@@ -2,7 +2,8 @@
  * Story scenes of the monthly build, told from the month's chapter story
  * (chapter_stories.json) like the endings are:
  *
- *   prologue   the first time the chapter opens: the prologue lyric and the month's words
+ *   prologue   after the player's first finished song (never before it): the
+ *              prologue lyric and the month's words
  *   act-<n>    the first time a run starts on an act's opening track: the act's
  *              word, mood and its three lyric beats (opens, turns, lands)
  *
@@ -13,6 +14,7 @@
 import type { GameSong } from '@/game/api';
 import { getMonthStory, hasClearedSong, type ChapterAct } from '@/game/chapterStory';
 import { PLAYGAMA_MONTH } from './month';
+import { hasFirstFinish } from './runMode';
 
 export type StorySceneId = 'prologue' | `act-${string}`;
 
@@ -48,6 +50,16 @@ export function actOpenedBy(song: GameSong, regular: GameSong[]): ChapterAct | n
  * opens when that hasn't been seen (plain runs on uncleared tracks only).
  */
 export function routeThroughStory(song: GameSong, runPath: string, regular: GameSong[], deluxe = false): string {
+  // Nothing stands between a new player and their first song (the story starts after it).
+  if (!hasFirstFinish()) return runPath;
+  // The first finish skipped the prologue and act I: they play before the next run.
+  if (!isStorySeen('prologue')) {
+    const firstAct = getMonthStory(PLAYGAMA_MONTH)?.acts[0];
+    const after = firstAct && !isStorySeen(`act-${firstAct.act}`)
+      ? `/story/act-${firstAct.act}?next=${encodeURIComponent(runPath)}`
+      : runPath;
+    return `/story/prologue?next=${encodeURIComponent(after)}`;
+  }
   if (deluxe || hasClearedSong(song)) return runPath;
   const act = actOpenedBy(song, regular);
   if (!act || isStorySeen(`act-${act.act}`)) return runPath;

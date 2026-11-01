@@ -20,6 +20,11 @@ export type { LeaderboardKind, LeaderboardRow };
 export const monthLeaderboardKind = (): LeaderboardKind =>
   PLAYGAMA_MONTH > 0 ? leaderboardKind() : 'not_available';
 
+/**
+ * Sum of the tracks' best scores. Only Standard runs (and saves from before
+ * run modes existed, all played under Standard rules) write hs_<id>, so
+ * Relaxed and first-run scores never reach the leaderboard (see runMode.ts).
+ */
 export function monthTotal(songs: GameSong[]): number {
   return songs.reduce((sum, s) => sum + (getHighScore(s.id) || 0), 0);
 }

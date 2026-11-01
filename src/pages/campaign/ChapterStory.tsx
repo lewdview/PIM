@@ -46,6 +46,7 @@ import { monthSummary, shareFileName } from '@/pages/month/shareSummary';
 import { achievementStates, syncAchievements } from '@/platform/playgama/achievements';
 import { drawProgressCard, progressText } from '@/platform/playgama/shareCard';
 import { isStorySeen, routeThroughStory } from '@/platform/playgama/storyScenes';
+import { bestFor, hasFirstFinish, levelForMode, MODE_LABEL, nextRunMode, setChosenMode, type RunMode } from '@/platform/playgama/runMode';
 import { endingStates } from '@/platform/playgama/endings';
 import {
   getMonthEntries, monthLeaderboardKind, monthTotal, showMonthPopup, submitMonthScore, type LeaderboardRow,
@@ -128,6 +129,13 @@ export default function ChapterStory() {
   // Monthly build: Playgama leaderboard (only where the portal offers one).
   const lbKind = MONTH_BUILD ? monthLeaderboardKind() : 'not_available';
   const [lbOpen, setLbOpen] = useState(false);
+  // Monthly build: the mode regular runs start in (intro until the first finish, then the player's pick).
+  const [runMode, setRunModeState] = useState<RunMode>(() => (MONTH_BUILD ? nextRunMode() : 'standard'));
+  const pickMode = (m: Exclude<RunMode, 'intro'>) => {
+    sfx(0.15);
+    setChosenMode(m);
+    setRunModeState(m);
+  };
   const [panel, setPanel] = useState<'options' | 'about' | 'song' | 'endings' | 'story' | 'share' | null>(null);
   const [lbRows, setLbRows] = useState<LeaderboardRow[] | null>(null);
   const openLeaderboard = async () => {
@@ -196,8 +204,9 @@ export default function ChapterStory() {
       const lastId = sessionStorage.getItem('campaign_last_song_id');
       const lastIdx = lastId ? list.findIndex((s) => s.id === lastId) : -1;
       const firstOpen = list.findIndex((s, i) => isStageUnlocked(i, p) && !hasClearedSong(s));
-      // Monthly build: a new player starts on the tutorial node; finishing it lands on track 1.
-      const onTutorial = MONTH_BUILD && !isTutorialDone() && (lastId === PG_TUTORIAL_ID || (lastIdx === -1 && firstOpen === 0));
+      // Monthly build: the tutorial node is optional practice. Only coming back from it lands on it;
+      // finishing it lands on track 1 (a new player's Play goes straight into the opener).
+      const onTutorial = MONTH_BUILD && lastId === PG_TUTORIAL_ID && !isTutorialDone();
       setSelectedIdx(onTutorial ? TUTORIAL_IDX : lastIdx !== -1 ? lastIdx : firstOpen !== -1 ? firstOpen : 0);
     });
     return () => { alive = false; };
@@ -205,9 +214,10 @@ export default function ChapterStory() {
 
   const progress = useMemo(() => (songs ? chapterProgress(songs, meta) : null), [songs, meta]);
 
-  // Monthly build: the first time the chapter opens, its prologue plays first.
+  // Monthly build: the prologue plays the first time the chapter opens after the player's first
+  // finished song (never before it: nothing stands between a new player and the music).
   useEffect(() => {
-    if (MONTH_BUILD && songs?.length && story && !isStorySeen('prologue')) setLocation('/story/prologue');
+    if (MONTH_BUILD && songs?.length && story && hasFirstFinish() && !isStorySeen('prologue')) setLocation('/story/prologue');
   }, [songs, story, setLocation]);
 
   // Monthly build: send any trophies earned so far to the portal (old saves included).
@@ -284,6 +294,7 @@ export default function ChapterStory() {
       modifier: getModifierForSong(selected),
       medal: getMedalForSong(selected.id),
       score: getHighScore(selected.id),
+      relaxedBest: MONTH_BUILD ? bestFor('relaxed', selected.id)?.score ?? 0 : 0,
       prophecy: claimedRewards[selected.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selected.id}`) === 'prophecy',
     };
   }, [songs, progress, selected, selectedIdx, collection, monthNum, meta, claimedRewards, stageOpen]);
@@ -299,7 +310,7 @@ export default function ChapterStory() {
     stopPreview();
     audioManager.playSfx('tap_nav', 0.4);
     if (MONTH_BUILD) {
-      const run = prepareMonthRun(selected, { month: monthNum, level: status.level, idx: selectedIdx, cleared: status.cleared, deluxe });
+      const run = prepareMonthRun(selected, { month: monthNum, level: status.level, idx: selectedIdx, cleared: status.cleared, deluxe, mode: runMode, source: 'chapter' });
       // The first run of an act's opening track plays that act's scene first.
       setLocation(progress ? routeThroughStory(selected, run, progress.regular, deluxe) : run);
       return;
@@ -313,7 +324,7 @@ export default function ChapterStory() {
       sessionStorage.removeItem(`active_modifier_type_${selected.id}`);
     }
     setLocation(`/play/${selected.id}`);
-  }, [selected, status, selectedIdx, stopPreview, monthNum, equippedCardId, setLocation, progress]);
+  }, [selected, status, selectedIdx, stopPreview, monthNum, equippedCardId, setLocation, progress, runMode]);
 
   const unlockByAd = async () => {
     if (!selected || unlocking) return;
@@ -625,7 +636,7 @@ export default function ChapterStory() {
                         className="mb-tile mb-tile--tutorial"
                         data-state={tutorialDone ? 'cleared' : 'open'}
                         data-selected={selectedIdx === TUTORIAL_IDX}
-                        aria-label={`Tutorial, before track 1, ${tutorialDone ? 'done' : 'open'}`}
+                        aria-label={`Practice, optional, ${tutorialDone ? 'done' : 'open'}`}
                         aria-pressed={selectedIdx === TUTORIAL_IDX}
                         onClick={() => select(TUTORIAL_IDX)}
                         onDoubleClick={() => { if (selectedIdx === TUTORIAL_IDX) handlePlay(); }}
@@ -633,7 +644,7 @@ export default function ChapterStory() {
                         <span className="mb-tile-ico"><Cpu size={34} /></span>
                         {selectedIdx === TUTORIAL_IDX && <span className="ca-cursor mb-tile-cursor" aria-hidden="true">▶</span>}
                         <span className="mb-tile-n">0</span>
-                        <span className="mb-tile-title">Tutorial</span>
+                        <span className="mb-tile-title">Practice</span>
                         {tutorialDone && <span className="mb-tile-medal" style={{ background: '#39ff14' }} title="Done" />}
                       </button>
                     </li>
@@ -678,10 +689,10 @@ export default function ChapterStory() {
               <div className="mb-detail-top">
                 <span className="mb-cover mb-cover--tutorial" aria-hidden="true"><Cpu size={56} /></span>
                 <div className="mb-detail-name">
-                  <div className="cs-eyebrow">Before track 1 · {tutorialDone ? 'done' : 'start here'}</div>
-                  <h2 className="cs-display">Tutorial</h2>
+                  <div className="cs-eyebrow">Optional practice · {tutorialDone ? 'done' : 'any time'}</div>
+                  <h2 className="cs-display">Practice</h2>
                   <p className="cs-hook mb-hook">
-                    Learn taps, holds, swipes and slides over a little computer music, then {meta.name} starts for real.
+                    Every note type (taps, holds, swipes and slides) over a little computer music. The songs teach the basics as you play, so this is extra.
                   </p>
                 </div>
               </div>
@@ -689,7 +700,7 @@ export default function ChapterStory() {
                 <span className="cs-muted">No score and no medal here. Miss three notes and it rewinds so you can try again.</span>
               </div>
               <div className="mb-actions">
-                <button type="button" className="btn-3d mb-play" onClick={() => handlePlay()} aria-label="Play the tutorial">
+                <button type="button" className="btn-3d mb-play" onClick={() => handlePlay()} aria-label="Play the practice run">
                   <Play size={16} fill="currentColor" />
                   {tutorialDone ? 'Replay' : 'Play'}
                 </button>
@@ -717,13 +728,35 @@ export default function ChapterStory() {
                 </div>
               </div>
               <div className="cs-detail-grid">
-                <div><small>Level · {levelToTier(status.level).toLowerCase()}</small><b>{status.level}</b></div>
-                <div><small>Best</small><b>{status.score ? status.score.toLocaleString() : '—'}</b></div>
+                {runMode === 'intro'
+                  ? <div><small>First run</small><b>Lv {levelForMode('intro', status.level)}</b></div>
+                  : (
+                    <div className="mb-mode">
+                      <small>Mode · lv {levelForMode(runMode, status.level)}</small>
+                      <span className="mb-mode-switch" role="radiogroup" aria-label="Mode">
+                        {(['relaxed', 'standard'] as const).map((m) => (
+                          <button key={m} type="button" role="radio" aria-checked={runMode === m} data-on={runMode === m || undefined}
+                            onClick={() => pickMode(m)}
+                            title={m === 'relaxed' ? 'Easier chart, wider timing, no fail. No medals or leaderboard.' : 'The full chart. Medals and leaderboard.'}>
+                            {MODE_LABEL[m]}
+                          </button>
+                        ))}
+                      </span>
+                    </div>
+                  )}
+                <div>
+                  <small>{!status.score && status.relaxedBest ? 'Best · relaxed' : 'Best'}</small>
+                  <b>{status.score ? status.score.toLocaleString() : status.relaxedBest ? status.relaxedBest.toLocaleString() : '—'}</b>
+                </div>
                 <div><small>Medal</small><b style={{ color: MEDAL_COLOR[status.medal] ?? undefined }}>{status.medal && status.medal !== 'NONE' ? status.medal.toLowerCase() : '—'}</b></div>
               </div>
               <div className="mb-note">
                 {status.lockReason
                   ? <span className="cs-lock-note">{status.lockReason}</span>
+                  : runMode === 'intro'
+                    ? <span className="cs-muted mb-mode-note">First song: gentle chart, wider timing, no fail, control tips.</span>
+                  : runMode === 'relaxed'
+                    ? <span className="cs-muted mb-mode-note">Relaxed: easier chart, no fail. Medals and the leaderboard need Standard.</span>
                   : status.bombshell
                     ? <span className="cs-muted">{status.bombshellUnlocked ? 'Bombshell art unlocked. It plays behind this track.' : 'Get a platinum medal to unlock this track’s Bombshell art.'}</span>
                     : null}
@@ -744,7 +777,14 @@ export default function ChapterStory() {
                 </button>
                 {!status.bonusLocked && (
                   <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={togglePreview} aria-label={previewing ? 'Stop preview' : 'Preview'}>
-                    {previewing ? <Pause size={14} /> : <Play size={14} />} {previewing ? 'Stop' : 'Preview'}
+                    {previewing ? <Pause size={14} /> : <Play size={14} />}<span className="mb-btn-label"> {previewing ? 'Stop' : 'Preview'}</span>
+                  </button>
+                )}
+                {runMode !== 'intro' && !status.locked && (
+                  <button type="button" className="btn-3d mb-mode-btn" data-size="sm" data-tone="quiet"
+                    onClick={() => pickMode(runMode === 'relaxed' ? 'standard' : 'relaxed')}
+                    aria-label={`Mode: ${MODE_LABEL[runMode]}. Switch to ${runMode === 'relaxed' ? 'Standard' : 'Relaxed'}`}>
+                    {MODE_LABEL[runMode]}
                   </button>
                 )}
                 {status.cleared && !status.locked && (

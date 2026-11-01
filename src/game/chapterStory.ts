@@ -10,6 +10,7 @@ import stories from '@/data/chapter_stories.json';
 import script from '@/data/chapter_script.json';
 import type { GameSong } from './api';
 import { getMedalForSong, getHighScore, getChapterPlatinums } from './progress';
+import { hasModeFinish } from '@/platform/playgama/runMode';
 import type { ChapterMeta } from './campaign';
 import { getMonthNumFromDay } from '@/utils/dayCalc';
 
@@ -108,7 +109,8 @@ export function splitChapter(songs: GameSong[]) {
 export function hasClearedSong(song?: GameSong): boolean {
   if (!song) return false;
   const medal = getMedalForSong(song.id);
-  return (!!medal && medal !== '') || getHighScore(song.id) > 0;
+  // A Relaxed or first-run finish counts too (monthly build; it keeps no medal or hs_ score).
+  return (!!medal && medal !== '') || getHighScore(song.id) > 0 || hasModeFinish(song.id);
 }
 
 export interface ChapterProgress {

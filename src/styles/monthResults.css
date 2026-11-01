@@ -219,3 +219,21 @@
 /* Phones: Share drops its label so the footer stays on one row. */
 @media (max-width: 620px) { .mr-fit .cr-foot .mr-share-label { display: none; } }
 @media (max-width: 380px) { .mr-fit .cr-foot { gap: 8px; } .mr-fit .cr-foot .btn-3d { padding-left: 12px; padding-right: 12px; } }
+
+/* Next entry: mode switch beside the button, the first finish's recommendation, a replay's goal. */
+.mr-mode { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.14); }
+.mr-mode button {
+  font: 700 11px/1 var(--shell-mono, monospace); letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 7px 9px; border-radius: 7px; border: 0; background: transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer;
+}
+.mr-mode button[data-on] { background: var(--ch, #00F5D4); color: #050402; }
+.mr-assist { font: 700 12px/1.3 var(--shell-mono, monospace); color: #FFD700; text-transform: uppercase; letter-spacing: 0.04em; }
+.mr-goal { font-size: 12px; margin-top: 2px; color: #FFD700; }
+.mr-next-title { display: none; }
+@media (min-aspect-ratio: 1/1) and (max-height: 520px) {
+  /* The next track's card is hidden here, so its title rides on the button and the mode switch goes under it. */
+  .mr-fit .cr-card .cs-detail-actions:has(.mr-mode) { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .mr-next-btn { max-width: min(46vw, 360px); }
+  .mr-next-btn .mr-next-title { display: inline; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .mr-fit .cr-card .mr-progress { display: none; }
+}

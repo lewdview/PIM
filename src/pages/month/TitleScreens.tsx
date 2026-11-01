@@ -1,12 +1,21 @@
 // Opening of a monthly Playgama build: a short animated intro (presenter card,
-// the PIM logo, then the month slamming in over its cover art), then a
-// press-start screen. Any tap, key or gamepad button skips the intro; the
-// start press is also the first user gesture, so game audio can play after it.
+// the PIM logo, then the month slamming in over its cover art), then the entry
+// screen: one primary Play that goes straight into a song (the opener for a new
+// player, the next unfinished entry for a returning one), plus Choose Entry and
+// Settings. Any tap, key or gamepad button skips the intro; the Play press is
+// also the first user gesture, so game audio can play after it.
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { loadCatalog } from '@/game/api';
+import { loadCatalog, type GameSong } from '@/game/api';
 import { CHAPTERS } from '@/game/campaign';
-import { songsForMonth } from '@/game/chapterStory';
+import { chapterProgress, hasClearedSong, songsForMonth, type ChapterProgress } from '@/game/chapterStory';
+import { Play, ListMusic, Settings } from 'lucide-react';
+import { hasFirstFinish } from '@/platform/playgama/runMode';
+import { routeThroughStory } from '@/platform/playgama/storyScenes';
+import { track, sinceLaunch } from '@/platform/playgama/funnel';
+import { monthStageLevel, prepareMonthRun } from './startRun';
+import { playTarget, type EntryPick } from './nextEntry';
+import { useVaultStore } from '@/store/useVaultStore';
 import { audioManager } from '@/game/audio';
 import { BUILD_VERSION, PLAYGAMA_MONTH } from '@/platform/playgama/month';
 import { externalLinksAllowed } from '@/platform/playgama/bridge';
@@ -55,14 +64,27 @@ function usePress(onPress: () => void, delayMs = 0) {
   }, [delayMs]);
 }
 
-function useMonthCovers(): { covers: string[]; count: number } {
-  const [state, setState] = useState({ covers: [] as string[], count: 0 });
+interface MonthState {
+  covers: string[];
+  count: number;
+  songs: GameSong[];
+  progress: ChapterProgress | null;
+}
+
+function useMonthCovers(): MonthState {
+  const [state, setState] = useState<MonthState>({ covers: [], count: 0, songs: [], progress: null });
   useEffect(() => {
     let alive = true;
     loadCatalog().then((catalog) => {
       if (!alive) return;
       const songs = songsForMonth(catalog, PLAYGAMA_MONTH);
-      setState({ covers: songs.map((s) => s.coverArt).filter((c): c is string => !!c), count: songs.length });
+      const meta = CHAPTERS.find((c) => c.month === PLAYGAMA_MONTH) ?? CHAPTERS[0];
+      setState({
+        covers: songs.map((s) => s.coverArt).filter((c): c is string => !!c),
+        count: songs.length,
+        songs,
+        progress: songs.length ? chapterProgress(songs, meta) : null,
+      });
     }).catch(() => {});
     return () => { alive = false; };
   }, []);
@@ -80,9 +102,13 @@ function CoverWall({ covers, className }: { covers: string[]; className: string 
   );
 }
 
-export default function TitleScreens({ onStart }: { onStart: () => void }) {
+/**
+ * onStart(path): leave the title for `path`, the chapter (Choose Entry) or a run (Play).
+ * onSettings: open Options over the title.
+ */
+export default function TitleScreens({ onStart, onSettings }: { onStart: (path: string | null) => void; onSettings: () => void }) {
   const [phase, setPhase] = useState<'intro' | 'start'>('intro');
-  const { covers, count } = useMonthCovers();
+  const { covers, count, songs, progress } = useMonthCovers();
   const meta = CHAPTERS.find((c) => c.month === PLAYGAMA_MONTH) ?? CHAPTERS[0];
   const style = { ['--ch' as string]: meta.dc };
 
@@ -94,7 +120,8 @@ export default function TitleScreens({ onStart }: { onStart: () => void }) {
 
   return phase === 'intro'
     ? <Intro key="intro" style={style} covers={covers} name={meta.name} onSkip={() => setPhase('start')} />
-    : <PressStart key="start" style={style} covers={covers} name={meta.name} sub={meta.sub} count={count} onStart={onStart} />;
+    : <PressStart key="start" style={style} covers={covers} name={meta.name} sub={meta.sub} count={count}
+        songs={songs} progress={progress} onStart={onStart} onSettings={onSettings} />;
 }
 
 function Intro({ style, covers, name, onSkip }: { style: CSSProperties; covers: string[]; name: string; onSkip: () => void }) {
@@ -117,16 +144,85 @@ function Intro({ style, covers, name, onSkip }: { style: CSSProperties; covers: 
   );
 }
 
-function PressStart({ style, covers, name, sub, count, onStart }: {
-  style: CSSProperties; covers: string[]; name: string; sub: string; count: number; onStart: () => void;
+function PressStart({ style, covers, name, sub, count, songs, progress, onStart, onSettings }: {
+  style: CSSProperties; covers: string[]; name: string; sub: string; count: number;
+  songs: GameSong[]; progress: ChapterProgress | null;
+  onStart: (path: string | null) => void; onSettings: () => void;
 }) {
   const [leaving, setLeaving] = useState(false);
-  const touch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
-  usePress(() => {
+  const [focus, setFocus] = useState(0);
+  const pick: EntryPick | null = progress ? playTarget(songs, progress) : null;
+  const firstTime = !hasFirstFinish();
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+
+  useEffect(() => {
+    track('interactive_ready', { since_launch_ms: sinceLaunch(), screen: 'entry' }, 'interactive_ready');
+  }, []);
+
+  const leave = (path: string | null, how: string) => {
+    if (leaving) return;
     audioManager.playSfx('tap_nav', 0.5);
     setLeaving(true);
-    setTimeout(onStart, 380);
-  }, 300);
+    if (how === 'choose') track('choose_entry_pressed', { from: 'entry_screen' });
+    setTimeout(() => onStart(path), 280);
+  };
+  const play = () => {
+    if (!pick || !progress) { leave(null, 'choose'); return; }
+    const level = monthStageLevel(PLAYGAMA_MONTH, pick.idx, progress);
+    const run = prepareMonthRun(pick.song, {
+      month: PLAYGAMA_MONTH, level, idx: pick.idx, cleared: hasClearedSong(pick.song), source: 'entry_screen',
+    });
+    leave(routeThroughStory(pick.song, run, progress.regular), 'play');
+  };
+  const actions = [play, () => leave(null, 'choose'), () => { audioManager.playSfx('tap_nav', 0.3); onSettings(); }];
+  const actionsRef = useRef(actions);
+  actionsRef.current = actions;
+
+  // Keyboard: arrows move, Enter/Space presses. Gamepad: d-pad/stick moves, A or Start presses.
+  useEffect(() => {
+    buttons.current[0]?.focus({ preventScroll: true });
+    const optionsOpen = () => useVaultStore.getState().optionsModalOpen;
+    const onKey = (e: KeyboardEvent) => {
+      if (optionsOpen()) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); setFocus((f) => Math.min(2, f + 1)); }
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); setFocus((f) => Math.max(0, f - 1)); }
+    };
+    window.addEventListener('keydown', onKey);
+    let raf = 0;
+    let held = true;
+    let lastMove = 0;
+    const poll = () => {
+      const gp = navigator.getGamepads ? Array.from(navigator.getGamepads()).find(Boolean) : null;
+      if (gp && !optionsOpen()) {
+        const press = gp.buttons[0]?.pressed || gp.buttons[9]?.pressed;
+        const any = gp.buttons.some((b) => b.pressed);
+        const y = gp.axes[1] ?? 0;
+        const down = gp.buttons[13]?.pressed || y > 0.6;
+        const up = gp.buttons[12]?.pressed || y < -0.6;
+        if (!any && Math.abs(y) < 0.3) held = false;
+        const now = performance.now();
+        if (!held && (down || up) && now - lastMove > 220) {
+          lastMove = now;
+          setFocus((f) => (down ? Math.min(2, f + 1) : Math.max(0, f - 1)));
+        }
+        if (!held && press) {
+          held = true;
+          const el = document.activeElement as HTMLButtonElement | null;
+          const idx = buttons.current.findIndex((b) => b === el);
+          actionsRef.current[idx === -1 ? 0 : idx]();
+        }
+      }
+      raf = requestAnimationFrame(poll);
+    };
+    raf = requestAnimationFrame(poll);
+    return () => { window.removeEventListener('keydown', onKey); cancelAnimationFrame(raf); };
+  }, []);
+  useEffect(() => { buttons.current[focus]?.focus({ preventScroll: true }); }, [focus]);
+
+  const playSub = pick
+    ? `${pick.goal ? 'Replay · ' : ''}Day ${pick.song.day} · ${pick.song.title}${firstTime ? ' · gentle start' : ''}`
+    : '';
+
   return (
     <div className="mt-screen mt-start" data-leaving={leaving || undefined} style={style}>
       <CoverWall covers={covers} className="mt-start-wall" />
@@ -136,7 +232,21 @@ function PressStart({ style, covers, name, sub, count, onStart }: {
           <b>{name}</b>
           <small>{sub}{count ? ` · ${count} tracks` : ''}</small>
         </div>
-        <div className="mt-press" role="button" aria-label="Start game">{touch ? 'Tap to start' : 'Press start'}</div>
+        <div className="mt-menu">
+          <button ref={(el) => { buttons.current[0] = el; }} type="button" className="mt-play" onClick={actions[0]} onFocus={() => setFocus(0)}
+            aria-label={pick ? `Play ${pick.song.title}` : 'Play'}>
+            <span className="mt-play-label"><Play size={20} fill="currentColor" /> Play</span>
+            {playSub && <small>{playSub}</small>}
+          </button>
+          <div className="mt-menu-row">
+            <button ref={(el) => { buttons.current[1] = el; }} type="button" className="mt-sub" onClick={actions[1]} onFocus={() => setFocus(1)}>
+              <ListMusic size={16} /> Choose entry
+            </button>
+            <button ref={(el) => { buttons.current[2] = el; }} type="button" className="mt-sub" onClick={actions[2]} onFocus={() => setFocus(2)}>
+              <Settings size={16} /> Settings
+            </button>
+          </div>
+        </div>
       </div>
       <div className="mt-start-foot">
         © th3scr1b3 · 365 days of light and dark

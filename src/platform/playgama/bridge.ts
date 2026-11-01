@@ -38,6 +38,12 @@ function withTimeout<T>(p: Promise<T>): Promise<T> {
 }
 
 let ready = false;
+/** Told when a save to bridge.storage fails (the funnel reports it as save_failed). */
+const saveFailedListeners = new Set<(err: unknown) => void>();
+export function onSaveFailed(fn: (err: unknown) => void): () => void {
+  saveFailedListeners.add(fn);
+  return () => saveFailedListeners.delete(fn);
+}
 let lastSnapshot = '';
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let writing = false;
@@ -77,6 +83,7 @@ async function flush(): Promise<void> {
     lastSnapshot = next;
   } catch (err) {
     console.warn('[Playgama] Save failed:', err);
+    saveFailedListeners.forEach((fn) => fn(err));
   } finally {
     writing = false;
     // A change that landed while this save was in flight gets its own save.
@@ -253,6 +260,27 @@ export function markGameReady(): void {
   if (!b || ready) return;
   ready = true;
   b.platform.sendMessage(b.PLATFORM_MESSAGE.GAME_READY).catch(() => {});
+}
+
+/**
+ * A custom analytics event through the Bridge's analytics module (it batches
+ * and sends them to Playgama with the session's meta). No-op without the SDK.
+ */
+export function sendAnalytics(event: string, data: Record<string, unknown>): void {
+  const b = bridgeOrNull() as (typeof window.bridge & { analytics?: { send(e: string, d?: Record<string, unknown>): void; gameVersion: string | null } }) | null;
+  if (!b?.analytics?.send) return;
+  try {
+    b.analytics.send(event, data);
+  } catch { /* analytics must never break the game */ }
+}
+
+/** Tags the Bridge's own analytics with the build version. */
+export function setAnalyticsGameVersion(version: string): void {
+  const b = bridgeOrNull() as (typeof window.bridge & { analytics?: { gameVersion: string | null } }) | null;
+  if (!b?.analytics) return;
+  try {
+    b.analytics.gameVersion = version;
+  } catch { /* older SDK */ }
 }
 
 export function sendGameplayMessage(kind: 'gameplay_started' | 'gameplay_stopped'): void {
@@ -548,4 +576,17 @@ export function setMenuBanners(on: boolean): void {
   if (on) b.advertisement.showAdvancedBanners('menu');
   else b.advertisement.hideAdvancedBanners();
   reserveBannerSpace();
+}
+
+/** Coarse device class for analytics: the Bridge's device type plus the browser family. */
+export function deviceClass(): string {
+  const b = bridgeOrNull() as (typeof window.bridge & { device?: { type?: string } }) | null;
+  const type = b?.device?.type || (window.matchMedia?.('(pointer: coarse)').matches ? 'mobile' : 'desktop');
+  const ua = navigator.userAgent;
+  const browser = /Edg\//.test(ua) ? 'edge'
+    : /Firefox\//.test(ua) ? 'firefox'
+    : /Chrome\//.test(ua) ? 'chrome'
+    : /Safari\//.test(ua) ? 'safari'
+    : 'other';
+  return `${type}/${browser}`;
 }

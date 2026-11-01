@@ -208,3 +208,34 @@
 }
 .mt-start-foot a { color: var(--ch); text-decoration: none; }
 .mt-version { opacity: 0.6; text-transform: none; user-select: text; }
+
+/* Entry screen: one primary Play straight into a song, then Choose entry and Settings. */
+.mt-menu { display: grid; gap: 10px; justify-items: center; margin-top: clamp(4px, 2vh, 20px); width: min(92vw, 420px); }
+.mt-play {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 100%; padding: 14px 22px; border-radius: 16px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--ch) 80%, transparent);
+  background: color-mix(in srgb, var(--ch) 28%, rgba(0, 0, 0, 0.55));
+  font: 800 clamp(18px, 3vmin, 24px)/1 var(--shell-mono); letter-spacing: 0.28em; text-transform: uppercase; color: #fff;
+  box-shadow: 0 0 28px color-mix(in srgb, var(--ch) 45%, transparent);
+  animation: mt-glow 1.6s ease-in-out infinite;
+}
+.mt-play-label { display: inline-flex; align-items: center; gap: 10px; }
+.mt-play small {
+  font: 600 11px/1.3 var(--shell-mono); letter-spacing: 0.06em; text-transform: none;
+  color: rgba(255, 255, 255, 0.78); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.mt-menu-row { display: flex; gap: 10px; width: 100%; }
+.mt-sub {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.22); background: rgba(0, 0, 0, 0.5);
+  font: 700 12px/1 var(--shell-mono); letter-spacing: 0.12em; text-transform: uppercase; color: #fff;
+}
+.mt-play:focus-visible, .mt-sub:focus-visible, .mt-play:focus, .mt-sub:focus { outline: 2px solid #fff; outline-offset: 3px; }
+.mt-sub:hover { border-color: rgba(255, 255, 255, 0.5); }
+@keyframes mt-glow {
+  0%, 100% { box-shadow: 0 0 28px color-mix(in srgb, var(--ch) 50%, transparent); }
+  50% { box-shadow: 0 0 10px color-mix(in srgb, var(--ch) 25%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .mt-play { animation: none; } }

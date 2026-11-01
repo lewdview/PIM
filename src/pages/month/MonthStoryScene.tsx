@@ -30,7 +30,8 @@ export default function MonthStoryScene() {
   // Only a run of this game is a place to go next.
   const nextPath = useMemo(() => {
     const next = new URLSearchParams(search).get('next');
-    return next && next.startsWith('/play/') ? next : null;
+    // A run, or another scene that leads to one (the prologue chains into act I).
+    return next && (next.startsWith('/play/') || next.startsWith('/story/')) ? next : null;
   }, [search]);
   const valid = !!story && (id === 'prologue' || story.acts.some((a) => `act-${a.act}` === id));
 
@@ -56,7 +57,7 @@ export default function MonthStoryScene() {
       music={built.music}
       kind="story"
       tone={meta.dc}
-      doneLabel={nextPath ? 'Play' : 'Continue'}
+      doneLabel={nextPath?.startsWith('/play/') ? 'Play' : 'Continue'}
       onDone={() => setLocation(nextPath ?? HOME, { replace: !!nextPath })}
     />
   );

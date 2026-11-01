@@ -11,7 +11,9 @@ import { bombshellFileForDay } from '@/platform/playgama/monthMedia.mjs';
 import { MONTH_BOMBSHELL } from '@/platform/playgama/month';
 import { getBombshellCoverUrl, BOMBSHELL_COVERS_MAP } from '@/utils/bombshellCards';
 import type { ChapterProgress } from '@/game/chapterStory';
-import { PG_TUTORIAL_ID } from '@/platform/playgama/tutorialTrack';
+import { PG_TUTORIAL_ID, isTutorialDone } from '@/platform/playgama/tutorialTrack';
+import { levelForMode, nextRunMode, setLastEntry, setRunMode, type RunMode } from '@/platform/playgama/runMode';
+import { markPlayPressed, track } from '@/platform/playgama/funnel';
 
 /** The Bombshell art a platinum run on this song unlocks, or null. */
 export function bombshellArtFor(song: GameSong): string | null {
@@ -45,14 +47,26 @@ export function prepareMonthRun(song: GameSong, opts: {
   cleared: boolean;
   /** Play the Chart Master Deluxe chart (opens once the track is cleared). */
   deluxe?: boolean;
+  /** Run mode; defaults to nextRunMode() (intro until the first finish). Deluxe is always Standard. */
+  mode?: RunMode;
+  /** Where the run was started from, for the funnel's play_pressed event. */
+  source?: string;
 }): string {
   // Gameplay reads these keys by the id in the play URL.
   const runId = opts.deluxe ? deluxeRunId(song.id) : song.id;
+  const mode: RunMode = opts.deluxe ? 'standard' : opts.mode ?? nextRunMode();
   sessionStorage.setItem('campaign_last_song_id', runId);
   sessionStorage.setItem(`game_origin_${runId}`, `chapter/${opts.month}`);
-  // Deluxe keeps its own difficulty (two above the chart's); a plain run plays at the stage level.
+  setRunMode(runId, mode);
+  setLastEntry(song.id);
+  // Deluxe keeps its own difficulty (two above the chart's); a plain run plays at its mode's level.
   if (opts.deluxe) sessionStorage.removeItem(`diff_override_${runId}`);
-  else sessionStorage.setItem(`diff_override_${runId}`, String(opts.level));
+  else sessionStorage.setItem(`diff_override_${runId}`, String(levelForMode(mode, opts.level)));
+  markPlayPressed();
+  track('play_pressed', {
+    entry: song.day, song: song.id, idx: opts.idx, mode, deluxe: !!opts.deluxe,
+    replay: opts.cleared, tutorial_done: isTutorialDone(), source: opts.source ?? 'chapter',
+  });
   sessionStorage.removeItem(`active_modifier_type_${runId}`);
   const bombshell = bombshellArtFor(song);
   if (bombshell && getMedalForSong(song.id) === 'PLATINUM') {

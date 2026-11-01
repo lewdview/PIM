@@ -24,7 +24,10 @@ import { getSmartCoverCandidates, isBombshellCoverPath } from "@/utils/rarityArt
 import { MEDAL_STOPS, MEDAL_COLOR_MAP, LANE_COUNT, HIT_RATIO, HW_TOP, HW_BOT, MATRIX_CHARS, MATRIX_COLUMNS, POWER_UPS, type PUType } from './constants';
 import { type StageGeometry, getStageGeometry, approachTime, hwAtProgress, laneAt, lerp, formatTimeSec, isDirectionMatch } from './geometry';
 import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
-import { perfectPlusWindow, perfectWindow, goodWindow, missWindow } from './timing';
+import { perfectPlusWindow, perfectWindow, goodWindow, missWindow, setTimingScale } from './timing';
+import { MODE_TUNING, recordFinish, runModeFor, hasModeFinish, type RunMode } from '@/platform/playgama/runMode';
+import { track as trackFunnel, msSincePlayPressed, sinceLaunch } from '@/platform/playgama/funnel';
+import IntroCoach from './IntroCoach';
 import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, selectSongPov, isArchetypeDevModeEnabled } from './archetypes';
 import { type ProjectionResult, getCorkscrewSpiralPos, getWaveCoasterPos, getFlat2DPos, getHorizontalDriftPos, getCockpitHudPos, getHyperPrismPos, getDnaHelixPos, getVertigoDropPos, getSingularityVoidPos, getGroundZeroPos, getOrbitalHaloPos, getMobiusLoopPos, getArchetypeProjection, getLaneFromCoords } from './projections';
 import { hasPovScene, usesFlatHighway, hasStraightHitLine, drawPovScene, drawPovLanes, type PovSceneInput } from './povScenes';
@@ -1348,6 +1351,17 @@ export default function Game() {
     [] as ReturnType<typeof setTimeout>[],
   );
   const missCountRef = useRef(0); // misses accumulated this attempt (triggers continue at 3)
+  // Monthly build run mode (intro / relaxed / standard) and its tuning, set when the song loads.
+  const runModeRef = useRef<RunMode>('standard');
+  const [runModeState, setRunModeState] = useState<RunMode>('standard');
+  /** Fractional strikes: Relaxed and the first run take half a strike per miss. */
+  const strikeDebtRef = useRef(0);
+  /** Assist turned on this run (out of strikes in a protected mode: the song plays on). */
+  const assistedRef = useRef(false);
+  /** Song times of lane presses this run, for the participation check. */
+  const pressTimesRef = useRef<number[]>([]);
+  const firstNoteTimeRef = useRef<number>(Infinity);
+  const funnelRef = useRef({ firstNote: false, firstInput: false, playWall: 0 });
   const rewindToRef = useRef(0);
   const rewindAnimRef = useRef<{ wallStart: number; fromT: number; toT: number } | null>(null);
   // PERF: M9 — frame-synced rewind completion data (replaces setTimeout)
@@ -2296,9 +2310,31 @@ export default function Game() {
     gain.gain.linearRampToValueAtTime(getTargetGainForLane(lane), ctx.currentTime + 0.25);
   }, [getTargetGainForLane]);
 
+  // First-run tips read the chart and the hit count through these (stable, ref-backed).
+  const coachNotes = useCallback(() => notesRef.current.map(ns => ({ time: ns.note.time, hold: (ns.note.holdDuration ?? 0) > 0 })), []);
+  const coachHits = useCallback(() => { const g = gsRef.current; return g.perfectPlus + g.perfects + g.goods; }, []);
+
+  /** A miss costs a strike, or half of one in Relaxed and on the first run. */
+  function addStrike() {
+    const w = PLAYGAMA_MONTH ? MODE_TUNING[runModeRef.current].strikeWeight : 1;
+    strikeDebtRef.current += w;
+    if (strikeDebtRef.current >= 0.999) {
+      strikeDebtRef.current -= 1;
+      missCountRef.current++;
+    }
+  }
+
   const hitLane = useCallback(
     (lane: number, direction?: Note['swipeDirection'], touchId?: number) => {
       if (phaseRef.current !== "playing") return;
+      if (PLAYGAMA_MONTH && !isTutorialRef.current) {
+        const pt = getT();
+        pressTimesRef.current.push(pt);
+        if (!funnelRef.current.firstInput) {
+          funnelRef.current.firstInput = true;
+          trackFunnel('first_input', { song: songRef.current?.id, mode: runModeRef.current, song_time_ms: Math.round(pt * 1000), from_play_ms: msSincePlayPressed() });
+        }
+      }
       if (touchId !== undefined) {
         lastInputModalityRef.current = 'touch';
       }
@@ -2532,7 +2568,7 @@ export default function Game() {
         addJudgment({ type: "MISS", lane: ns.note.lane, id: ++jCounter.current, ts: Date.now() });
         const now = Date.now();
         if (now - lastMissTimeRef.current > 350) {
-          missCountRef.current++;
+          addStrike();
           lastMissTimeRef.current = now;
         }
         setMissCount(missCountRef.current);
@@ -2619,7 +2655,7 @@ export default function Game() {
 
           const now = Date.now();
           if (now - lastMissTimeRef.current > 350) {
-            missCountRef.current++;
+            addStrike();
             lastMissTimeRef.current = now;
           }
           setMissCount(missCountRef.current);
@@ -2659,7 +2695,7 @@ export default function Game() {
 
         const now = Date.now();
         if (now - lastMissTimeRef.current > 350) {
-          missCountRef.current++;
+          addStrike();
           lastMissTimeRef.current = now;
         }
         setMissCount(missCountRef.current);
@@ -2983,6 +3019,7 @@ export default function Game() {
 
   const finishGame = useCallback((failed = false) => {
     if (phaseRef.current === "finished") return;
+    const endSongTime = audioRef.current?.currentTime ?? 0;
     phaseRef.current = "finished";
     setPhase("finished");
     setDisplayGs({ ...gsRef.current });
@@ -3027,13 +3064,30 @@ export default function Game() {
     // Monthly build: whether this run is the stage's first clear, read before
     // the save below so the results screen can call it out.
     const wasCleared = !!saveId && (
-      (getMedalForSong(saveId) || '') !== '' || getHighScore(saveId) > 0
+      (getMedalForSong(saveId) || '') !== '' || getHighScore(saveId) > 0 || hasModeFinish(saveId)
     );
     const wasPlatinum = !!saveId && getMedalForSong(saveId) === 'PLATINUM';
+    // Monthly build: only Standard runs set medals, the track's best and the leaderboard total.
+    const runMode = runModeRef.current;
+    const ranked = !PLAYGAMA_MONTH || runMode === 'standard';
+    const assisted = assistedRef.current;
+    // Participation (spec section 7): scorable notes the player hit or at least tried for.
+    const scorable = notesRef.current.filter(ns => ns.note.type !== 'mine' && (ns.note.type as string) !== 'ghost');
+    const presses = pressTimesRef.current;
+    const attempted = scorable.filter(ns => ns.hit || presses.some(pt => Math.abs(pt - ns.note.time) <= 0.6)).length;
+    const participation = scorable.length ? attempted / scorable.length : 0;
+    const judgedNotes = gs.perfectPlus + gs.perfects + gs.goods + gs.misses;
+    const runAccuracy = judgedNotes > 0 ? ((gs.perfectPlus + gs.perfects) / judgedNotes) * 100 : 0;
+    let chapterFirstFinish = false;
 
     // Save progress with error handling (the monthly build's tutorial node keeps no score)
     try {
-      if (songRef.current && !failed && !(PLAYGAMA_MONTH && isTutorial)) {
+      if (PLAYGAMA_MONTH && songRef.current && !failed && !isTutorial) {
+        chapterFirstFinish = recordFinish(saveId, runMode, {
+          score: gs.score, accuracy: parseFloat(runAccuracy.toFixed(2)), medal: ranked ? medal : 'NONE', assisted,
+        });
+      }
+      if (songRef.current && !failed && !(PLAYGAMA_MONTH && isTutorial) && ranked) {
         const totalNotes = gs.perfectPlus + gs.perfects + gs.goods + gs.misses;
         const accuracy = totalNotes > 0 ? ((gs.perfectPlus + gs.perfects) / totalNotes) * 100 : 0;
         const rewardOpts = loadOpts();
@@ -3097,17 +3151,34 @@ export default function Game() {
           perfects: gs.perfects,
           goods: gs.goods,
           misses: gs.misses,
-          medal,
+          medal: ranked ? medal : 'NONE',
           total: gs.perfectPlus + gs.perfects + gs.goods + gs.misses,
           failed,
           continuesUsed,
           laneTelemetry,
           coverUrl: finalCover,
-          ...(PLAYGAMA_MONTH > 0 ? { firstClear: !failed && !wasCleared, firstPlatinum: medal === 'PLATINUM' && !wasPlatinum } : {}),
+          ...(PLAYGAMA_MONTH > 0 ? {
+            firstClear: !failed && !wasCleared,
+            firstPlatinum: ranked && medal === 'PLATINUM' && !wasPlatinum,
+            mode: runMode,
+            assisted,
+            chapterFirstFinish,
+            participation: Math.round(participation * 100),
+          } : {}),
         }),
       );
     } catch (err) {
       console.error("Failed to save game results:", err);
+    }
+
+    if (PLAYGAMA_MONTH && !isTutorial) {
+      trackFunnel('run_ended', {
+        song: songRef.current?.id, outcome: failed ? 'failed' : 'completed', mode: runMode, assisted,
+        accuracy: Math.round(runAccuracy), participation: Math.round(participation * 100),
+        score: gs.score, song_time_ms: Math.round(endSongTime * 1000),
+        wall_ms: funnelRef.current.playWall ? Date.now() - funnelRef.current.playWall : null,
+        first_finish: chapterFirstFinish,
+      });
     }
 
     // Only navigate to results if not exporting video (or user closes export modal)
@@ -3218,6 +3289,15 @@ export default function Game() {
 
     // Log game abandon event
     const gs = gsRef.current;
+    if (PLAYGAMA_MONTH && !isTutorialRef.current) {
+      const judged = gs.perfectPlus + gs.perfects + gs.goods + gs.misses;
+      trackFunnel('run_ended', {
+        song: songRef.current?.id, outcome: 'quit', mode: runModeRef.current, assisted: assistedRef.current,
+        accuracy: judged ? Math.round(((gs.perfectPlus + gs.perfects) / judged) * 100) : 0,
+        score: gs.score, song_time_ms: Math.round(elapsedTime * 1000),
+        wall_ms: funnelRef.current.playWall ? Date.now() - funnelRef.current.playWall : null,
+      });
+    }
     logAnalyticsEvent('game_abandon', {
       songId: songId,
       score: gs.score,
@@ -3237,6 +3317,28 @@ export default function Game() {
     const inRewindGrace = performance.now() < rewindGraceUntilWallRef.current || (rewindGraceUntilSongTimeRef.current > 0 && getT() < rewindGraceUntilSongTimeRef.current);
     if (inRewindGrace) return false;
 
+    if (missCountRef.current >= 3 && optsRef.current.missSystem && !activeTutorial && PLAYGAMA_MONTH && MODE_TUNING[runModeRef.current].assist) {
+      // Relaxed / first run: out of strikes turns Assist on and the song plays on.
+      // Misses still count and still show; nothing is faked.
+      missCountRef.current = 0;
+      strikeDebtRef.current = 0;
+      setMissCount(0);
+      restoreLane(0);
+      restoreLane(1);
+      restoreLane(2);
+      warpBannerRef.current = { text: 'ASSIST ON · KEEP PLAYING', until: Date.now() + 2600, instant: false };
+      if (!assistedRef.current) {
+        assistedRef.current = true;
+        const gs0 = gsRef.current;
+        const judged = gs0.perfectPlus + gs0.perfects + gs0.goods + gs0.misses;
+        trackFunnel('assist_activated', {
+          song: songRef.current?.id, mode: runModeRef.current, stage: lastDetectedStageRef.current,
+          song_time_ms: Math.round(getT() * 1000),
+          accuracy: judged ? Math.round(((gs0.perfectPlus + gs0.perfects) / judged) * 100) : 0,
+        });
+      }
+      return false;
+    }
     if (missCountRef.current >= 3 && optsRef.current.missSystem && !activeTutorial) {
       audioManager.stopAllHoldTones();
       const audio = audioRef.current;
@@ -3346,6 +3448,7 @@ export default function Game() {
 
     // Reset miss counter immediately (pips clear visually)
     missCountRef.current = 0;
+    strikeDebtRef.current = 0;
     lastMissTimeRef.current = 0;
     setMissCount(0);
     gameSenseService.sendHealth(3);
@@ -3881,10 +3984,27 @@ export default function Game() {
     // has them (Chart Master places stage 3 / 5 on the drops), so the POV
     // switch lands on the music; otherwise the fixed 15/35/60/80% split.
     const calculatedStage = stageAtTime(stageStartsRef.current, t);
+      if (PLAYGAMA_MONTH && !funnelRef.current.firstNote && t >= firstNoteTimeRef.current && !activeTutorial) {
+        funnelRef.current.firstNote = true;
+        trackFunnel('first_note_reached', {
+          song: songRef.current?.id, mode: runModeRef.current,
+          from_play_ms: msSincePlayPressed(), since_launch_ms: sinceLaunch(),
+        });
+      }
       if (calculatedStage !== lastDetectedStageRef.current) {
         const prevStage = lastDetectedStageRef.current;
         lastDetectedStageRef.current = calculatedStage;
         setCurrentStage(calculatedStage);
+        if (PLAYGAMA_MONTH && !activeTutorial && prevStage > 0 && calculatedStage > prevStage) {
+          const gsS = gsRef.current;
+          const judged = gsS.perfectPlus + gsS.perfects + gsS.goods + gsS.misses;
+          trackFunnel('stage_reached', {
+            song: songRef.current?.id, mode: runModeRef.current, stage: calculatedStage,
+            song_time_ms: Math.round(t * 1000),
+            accuracy: judged ? Math.round(((gsS.perfectPlus + gsS.perfects) / judged) * 100) : 0,
+            strikes: missCountRef.current, assisted: assistedRef.current,
+          });
+        }
 
         // Stage-Integrated Dynamic POV Camera Auto-Switching (Untouched & automatic for all players)
         // Stage 1 & 2: Classic, Stage 3: Song 3D Archetype POV, Stage 4: Classic Void, Stage 5: Hyper Version of Stage 3
@@ -3895,7 +4015,8 @@ export default function Game() {
           if (calculatedStage === 1 || calculatedStage === 2) {
             targetPov = 'classic';
           } else if (calculatedStage === 3) {
-            targetPov = archetypePov;
+            // First run: stage 3 keeps the classic camera; its banner and music still mark the change.
+            targetPov = PLAYGAMA_MONTH && MODE_TUNING[runModeRef.current].softCamera ? 'classic' : archetypePov;
           } else if (calculatedStage === 4) {
             targetPov = 'classic';
           } else if (calculatedStage === 5) {
@@ -6019,7 +6140,7 @@ export default function Game() {
             dirty = true;
             const now = Date.now();
             if (now - lastMissTimeRef.current > 350) {
-              missCountRef.current++;
+              addStrike();
               lastMissTimeRef.current = now;
             }
             setMissCount(missCountRef.current);
@@ -8728,6 +8849,10 @@ export default function Game() {
           optsRef.current.gameTrack
         );
       }
+      // Monthly build: the run's mode (set by prepareMonthRun) and its timing windows.
+      runModeRef.current = PLAYGAMA_MONTH && !activeTutorial ? runModeFor(songId ?? '') : 'standard';
+      setRunModeState(runModeRef.current);
+      setTimingScale(MODE_TUNING[runModeRef.current].timingScale);
       // Apply difficulty override set by SongDetail page
       const diffOverrideNum = parseInt(sessionStorage.getItem(`diff_override_${songId}`) ?? '', 10);
       if (!isNaN(diffOverrideNum) && diffOverrideNum >= 1 && diffOverrideNum <= 10 && !activeTutorial) {
@@ -9068,6 +9193,16 @@ export default function Game() {
           return true;
         });
       }
+      // First run: a floor on note spacing through every stage, so stage 3 stays as readable as stage 1.
+      const introGap = PLAYGAMA_MONTH ? MODE_TUNING[runModeRef.current].minGap : 0;
+      if (introGap > 0) {
+        let lastTime = -999;
+        notesRef.current = notesRef.current.filter(ns => {
+          if (ns.note.time - lastTime < introGap) return false;
+          lastTime = ns.note.time + (ns.note.holdDuration && ns.note.holdDuration > 0 ? Math.min(ns.note.holdDuration, 0.8) : 0);
+          return true;
+        });
+      }
       // ── Secret warp (rare): turn one lone final-stage tap into a warp note ──
       warpClearUnlockedRef.current = false;
       instantWarpPendingRef.current = false;
@@ -9083,6 +9218,7 @@ export default function Game() {
       }
 
       unresolvedNotesCountRef.current = notesRef.current.length;
+      firstNoteTimeRef.current = notesRef.current.reduce((m, ns) => Math.min(m, ns.note.time), Infinity);
       lastNoteTimeRef.current = notesRef.current.length > 0
         ? Math.max(...notesRef.current.map(ns => ns.note.time))
         : 0;
@@ -9170,6 +9306,10 @@ export default function Game() {
       lastMissTimeRef.current = 0;
       continueUsedRef.current = 0;
       missCountRef.current = 0;
+      strikeDebtRef.current = 0;
+      assistedRef.current = false;
+      pressTimesRef.current = [];
+      funnelRef.current = { firstNote: false, firstInput: false, playWall: 0 };
       setMissCount(0);
       healingGaugeRef.current = 0;
       healingHealedFlashMsRef.current = 0;
@@ -10140,7 +10280,10 @@ export default function Game() {
   }, [doPause, resetAllLanes]);
 
   useEffect(() => {
-    if (phase === 'playing') sendGameplayMessage('gameplay_started');
+    if (phase === 'playing') {
+      sendGameplayMessage('gameplay_started');
+      if (!funnelRef.current.playWall) funnelRef.current.playWall = Date.now();
+    }
   }, [phase]);
 
   // Handle manual keyboard pause (Escape), POV switcher (V), and Continue (Enter)
@@ -10340,6 +10483,18 @@ export default function Game() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Monthly build, first run: in-song control tips ── */}
+      {PLAYGAMA_MONTH > 0 && runModeState === 'intro' && (phase === 'playing' || phase === 'countdown') && !paused && (
+        <IntroCoach
+          getT={getT}
+          notes={coachNotes}
+          hits={coachHits}
+          laneKeys={laneKeysRef}
+          modality={lastInputModalityRef}
+          gamepad={gamepadConnectedRef}
+        />
       )}
 
       {/* ── INTERACTIVE CURRICULUM TUTORIAL OVERLAY ── */}

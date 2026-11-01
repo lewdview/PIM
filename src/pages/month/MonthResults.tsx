@@ -36,6 +36,9 @@ import { baseSongId, bombshellArtFor, isDeluxeRun, monthStageLevel, prepareMonth
 import { ENDING_INFO, pendingEnding, type EndingId } from '@/platform/playgama/endings';
 import { routeThroughStory } from '@/platform/playgama/storyScenes';
 import { recordFullCombo, syncAchievements, type AchievementState } from '@/platform/playgama/achievements';
+import { MODE_LABEL, levelForMode, nextRunMode, recommendedMode, setChosenMode, bestFor, type RunMode } from '@/platform/playgama/runMode';
+import { markResultsShown, resultsDwellMs, track } from '@/platform/playgama/funnel';
+import { nextEntryAfter } from './nextEntry';
 import { drawRunCard, runText, type RunSummary } from '@/platform/playgama/shareCard';
 import MonthShare from './MonthShare';
 import { shareFileName } from './shareSummary';
@@ -83,6 +86,14 @@ interface MonthResultData {
   /** Set by GameplayCore in a monthly build, read before the run was saved. */
   firstClear?: boolean;
   firstPlatinum?: boolean;
+  /** Run mode; missing on results saved before modes existed (treated as Standard). */
+  mode?: RunMode;
+  /** Assist turned on during the run (Relaxed / first run only). */
+  assisted?: boolean;
+  /** This run was the chapter's first finished song. */
+  chapterFirstFinish?: boolean;
+  /** Percent of scorable notes the player hit or tried for. */
+  participation?: number;
 }
 
 interface Stage {
@@ -94,7 +105,7 @@ interface Stage {
 }
 
 type NextStep =
-  | { kind: 'play'; song: GameSong; idx: number; level: number; isBonus: boolean }
+  | { kind: 'play'; song: GameSong; idx: number; level: number; isBonus: boolean; goal?: string }
   | { kind: 'bonus-gate'; song: GameSong; idx: number; need: number; have: number }
   | { kind: 'chapter-complete' }
   | { kind: 'done' };
@@ -173,7 +184,7 @@ function RunResults({ songId }: { songId: string }) {
     : 0;
   const firstClear = passed && !!result?.firstClear;
   // A Deluxe run's best is kept apart from the track's (saved under the run id).
-  const best = getHighScore(songId);
+  const best = !result?.mode || result.mode === 'standard' ? getHighScore(songId) : bestFor('relaxed', songId)?.score ?? 0;
   // The best is saved before this screen mounts, so a matching score means this run set it.
   const newRecord = passed && !firstClear && !!result && result.score > 0 && best === result.score;
   const fullCombo = passed && result?.goods === 0 && result?.misses === 0;
@@ -185,6 +196,17 @@ function RunResults({ songId }: { songId: string }) {
   const next = useMemo<NextStep | null>(() => {
     if (!stage || !passed) return null;
     const { songs, progress, idx } = stage;
+    // A regular entry: the next unfinished open entry after it (wrapping), or a replay with a goal
+    // once they're all finished, unless an open bonus song is still waiting.
+    if (idx < progress.regular.length && !deluxe) {
+      const pick = nextEntryAfter(progress, idx);
+      const openBonus = pick.goal
+        ? progress.bonus.findIndex((b, bi) => !hasClearedSong(b) && (isStageUnlocked(progress.regular.length + bi, progress) || isBonusSongBought(b.id)))
+        : -1;
+      if (openBonus === -1) {
+        return { kind: 'play', song: pick.song, idx: pick.idx, level: monthStageLevel(meta.month, pick.idx, progress), isBonus: false, goal: pick.goal };
+      }
+    }
     const n = idx + 1;
     if (n < songs.length) {
       const nextSong = songs[n];
@@ -201,7 +223,35 @@ function RunResults({ songId }: { songId: string }) {
     return { kind: 'done' };
   // unlockRev: a bonus song bought or ad-unlocked on this screen opens the next stage.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, passed, unlockRev]);
+  }, [stage, passed, unlockRev, deluxe]);
+
+  // Mode of the next run (the first finish hands over to the recommendation); one tap changes it.
+  const runMode: RunMode = result?.mode ?? 'standard';
+  const ranked = runMode === 'standard';
+  const assisted = !!result?.assisted;
+  const [nextMode, setNextMode] = useState<Exclude<RunMode, 'intro'>>(() => {
+    const m = nextRunMode();
+    return m === 'intro' ? recommendedMode() : m;
+  });
+  const pickNextMode = (m: Exclude<RunMode, 'intro'>) => {
+    audioManager.playSfx('tap_nav', 0.15);
+    setChosenMode(m);
+    setNextMode(m);
+  };
+
+  // Funnel: results_shown once per run, with the entry it proposes next.
+  const shownRef = useRef(false);
+  useEffect(() => {
+    if (shownRef.current || !result || !stage || (passed && !next)) return;
+    shownRef.current = true;
+    markResultsShown();
+    track('results_shown', {
+      song: trackId, outcome: passed ? 'completed' : 'failed', mode: runMode, assisted,
+      proposed: next?.kind === 'play' ? next.song.id : next?.kind ?? null,
+      proposed_mode: next?.kind === 'play' ? nextMode : null,
+      first_finish: !!result.chapterFirstFinish,
+    });
+  }, [result, stage, passed, next, trackId, runMode, assisted, nextMode]);
 
   const banners = useMemo(() => {
     if (!passed || !stage) return [];
@@ -384,10 +434,13 @@ function RunResults({ songId }: { songId: string }) {
     return () => clearTimeout(t);
   }, [passed, step, count]);
 
-  const launch = (target: GameSong, idx: number, level: number, deluxeRun = false) => {
+  const launch = (target: GameSong, idx: number, level: number, deluxeRun = false, mode?: RunMode, source = 'results') => {
     audioManager.playSfx('tap_nav', 0.4);
     sessionStorage.removeItem(`result_${songId}`);
-    const run = prepareMonthRun(target, { month: meta.month, level, idx, cleared: hasClearedSong(target), deluxe: deluxeRun });
+    if (source === 'results_next') {
+      track('next_entry_pressed', { from: trackId, to: target.id, mode: mode ?? nextMode, dwell_ms: resultsDwellMs(), goal: next?.kind === 'play' ? next.goal ?? null : null });
+    }
+    const run = prepareMonthRun(target, { month: meta.month, level, idx, cleared: hasClearedSong(target), deluxe: deluxeRun, mode, source });
     // "Play next" into a new act plays that act's scene first.
     setLocation(stage ? routeThroughStory(target, run, stage.progress.regular, deluxeRun) : run);
   };
@@ -428,12 +481,13 @@ function RunResults({ songId }: { songId: string }) {
       ? `Bonus ${stage.idx - stage.progress.regular.length + 1}/${stage.progress.bonus.length}`
       : `Stage ${stage.idx + 1}/${stage.progress.regular.length}`
     : 'Stage';
-  const level = stage?.level ?? 1;
+  // The chart level this run actually played (Relaxed and the first run play easier charts).
+  const level = levelForMode(runMode, stage?.level ?? 1);
   const coverUrl = song?.coverArt ?? result.coverUrl ?? null;
 
   const on = (s: number) => (step >= s ? ' is-on' : '');
   const locked = (s: number) => (step > s ? ' is-locked' : '');
-  const titleWords = passed ? ['Stage', 'Clear!'] : ['K.O.'];
+  const titleWords = passed ? (ranked ? ['Stage', 'Clear!'] : ['Song', 'Finished!']) : ['K.O.'];
   let li = 0;
 
   return (
@@ -469,6 +523,7 @@ function RunResults({ songId }: { songId: string }) {
           {deluxe
             ? <span className="cr-chip" data-tone="hot">Deluxe</span>
             : <span className="cr-chip" data-tone="hot">Lv {level} · {levelToTier(level)}</span>}
+          {!ranked && <span className="cr-chip">{MODE_LABEL[runMode]}</span>}
         </div>
       </nav>
 
@@ -482,7 +537,11 @@ function RunResults({ songId }: { songId: string }) {
         ))}
       </h1>
       <div className={`cr-subtitle cr-in${on(S.title)}`}>
-        {passed ? (fullCombo ? 'Full combo · flawless transmission' : 'Transmission decoded') : 'Signal lost · transmission not decoded'}
+        {passed
+          ? ranked
+            ? (fullCombo ? 'Full combo · flawless transmission' : 'Transmission decoded')
+            : `Entry finished · ${MODE_LABEL[runMode]}${assisted ? ' · assist used' : ''}`
+          : 'Signal lost · transmission not decoded'}
       </div>
 
       <section className="cr-hero">
@@ -504,7 +563,7 @@ function RunResults({ songId }: { songId: string }) {
               <div className="cr-stamp-rays" />
               <div className="cr-stamp-disc">
                 <span className="cr-stamp-rank">{rank}</span>
-                <span className="cr-stamp-name">{medal ? medal : 'Clear'}</span>
+                <span className="cr-stamp-name">{medal ? medal : ranked ? 'Clear' : 'Finished'}</span>
               </div>
               {step >= S.stamp && <Sparks />}
             </div>
@@ -531,7 +590,8 @@ function RunResults({ songId }: { songId: string }) {
 
           {passed && (
             <div className={`cr-record cr-in${on(S.record)}`}>
-              {newRecord ? <b className="cr-rainbow">New record!!</b>
+              {assisted ? <span className="mr-assist">Assist used · try Standard for ranked medals</span>
+                : newRecord ? <b className="cr-rainbow">New record!!</b>
                 : firstClear ? <b className="cr-rainbow">First clear!</b>
                 : best > result.score ? <span>Best {best.toLocaleString()}</span>
                 : null}
@@ -544,7 +604,8 @@ function RunResults({ songId }: { songId: string }) {
         <div className="mr-banners">
           {banners.map((b) => (
             <div key={b.head} className={`cr-banner cr-in${on(S.banner)}`} role="note"
-              style={b.tone === 'bombshell' ? ({ ['--ch' as string]: '#FF1493' } as CSSProperties) : undefined}>
+              style={b.tone === 'bombshell' ? ({ ['--ch' as string]: '#FF1493' } as CSSProperties)
+                : b.tone === 'assist' ? ({ ['--ch' as string]: '#FFD700' } as CSSProperties) : undefined}>
               <div className="cr-banner-head">{b.head}</div>
               <div className="cr-banner-sub">{b.sub}</div>
             </div>
@@ -561,13 +622,18 @@ function RunResults({ songId }: { songId: string }) {
                 ? <span key={count} className="cr-count">{count}</span>
                 : <span className="cr-gameover">Game over</span>}
             </div>
-            <p className="cs-hook">The next track stays locked until you pass this one. Retry as many times as you need.</p>
+            <p className="cs-hook">The next track opens once you finish this one. Retry, or finish it in Relaxed (no fail, no medal).</p>
             {song && stage && (
               <div className="cs-detail-actions">
-                <button type="button" className="btn-3d" onClick={() => launch(song, stage.idx, stage.level, deluxe)}>
+                <button type="button" className="btn-3d" onClick={() => launch(song, stage.idx, stage.level, deluxe, deluxe ? undefined : runMode, 'results_retry')}>
                   <RotateCcw size={16} /> Retry stage
                 </button>
-                <span className="cr-blink">Insert coin</span>
+                {!deluxe && runMode === 'standard' && (
+                  <button type="button" className="btn-3d" data-tone="quiet" onClick={() => { setChosenMode('relaxed'); launch(song, stage.idx, stage.level, false, 'relaxed', 'results_relaxed'); }}
+                    title="Easier chart, wider timing, no fail. No medal for this run.">
+                    <Play size={16} /> Continue in Relaxed
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -579,12 +645,21 @@ function RunResults({ songId }: { songId: string }) {
             {!next && <p className="cs-hook">Checking the next stage…</p>}
             {next?.kind === 'play' && (
               <>
-                <NextTrack song={next.song} level={next.level} isBonus={next.isBonus} />
+                <NextTrack song={next.song} level={levelForMode(nextMode, next.level)} isBonus={next.isBonus} goal={next.goal} />
                 <div className="cs-detail-actions">
-                  <button type="button" className="btn-3d" onClick={() => launch(next.song, next.idx, next.level)}>
-                    <Play size={16} fill="currentColor" /> Play next
+                  <button type="button" className="btn-3d mr-next-btn" onClick={() => launch(next.song, next.idx, next.level, false, nextMode, 'results_next')}>
+                    <Play size={16} fill="currentColor" /> {next.goal ? 'Play again' : 'Next entry'}
+                    <span className="mr-next-title">· {next.song.title}</span>
                   </button>
-                  <span className="cr-blink">Press start</span>
+                  <span className="mr-mode" role="radiogroup" aria-label="Mode for the next song">
+                    {(['relaxed', 'standard'] as const).map((m) => (
+                      <button key={m} type="button" role="radio" aria-checked={nextMode === m} data-on={nextMode === m || undefined}
+                        onClick={() => pickNextMode(m)}
+                        title={m === 'relaxed' ? 'Easier chart, wider timing, no fail. No medals or leaderboard.' : 'The full chart, with medals and the leaderboard.'}>
+                        {MODE_LABEL[m]}{result?.chapterFirstFinish && recommendedMode() === m ? ' ★' : ''}
+                      </button>
+                    ))}
+                  </span>
                 </div>
               </>
             )}
@@ -615,8 +690,10 @@ function RunResults({ songId }: { songId: string }) {
             )}
             {next?.kind === 'done' && <p className="cs-hook">That's the last open track for now.</p>}
             {stage && (
-              <div className="cs-muted" style={{ fontSize: 12, marginTop: 8 }}>
-                Chapter total {monthTotal(stage.songs).toLocaleString()}
+              <div className="cs-muted mr-progress" style={{ fontSize: 12, marginTop: 8 }}>
+                {meta.name.charAt(0) + meta.name.slice(1).toLowerCase()} {stage.progress.cleared}/{stage.progress.regular.length} finished
+                {stage.progress.bonus.length > 0 && <> · bonus {stage.progress.bonus.filter((b) => hasClearedSong(b)).length}/{stage.progress.bonus.length}</>}
+                {' · '}ranked total {monthTotal(stage.songs).toLocaleString()}
               </div>
             )}
           </div>
@@ -625,7 +702,7 @@ function RunResults({ songId }: { songId: string }) {
 
       <div className={`cr-foot cr-in${on(S.actions)}`}>
         {passed && song && stage && (
-          <button type="button" className="btn-3d" data-tone="quiet" onClick={() => launch(song, stage.idx, stage.level, deluxe)}>
+          <button type="button" className="btn-3d" data-tone="quiet" onClick={() => launch(song, stage.idx, stage.level, deluxe, deluxe ? undefined : nextMode, 'results_retry')}>
             <RotateCcw size={16} /> {deluxe ? 'Replay Deluxe' : 'Replay'}
           </button>
         )}
@@ -635,7 +712,7 @@ function RunResults({ songId }: { songId: string }) {
           </button>
         )}
         <button type="button" className="btn-3d" data-tone="ghost" onClick={() => go(HOME)}>
-          Back to chapter
+          Choose entry
         </button>
       </div>
 
@@ -721,7 +798,7 @@ function Sparks() {
   );
 }
 
-function NextTrack({ song, level, isBonus }: { song: GameSong; level: number; isBonus: boolean }) {
+function NextTrack({ song, level, isBonus, goal }: { song: GameSong; level: number; isBonus: boolean; goal?: string }) {
   return (
     <div className="cr-next">
       <div className="cr-next-art">
@@ -731,6 +808,7 @@ function NextTrack({ song, level, isBonus }: { song: GameSong; level: number; is
       <div style={{ minWidth: 0 }}>
         <div className="cs-eyebrow">Day {song.day} · {isBonus ? 'Bonus · ' : ''}Lv {level}</div>
         <div className="cr-next-title">{song.title}</div>
+        {goal && <div className="cs-muted mr-goal">{goal}</div>}
       </div>
     </div>
   );

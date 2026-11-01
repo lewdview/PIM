@@ -393,3 +393,18 @@
 
 /* The detail panel's cover opens the track's song page. */
 .mb-cover-btn { flex: 0 0 auto; align-self: flex-start; padding: 0; border: 0; background: none; cursor: zoom-in; }
+
+/* Run mode (Relaxed / Standard) in the track panel; phones that hide the detail grid get a one-tap toggle instead. */
+.mb-mode-switch { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); }
+.mb-mode-switch button {
+  font: 700 11px/1 var(--shell-mono); letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 4px 6px; border-radius: 6px; border: 0; background: transparent; color: var(--shell-text-3); cursor: pointer;
+}
+.mb-mode-switch button[data-on] { background: var(--ch, #00F5D4); color: #050402; }
+.mb-mode-btn { display: none; }
+@media (max-aspect-ratio: 1/1) and (max-height: 900px) { .mb-mode-btn { display: inline-flex; } }
+@media (min-aspect-ratio: 1/1) and (max-height: 480px) { .mb-mode-btn { display: inline-flex; } }
+@media (min-aspect-ratio: 1/1) and (max-height: 480px) {
+  .mb-mode-note { display: none; }
+  .mb-actions .mb-btn-label { display: none; }
+}

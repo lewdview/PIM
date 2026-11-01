@@ -17,6 +17,7 @@ import { setGate } from '@/platform/playgama/audioGate';
 import { PLAYGAMA_MONTH, restoreBonusBundle } from '@/platform/playgama/month';
 import { submitMonthScore } from '@/platform/playgama/monthLeaderboard';
 import { TUTORIAL_DONE_KEY } from '@/platform/playgama/tutorialTrack';
+import { startFunnel } from '@/platform/playgama/funnel';
 import TitleScreens from './month/TitleScreens';
 import '@/styles/CardShowcaseStyles.css';
 
@@ -103,6 +104,7 @@ export default function MonthShell() {
   const optionsOpen = useVaultStore((s) => s.optionsModalOpen);
 
   useEffect(() => {
+    startFunnel();
     markGameReady();
     void restoreBonusBundle();
   }, []);
@@ -121,7 +123,17 @@ export default function MonthShell() {
   if (!started) {
     return (
       <ErrorBoundary sectionName="ROOT_APP">
-        <TitleScreens onStart={() => { setLocation(HOME, { replace: true }); setStarted(true); }} />
+        <TitleScreens
+          onStart={(path) => { setLocation(path ?? HOME, { replace: true }); setStarted(true); }}
+          onSettings={() => useVaultStore.getState().setOptionsModalOpen(true)}
+        />
+        {optionsOpen && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 10000 }}>
+            <Suspense fallback={null}>
+              <MonthOptions onClose={() => useVaultStore.getState().setOptionsModalOpen(false)} />
+            </Suspense>
+          </div>
+        )}
       </ErrorBoundary>
     );
   }
