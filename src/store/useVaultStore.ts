@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { submitGameplayRecord, type VaultCard, type OwnedCard } from '../services/vaultService';
 import { supabase } from '../services/supabaseClient';
-import { getBombshellCoverUrl } from '../utils/bombshellCards';
+import { getBombshellCoverUrl, getOwnBombshellCoverFile } from '../utils/bombshellCards';
 import { clearPrimedGameCover } from '../utils/gameCover';
 import { hydrateSettings, persistSettings } from '../utils/settingsStorage';
 
@@ -674,14 +674,17 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     set((state) => {
       const nextCollection = state.collection.map((c) => {
         if (c && c.card && c.card.day === day && (c.cardSet === 'bombshell' || c.card.cardSet === 'bombshell')) {
-          const coverUrl = getBombshellCoverUrl(day, coverArtwork);
+          // Only the displayed art follows the preference. coverArtwork stays the
+          // cover this copy was pulled with: it is what unlocks that cover, so
+          // overwriting it made every other owned cover vanish from the picker.
+          const ownArt = getOwnBombshellCoverFile(c) || undefined;
           return {
             ...c,
-            coverArtwork,
+            coverArtwork: ownArt,
             card: {
               ...c.card,
-              coverArtwork,
-              coverUrl,
+              coverArtwork: ownArt,
+              coverUrl: getBombshellCoverUrl(day, coverArtwork),
             },
           };
         }

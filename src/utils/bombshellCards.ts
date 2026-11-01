@@ -244,6 +244,20 @@ export function getActiveBombshellCover(
 }
 
 /**
+ * The cover file a bombshell copy was actually pulled with. This is the copy's
+ * identity (it is what unlocks the cover), so it never follows the player's
+ * preferred-cover choice.
+ */
+export function getOwnBombshellCoverFile(c: OwnedCard | null | undefined): string | null {
+  if (!c) return null;
+  const art = (c as any).coverArtwork || (c.card as any)?.coverArtwork;
+  if (art) return art;
+  let urlFile = (c.card?.coverUrl || '').split(/[?#]/)[0].split('/').pop() || '';
+  try { urlFile = decodeURIComponent(urlFile); } catch {}
+  return urlFile || null;
+}
+
+/**
  * Check if a card belongs to the Bombshell set.
  */
 export function isBombshellCard(cardOrOwned: any): boolean {

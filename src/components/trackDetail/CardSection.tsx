@@ -7,14 +7,12 @@ import { useLocation } from 'wouter';
 import { Download, ExternalLink, Flame, ShieldCheck, Share2, Layers } from 'lucide-react';
 import { generateCardMetadata, type OwnedCard } from '../../services/vaultService';
 import { useVaultStore, getGen0ShardsForDay, getBombshellShardsForDay } from '../../store/useVaultStore';
-import { RARITY_CONFIG, getMintableCap, getSupplyCap, type Rarity } from '../../utils/rarity';
+import { PRESTIGE_POINTS, RARITY_CONFIG, getMintableCap, getSupplyCap, type Rarity } from '../../utils/rarity';
 import { getArtTypeForDay, OUTFIT_STYLES } from '../../utils/artTypes';
 import { isBombshellCard } from '../../utils/bombshellCards';
 import { getDayFromDate } from '../../utils/dayCalc';
 import RarityBadge from '../RarityBadge';
 import type { TrackDetailData } from './useTrackDetail';
-
-const BASE_POINTS: Record<string, number> = { common: 10, uncommon: 25, rare: 60, legendary: 350, mythic: 800 };
 
 function Row({ label, children, accent }: { label: string; children: React.ReactNode; accent?: string }) {
   return (
@@ -77,7 +75,7 @@ export default function CardSection({ data, selected, onSelect, onBurn, onShare,
   // Stored proofs are 'proof_of_first' or 'proof_of_listen' (the type still says heard_first)
   const proof = card.proof as string | null | undefined;
   const hasRealProof = proof === 'proof_of_first' || proof === 'proof_of_listen';
-  const basePoints = BASE_POINTS[rarity] ?? 0;
+  const basePoints = PRESTIGE_POINTS[rarity] ?? 0;
   const discovererPoints = card.edition === 1 ? 500 : 0;
   const proofPoints = hasRealProof ? 200 : 0;
   const echoPoints = card.isEcho ? 400 : 0;

@@ -19,7 +19,7 @@ import { useGlobalPlayer } from '../../store/useGlobalPlayer';
 import { useVaultStore } from '../../store/useVaultStore';
 import { RARITY_CONFIG, getSupplyCap, type Rarity } from '../../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt } from '../../utils/rarityArtwork';
-import { getBombshellCoverUrl, isBombshellCard } from '../../utils/bombshellCards';
+import { getBombshellCoverUrl, getOwnBombshellCoverFile, isBombshellCard } from '../../utils/bombshellCards';
 import { primeGameCover } from '../../utils/gameCover';
 import { getDateFromDay } from '../../utils/dayCalc';
 import RarityBadge from '../RarityBadge';
@@ -81,6 +81,10 @@ export default function TrackDetail({
   const [copied, setCopied] = useState(false);
   const [previewRarity, setPreviewRarity] = useState<Rarity | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(ownedCard?.id ?? null);
+  // What the card on the left shows: the highlighted copy's own art ('copy'), or
+  // the cover picked in the Artwork tab ('pick'). Highlighting a copy, gen 0
+  // included, always shows that copy.
+  const [coverMode, setCoverMode] = useState<'copy' | 'pick'>(ownedCard ? 'copy' : 'pick');
   const [diff, setDiff] = useState<number>(5);
   const [claiming, setClaiming] = useState(false);
   const [deluxeLoaded, setDeluxeLoaded] = useState(0);
@@ -93,7 +97,11 @@ export default function TrackDetail({
   }, [userId]);
 
   useEffect(() => { setTab(initialTab); }, [day, initialTab]);
-  useEffect(() => { setFocusedId(ownedCard?.id ?? null); setPreviewRarity(null); }, [day, ownedCard?.id]);
+  useEffect(() => {
+    setFocusedId(ownedCard?.id ?? null);
+    setPreviewRarity(null);
+    setCoverMode(ownedCard ? 'copy' : 'pick');
+  }, [day, ownedCard?.id]);
   // Always start from the canonical difficulty: a stale override voids award eligibility.
   useEffect(() => { if (song) setDiff(song.difficultyLevel || 5); }, [song?.id]);
 
@@ -106,7 +114,7 @@ export default function TrackDetail({
   const [activeCover, setActiveCover] = useState<string | null>(null);
   useEffect(() => {
     const pref = data.preferredCover;
-    const own = focused && isBombshellCard(focused) ? focused.coverArtwork || focused.card.coverArtwork || null : null;
+    const own = focused && isBombshellCard(focused) ? getOwnBombshellCoverFile(focused) : null;
     if (pref && unlockedCovers.has(pref)) setActiveCover(pref);
     else if (own && unlockedCovers.has(own)) setActiveCover(own);
     else setActiveCover(unlockedCovers.size > 0 ? Array.from(unlockedCovers)[0] : null);
@@ -115,6 +123,10 @@ export default function TrackDetail({
   const handleSelectCover = (fileName: string) => {
     setActiveCover(fileName);
     setPreviewRarity(null);
+    setCoverMode('pick');
+    // If one of your copies was pulled with this cover, highlight it so the rarity matches the art.
+    const match = ownedCopies.find((c) => isBombshellCard(c) && getOwnBombshellCoverFile(c) === fileName);
+    if (match) setFocusedId(match.id);
     setPreferredCardCover(day, fileName);
     primeGameCover(day, getBombshellCoverUrl(day, fileName));
   };
@@ -123,12 +135,20 @@ export default function TrackDetail({
   const displayRarity: Rarity = (previewRarity || focused?.card.rarity || 'common') as Rarity;
   const rc = RARITY_CONFIG[displayRarity] || RARITY_CONFIG.common;
   const baseCover = song?.coverArt || data.vaultCard?.coverUrl || focused?.card.coverUrl || '';
+  const copyCoverUrl = useMemo(() => {
+    if (!focused) return '';
+    if (isBombshellCard(focused)) {
+      const own = getOwnBombshellCoverFile(focused);
+      return own ? getBombshellCoverUrl(day, own) : focused.card.coverUrl;
+    }
+    return getCoverUrlForRarity(focused.card.coverUrl || baseCover, focused.card.rarity);
+  }, [focused, baseCover, day]);
   const rawCoverUrl = useMemo(() => {
     if (previewRarity) return getCoverUrlForRarity(baseCover, previewRarity);
+    if (coverMode === 'copy' && copyCoverUrl) return copyCoverUrl;
     if (activeCover) return getBombshellCoverUrl(day, activeCover);
-    if (focused) return isBombshellCard(focused) ? focused.card.coverUrl : getCoverUrlForRarity(focused.card.coverUrl, focused.card.rarity);
-    return baseCover;
-  }, [previewRarity, activeCover, focused, baseCover, day]);
+    return copyCoverUrl || baseCover;
+  }, [previewRarity, coverMode, copyCoverUrl, activeCover, baseCover, day]);
   const { src: coverUrl, handleError: handleCoverError } = useSmartCoverArt(rawCoverUrl, displayRarity);
   const isOneOfOne = displayRarity === 'mythic' || (!previewRarity && focused?.edition === 1 && getSupplyCap(displayRarity, day) === 1);
 
@@ -313,7 +333,7 @@ export default function TrackDetail({
             <div className="absolute -inset-4 rounded-3xl opacity-25 blur-2xl" style={{ background: `radial-gradient(circle, ${rc.color}, transparent 70%)` }} />
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border-2 shadow-2xl"
               style={{ borderColor: isOwned || previewRarity ? rc.color : 'rgba(255,255,255,0.15)', boxShadow: `0 0 35px ${rc.color}30, 0 10px 40px rgba(0,0,0,0.8)` }}>
-              <img src={coverUrl || undefined} alt={data.title} onError={handleCoverError}
+              <img key={rawCoverUrl} src={coverUrl || undefined} alt={data.title} onError={handleCoverError}
                 className={`w-full h-full object-cover ${!isOwned && !previewRarity ? 'saturate-[0.6]' : ''}`} />
               {displayRarity === 'mythic' && <MythicPrismFoil />}
               {displayRarity === 'mythic' && <MythicEmberParticles count={12} />}
@@ -436,7 +456,7 @@ export default function TrackDetail({
               <CardSection
                 data={data}
                 selected={focused}
-                onSelect={(c) => { setFocusedId(c.id); setPreviewRarity(null); }}
+                onSelect={(c) => { setFocusedId(c.id); setPreviewRarity(null); setCoverMode('copy'); }}
                 onBurn={handleBurn}
                 onShare={handleShare}
                 onNavigateAway={onClose}

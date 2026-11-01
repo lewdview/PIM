@@ -304,6 +304,15 @@ export function useSmartCoverArt(
 
   const [currentSrc, setCurrentSrc] = useState<string>(cachedUrl || candidates[0] || original);
   const [failed, setFailed] = useState(false);
+  // When the cover changes, drop the previous one right away instead of
+  // showing it until the async resolve below finishes (or forever, if every
+  // candidate check times out).
+  const [srcKey, setSrcKey] = useState(cacheKey);
+  if (srcKey !== cacheKey) {
+    setSrcKey(cacheKey);
+    setCurrentSrc(cachedUrl || candidates[0] || original);
+    setFailed(false);
+  }
 
   useEffect(() => {
     let active = true;

@@ -5,18 +5,21 @@
 import { useState } from 'react';
 import { Check, Lock, Maximize2, Sparkles, Layers, Download } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { RARITY_CONFIG, getSupplyCap, type Rarity } from '../../utils/rarity';
-import { getBombshellCoverUrl, downloadBombshellHiResArtwork } from '../../utils/bombshellCards';
+import { PRESTIGE_POINTS, RARITY_CONFIG, getSupplyCap, type Rarity } from '../../utils/rarity';
+import { getBombshellCoverUrl, getOwnBombshellCoverFile, isBombshellCard, downloadBombshellHiResArtwork } from '../../utils/bombshellCards';
 import { getArtTypeForDay, OUTFIT_STYLES } from '../../utils/artTypes';
 import BombshellLightbox from './BombshellLightbox';
 import type { TrackDetailData } from './useTrackDetail';
 
-const RARITY_EDITIONS: { rarity: Rarity; label: string; desc: string; badge: string; perk: string }[] = [
-  { rarity: 'common', label: 'Standard Edition', desc: 'Base studio master, daily drop mint.', badge: 'STAGE PASS', perk: 'Base Song Score + 1x Multiplier' },
-  { rarity: 'uncommon', label: 'Enhanced Stem', desc: 'Expanded harmonic mix & dynamic EQ tier.', badge: 'SYNTH ACCENT', perk: '1.25x Overdrive Point Boost' },
-  { rarity: 'rare', label: 'Prism Holographic', desc: 'Foil iridescent finish with extended stems.', badge: 'PRISM FOIL', perk: '1.5x Multiplier + Shiny Visual FX' },
-  { rarity: 'legendary', label: 'Gold Inscription', desc: 'Gold leaf finish and the uncompressed studio master.', badge: 'GOLD FOIL', perk: '2.0x Multiplier + Golden Sparkle Aura' },
-  { rarity: 'mythic', label: 'Genesis 1-of-1 Arcane', desc: 'Particle effects and the full multitrack stems.', badge: '1 OF 1 GENESIS', perk: '3.0x Ultra Multiplier + Cosmic Stems Access' },
+// What an edition really changes: art, finish and supply. Score is the same for
+// every edition (the in-song multiplier comes from combo and power-ups only),
+// so no score multipliers are listed here.
+const RARITY_EDITIONS: { rarity: Rarity; label: string; desc: string; badge: string }[] = [
+  { rarity: 'common', label: 'Standard Edition', desc: 'Base studio master, daily drop mint.', badge: 'STAGE PASS' },
+  { rarity: 'uncommon', label: 'Enhanced Stem', desc: 'Expanded harmonic mix & dynamic EQ tier.', badge: 'SYNTH ACCENT' },
+  { rarity: 'rare', label: 'Prism Holographic', desc: 'Foil iridescent finish with extended stems.', badge: 'PRISM FOIL' },
+  { rarity: 'legendary', label: 'Gold Inscription', desc: 'Gold leaf finish and the uncompressed studio master.', badge: 'GOLD FOIL' },
+  { rarity: 'mythic', label: 'Genesis 1-of-1 Arcane', desc: 'Particle effects and the full multitrack stems.', badge: '1 OF 1 GENESIS' },
 ];
 
 interface Props {
@@ -44,7 +47,7 @@ export default function ArtworkSection({ data, activeCover, onSelectCover, previ
     const unlocked = unlockedCovers.has(fileName);
     const active = activeCover === fileName;
     const copy = unlocked
-      ? ownedCopies.find((c) => (c.coverArtwork || c.card.coverArtwork) === fileName || (c.card.coverUrl || '').includes(encodeURIComponent(fileName)))
+      ? ownedCopies.find((c) => isBombshellCard(c) && getOwnBombshellCoverFile(c) === fileName)
       : undefined;
     const copyRc = copy ? RARITY_CONFIG[copy.card.rarity as Rarity] : null;
     return (
@@ -178,7 +181,7 @@ export default function ArtworkSection({ data, activeCover, onSelectCover, previ
             </button>
           )}
         </div>
-        <p className="td-muted">Tap an edition to preview its art on the card.</p>
+        <p className="td-muted">Tap an edition to preview its art on the card. Every edition scores the same in PIM: your multiplier comes from combo and power-ups, not the card.</p>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {RARITY_EDITIONS.map((v) => {
             const rc = RARITY_CONFIG[v.rarity];
@@ -206,7 +209,9 @@ export default function ArtworkSection({ data, activeCover, onSelectCover, previ
           return (
             <div className="p-3.5 rounded-xl border bg-white/[0.02] text-xs" style={{ borderColor: `${rc.color}40` }}>
               <p className="font-bold text-white">{v.desc}</p>
-              <p className="text-[10px] font-mono mt-0.5" style={{ color: rc.color }}>{v.perk}</p>
+              <p className="text-[10px] font-mono mt-0.5" style={{ color: rc.color }}>
+                +{PRESTIGE_POINTS[previewRarity]} vault prestige per copy · {getSupplyCap(previewRarity, day)} max
+              </p>
             </div>
           );
         })()}
