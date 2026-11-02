@@ -70,6 +70,13 @@ export const RARITY_CONFIG: Record<Rarity, RarityConfig> = {
 export const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
 
 /**
+ * Vault prestige a copy of each rarity adds (calculatePrestigeScore and the
+ * leaderboard). This is the only thing rarity adds up: card rarity never
+ * changes the in-song score multiplier, which comes from combo and power-ups.
+ */
+export const PRESTIGE_POINTS: Record<Rarity, number> = { common: 10, uncommon: 25, rare: 60, legendary: 350, mythic: 800 };
+
+/**
  * Get the default supply cap for a rarity tier.
  * Matches backend vault-engine logic.
  */

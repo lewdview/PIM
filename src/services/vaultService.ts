@@ -4,7 +4,7 @@ import {
 } from '../utils/rarity';
 import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 import {
-  getBombshellCoverUrl, pickBombshellArtwork, isBombshellCard,
+  getBombshellCoverUrl, pickBombshellArtwork, isBombshellCard, getOwnBombshellCoverFile,
 } from '../utils/bombshellCards';
 import {
   getAdminConfig,
@@ -183,11 +183,15 @@ export function generateCardMetadata(owned: OwnedCard) {
 
   const isBombshell = isBombshellCard(owned);
   const activeArtwork = owned.coverArtwork || card.coverArtwork || null;
+  // card.coverUrl follows the player's preferred cover for the day; the metadata
+  // image must be the art this copy was pulled with, matching Cover Variant.
+  const ownArtwork = isBombshell ? getOwnBombshellCoverFile(owned) : null;
+  const image = ownArtwork ? getBombshellCoverUrl(card.day, ownArtwork) : card.coverUrl;
 
   return {
     name: `th3scr1b3's 365 Days of Light and Dark - PIM : th3v4ult - Day ${String(card.day).padStart(3, '0')} : ${card.title}${isBombshell ? ' [BOMBSHELL]' : ''}`,
     description: card.description || `TH3V4ULT ${isBombshell ? 'Bombshell Collection' : 'Gen 0 Archive'} - Day ${card.day} of 365.`,
-    image: card.coverUrl,
+    image,
     animation_url: card.audioUrl,
     external_url: `https://vault.th3scr1b3.art/card/${owned.id}`,
     attributes: [
