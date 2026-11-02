@@ -653,9 +653,15 @@ const HAIR_MASS_BEHIND = HAIR_MASS.replace('C86 46 214 46', 'C86 26 214 26');
 function HairBack({ item, color, behind = false }: { item: string; color: string; behind?: boolean }) {
   const { defs, p, dark } = useHairPaint(color);
   const strands = (d: string) => <path d={d} fill="none" stroke={dark} strokeOpacity="0.45" strokeWidth="1" />;
+  const tailClip = useSvgId('tailclip');
+  const ponyClip = useSvgId('ponyclip');
   return (
     <g>
-      <defs>{defs}</defs>
+      <defs>
+        {defs}
+        <clipPath id={tailClip}><path d={TWIN_TAIL} /></clipPath>
+        <clipPath id={ponyClip}><path d={PONYTAIL} /></clipPath>
+      </defs>
       {item === 'long' && <>
         <Cel d={LONG_BACK} fill={p.fill} line={p.stroke} />
         {strands('M114 190 C110 250 112 300 113.8 344 M128 186 C126 260 127 310 128.2 344 M147 190 C148 260 143 310 142.8 344 M172 186 C174 260 173 310 171.8 344 M186 190 C190 250 188 300 186.2 344')}
@@ -665,6 +671,12 @@ function HairBack({ item, color, behind = false }: { item: string; color: string
           <g className="wf-sway" style={{ transformOrigin: '108px 92px', animationDelay: right ? '-2.2s' : '0s' }}>
             <Cel d={TWIN_TAIL} fill={p.fill} line={p.stroke} mirrored={right} />
             {strands('M98 120 C80 170 78 260 84.5 325 M104 112 C92 170 90 260 91.6 324')}
+            {/* A sheen band where the tail curves out under the tie, and ends that darken toward the tips. */}
+            <g clipPath={`url(#${tailClip})`}>
+              <path d="M62 170 C70 160 90 156 104 162 L103 174 C90 168 72 172 63 182 Z" fill="#ffffff" fillOpacity="0.3" />
+              <path d="M66 166 L70 186 M76 162 L79 182 M88 160 L89 178" stroke="#ffffff" strokeOpacity="0.35" strokeWidth="1.2" strokeLinecap="round" />
+              <path d="M56 280 C70 292 86 296 100 290 L100 360 L56 360 Z" fill={dark} fillOpacity="0.28" />
+            </g>
           </g>
         </g>
       ))}
@@ -672,6 +684,10 @@ function HairBack({ item, color, behind = false }: { item: string; color: string
         <g className="wf-sway" style={{ transformOrigin: '170px 66px' }}>
           <Cel d={PONYTAIL} fill={p.fill} line={p.stroke} />
           {strands('M190 90 C220 130 220 220 233 288 M180 86 C206 140 210 230 222 286')}
+          <g clipPath={`url(#${ponyClip})`}>
+            <path d="M200 120 C212 112 228 114 238 124 L237 136 C228 126 212 124 201 132 Z" fill="#ffffff" fillOpacity="0.3" />
+            <path d="M198 250 C214 262 234 266 250 258 L250 320 L198 320 Z" fill={dark} fillOpacity="0.28" />
+          </g>
         </g>
       )}
       <Cel d={behind ? HAIR_MASS_BEHIND : HAIR_MASS} fill={p.fill} line={p.stroke} />
@@ -758,7 +774,8 @@ const LID_CREASE = 'M117.5 107.5 C124 101.5 137.5 101 145 109.5';
 const LID_SHADOW = 'M116 118.5 C121 110 135 108.5 145 121 C135 113.5 123 113.5 117.5 121.5 Z';
 const LOWER_LASH = 'M116.8 121.5 C119.2 128 125.2 131 132.5 130.8';
 // Brows sit high with a gentle arch and the inner end lifted, which reads soft rather than stern.
-const BROW = 'M145.5 96.5 C140 92 131 90 122.5 91 C118.5 91.5 115.5 92.8 113.5 95 C117.5 93.8 121 93.2 125 93.3 C132.8 93.6 139.6 94.6 145.5 96.5 Z';
+// Soft arched brow: the inner end sits level with the arch so she reads relaxed, not stern.
+const BROW = 'M145 93.8 C139.6 90.2 131.4 88.8 123.2 89.4 C118.8 89.8 115.6 91.4 113.4 94 C117.4 92.6 121 92 125 92 C132.4 92 139.2 92.8 145 93.8 Z';
 const EYESHADOW = 'M116.5 117 C118 106 136 100.5 146 112 C146.5 106 136 98 124 100 C117.5 101.2 113.5 108 116.5 117 Z';
 const UPPER_LIP = 'M142 152.6 C144.4 150.4 146.6 148.4 148.7 149.3 Q150 150.1 151.3 149.3 C153.4 148.4 155.6 150.4 158 152.6 Q150 154 142 152.6 Z';
 const LOWER_LIP = 'M142.9 153.1 Q150 154.6 157.1 153.1 C156 157.6 153.4 159.8 150 159.8 C146.6 159.8 144 157.6 142.9 153.1 Z';
@@ -816,8 +833,12 @@ function Face({ eyeColor }: { eyeColor: string }) {
           {[0, 1].map((side) => (
             <g key={side} transform={side ? MIRROR : undefined}>
               {/* Iris tucked under the upper lid, pupil, the lid's shadow on the white. */}
-              <ellipse cx="131" cy="121.5" rx="8.6" ry="10.8" fill={`url(#${irisId})`} />
-              <ellipse cx="131" cy="121.5" rx="8.6" ry="10.8" fill="none" stroke={mix(eyeColor, '#000000', 0.6)} strokeWidth="1" />
+              <ellipse cx="131" cy="121.2" rx="9.2" ry="11.4" fill={`url(#${irisId})`} />
+              {/* Iris fibres radiating from the pupil, and the bright crescent where light pools at the bottom. */}
+              <path d="M131 116 L131 111 M134.6 117.6 L137.6 113.4 M127.4 117.6 L124.4 113.4 M136.4 122 L140 122 M125.6 122 L122 122 M134.8 126.6 L137.6 130 M127.2 126.6 L124.4 130" stroke={mix(eyeColor, '#ffffff', 0.55)} strokeOpacity="0.45" strokeWidth="0.7" strokeLinecap="round" />
+              <path d="M124.4 126.6 Q131 133.4 137.6 126.6 Q131 130.6 124.4 126.6 Z" fill={mix(eyeColor, '#ffffff', 0.7)} opacity="0.75" />
+              <ellipse cx="131" cy="121.2" rx="9.2" ry="11.4" fill="none" stroke={mix(eyeColor, '#000000', 0.6)} strokeWidth="1.1" />
+              <ellipse cx="131" cy="121.6" rx="5.2" ry="6.6" fill="none" stroke={mix(eyeColor, '#000000', 0.35)} strokeOpacity="0.5" strokeWidth="0.6" />
               <ellipse cx="131" cy="122" rx="3.4" ry="5" fill="#120a20" />
               <path d={LID_SHADOW} fill="#3b1d5e" opacity="0.22" />
             </g>
@@ -834,7 +855,7 @@ function Face({ eyeColor }: { eyeColor: string }) {
             <path d={LOWER_LASH} fill="none" stroke={LINE} strokeOpacity="0.7" strokeWidth="0.9" strokeLinecap="round" />
             <path d={LID_CREASE} fill="none" stroke={LINE} strokeOpacity="0.45" strokeWidth="0.9" strokeLinecap="round" />
             {/* Inner corner of the eye. */}
-            <path d="M145.6 121.6 Q147.6 122.6 146 124.2" fill="none" stroke="#c97a7a" strokeWidth="1" strokeLinecap="round" />
+            <path d="M144.6 119.8 Q146.2 120.6 145.2 122" fill="none" stroke="#c97a7a" strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
           </g>
         ))}
       </g>
@@ -857,6 +878,8 @@ function Face({ eyeColor }: { eyeColor: string }) {
       <path d="M141.6 152.4 Q146 153.8 150 153.5 Q154 153.8 158.4 152.4" fill="none" stroke="#5c0f30" strokeWidth="1" strokeLinecap="round" />
       <path d="M140.8 151.8 L142.2 152.8 M159.2 151.8 L157.8 152.8" stroke="#5c0f30" strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
       <path d="M145.6 155.6 Q148 154.9 150.2 155.5" fill="none" stroke="#ffffff" strokeOpacity="0.75" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M152.6 156.4 L154.2 156.2" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="0.9" strokeLinecap="round" />
+      <path d="M147.4 150.6 Q148.6 149.9 149.6 150.5" fill="none" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="0.7" strokeLinecap="round" />
       <path d="M147 161.8 Q150 162.8 153 161.8" fill="none" stroke="#d9826e" strokeOpacity="0.6" strokeWidth="0.9" strokeLinecap="round" />
 
       {/* Pin-up beauty mark. */}
