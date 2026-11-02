@@ -378,7 +378,7 @@ const SPORTS_BRA = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C1
 // that follows the ribcage under the shoulder blades.
 const BRA_RACER = 'M116 199 L126 197.6 C132 214 140 230 150 242 L150 254 L143 254 C138 236 126 216 116 199 Z';
 const BRA_BACK_BAND = 'M98 248 Q150 256 202 248 C202 252 201 256 200 258 C197 266 187 272 179 276 Q150 282 121 276 C113 272 103 266 100 258 C99 256 98 252 98 248 Z';
-const BRA_STRAP = 'M112 214 C114 207 118 201 122 197 L131 196 C128 201 126 207 125.4 213 Z';
+const BRA_STRAP = 'M112 214 C114 207 117 200.6 119.6 195.8 L130.6 191.6 C127.8 198.6 126 206 125.4 213 Z';
 // Mid-thigh bike shorts: waistband at the navel line, snug over the hips, hems curving round each thigh.
 const SHORTS = 'M108 318 Q150 324 192 318 C201 328 211.6 338 211.8 352 C212.2 372 207.6 390 201.6 406 Q178 412 154 408 L150 392 L146 408 Q122 412 98.4 406 C92.4 390 87.8 372 88.2 352 C88.4 338 99 328 108 318 Z';
 const TOES = 'M141 580 L141.4 575.4 M136.8 580.2 L137 575.8 M132.6 579.8 L132.6 575.6 M128.8 579.2 L128.4 575.4';
@@ -994,8 +994,8 @@ function UpperBody({ base }: { base: string }) {
           <g mask={`url(#${armClip}-a)`}><Skin d={ARM} mirrored={m} /></g>
           <Hand />
           {/* Deltoid edge, elbow crease at the waistline, tendons on the back of the hand. */}
-          <path d="M86.5 250 Q90 240 97 233" fill="none" strokeOpacity="0.3" strokeWidth="0.8" />
-          <path d="M79.4 281.6 Q83.4 284.4 87.8 283" fill="none" strokeOpacity="0.45" strokeWidth="0.8" />
+          <path d="M86.5 250 Q90 240 97 233" fill="none" strokeOpacity="0.14" strokeWidth="0.7" />
+          <path d="M80.4 282.4 Q83.6 284 86.6 283.2" fill="none" strokeOpacity="0.2" strokeWidth="0.7" />
           {/* Forearm muscle: the brachioradialis swell turning toward the slimmer wrist. */}
           <path d="M77.6 290 C75.4 302 73.6 314 72.6 324" fill="none" strokeOpacity="0.18" strokeWidth="0.7" />
           <path d="M68.4 343 L67.6 351 M72 344 L71.6 352 M75.6 343.6 L75.8 351.6" fill="none" strokeOpacity="0.16" strokeWidth="0.6" strokeLinecap="round" />
@@ -1034,6 +1034,14 @@ function UpperBody({ base }: { base: string }) {
           <path d="M106 216 C104 226 106 236 112 242" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="2" />
         </g>
       ) : <path d="M130 200 Q138 203 145 200 M155 200 Q162 203 170 200 M147.5 198 Q150 200 152.5 198" fill="none" strokeOpacity="0.4" />}
+      {/* Where the arms hang against the ribcage the torso's side contour is redrawn finer, so the
+          shoulder flows into the arm instead of reading as a ball joint. */}
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined} fill="none" strokeLinecap="round">
+          <path d="M98.4 248 C94.4 230 99.6 208 115.6 196.4" stroke={SKIN} strokeWidth={m ? 2.6 : 1.8} />
+          <path d="M98.4 248 C94.4 230 99.6 208 115.6 196.4" stroke={m ? SKIN_SHADE : SKIN_LINE} strokeOpacity={m ? 0.9 : 0.45} strokeWidth="0.8" />
+        </g>
+      ))}
       {/* Bust volumes sit in front of the collarbones; the sports bra neckline follows their curve. */}
       {!back && [0, 1].map((side) => (
         <g key={side} transform={side ? MIRROR : undefined}>
@@ -1129,7 +1137,6 @@ function BustShading({ opacity = 0.35, upper = true }: { opacity?: number; upper
       <path d="M98 252 Q110 268 124 268 Q140 268 148 256" />
       <path d="M202 252 Q190 268 176 268 Q160 268 152 256" />
       <path d="M150 230 L150 246" strokeOpacity={opacity * 0.8} />
-      <path d="M126 290 Q150 296 174 290" strokeOpacity={opacity * 0.5} />
     </g>
   );
 }
