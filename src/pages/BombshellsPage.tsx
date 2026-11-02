@@ -1,60 +1,52 @@
 // BombshellsPage — dedicated route for the Bombshell variant-cover collection.
 // "/bombshells" — info, real art examples, per-month counts, shard mechanics,
-// and the V⚡ spark rewards for completing full months.
-import { useMemo, useState } from 'react';
+// and the V⚡ spark rewards for completing full months, claimed here (utils/bombshellRewards).
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Bomb, Sparkles, Zap, Image as ImageIcon,
-  Trophy, ChevronRight, Moon, Sun, Package, Puzzle,
+  Trophy, ChevronRight, Moon, Sun, Package, Puzzle, Check, Loader2, Lock,
 } from 'lucide-react';
 import { useVaultStore, AWARD_PLAY_SHARD_THRESHOLD } from '../store/useVaultStore';
+import { useAuthStore } from '../store/useAuthStore';
 import {
-  BOMBSHELL_COVERS_MAP,
   getBombshellCoverUrl,
   getBombshellDayCovers,
 } from '../utils/bombshellCards';
+import {
+  BOMBSHELL_REWARD_SPARKS,
+  claimBombshellReward,
+  fetchBombshellClaims,
+  getBombshellMonthProgress,
+  monthRewardKey,
+  type BombshellRewardKey,
+} from '../utils/bombshellRewards';
 
-// ── Month helpers (2026, not a leap year) ────────────────────────────────────
-
-const MONTHS = [
-  { name: 'January', start: 1, end: 31 },
-  { name: 'February', start: 32, end: 59 },
-  { name: 'March', start: 60, end: 90 },
-  { name: 'April', start: 91, end: 120 },
-  { name: 'May', start: 121, end: 151 },
-  { name: 'June', start: 152, end: 181 },
-  { name: 'July', start: 182, end: 212 },
-  { name: 'August', start: 213, end: 243 },
-  { name: 'September', start: 244, end: 273 },
-  { name: 'October', start: 274, end: 304 },
-  { name: 'November', start: 305, end: 334 },
-  { name: 'December', start: 335, end: 365 },
-];
-
-// ── Spark reward tiers (collection-completion design) ────────────────────────
-// Calibrated against the economy: a bombshell single pull costs 100 V⚡,
-// a standard token pack 275 V⚡, daily streaks pay 10–50 V⚡/day.
+// ── Reward tiers (rules + payout live in utils/bombshellRewards + the server) ──
 
 const REWARD_TIERS = [
   {
+    kind: 'complete' as const,
     name: 'Month Complete',
-    sparks: 1000,
-    desc: 'Own at least one bombshell variant for every day of a calendar month.',
+    sparks: BOMBSHELL_REWARD_SPARKS.complete,
+    desc: 'Own a bombshell variant of every day in a calendar month.',
     color: '#4ade80',
     equiv: '≈ 10 free bombshell pulls',
   },
   {
+    kind: 'mastered' as const,
     name: 'Month Mastered',
-    sparks: 2500,
-    desc: 'Own both a light and a dark variant for every day of a calendar month.',
+    sparks: BOMBSHELL_REWARD_SPARKS.mastered,
+    desc: 'Own both cuts, full-frame and letterbox, of every day in a month. Paid on top of Month Complete.',
     color: '#3b82f6',
     equiv: '≈ 25 free bombshell pulls',
   },
   {
+    kind: 'year' as const,
     name: 'Full Year',
-    sparks: 10000,
-    desc: 'Complete all 12 months. The grand prize — paid once, on top of the month rewards.',
+    sparks: BOMBSHELL_REWARD_SPARKS.year,
+    desc: 'Complete all 12 months. The grand prize, paid once, on top of the month rewards.',
     color: '#ffd700',
     equiv: '≈ 100 free bombshell pulls',
   },
@@ -132,33 +124,100 @@ function SectionTitle({ icon: Icon, title, sub, accent = '#ff1493' }: { icon: an
   );
 }
 
+// ── Claim button ─────────────────────────────────────────────────────────────
+
+function ClaimButton({
+  state, color, sparks, lockedLabel, busy, signedIn, onClaim, compact = false,
+}: {
+  state: 'locked' | 'ready' | 'claimed';
+  color: string;
+  sparks: number;
+  lockedLabel: string;
+  busy: boolean;
+  signedIn: boolean;
+  onClaim: () => void;
+  compact?: boolean;
+}) {
+  const size = compact ? 'px-2.5 py-1.5 text-[10px] min-w-[104px]' : 'w-full px-4 py-2.5 text-xs';
+  const amount = sparks.toLocaleString();
+  if (state === 'claimed') {
+    return (
+      <span className={`${size} inline-flex items-center justify-center gap-1.5 rounded-lg font-mono font-bold uppercase border`}
+        style={{ color, borderColor: `${color}55`, background: `${color}12` }}>
+        <Check size={12} /> Claimed
+      </span>
+    );
+  }
+  if (state === 'locked') {
+    return (
+      <span className={`${size} inline-flex items-center justify-center gap-1.5 rounded-lg font-mono uppercase border border-white/10 text-white/35`}
+        title={`${amount} V⚡ when earned`}>
+        <Lock size={11} /> {lockedLabel} · {amount}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClaim}
+      disabled={busy || !signedIn}
+      title={signedIn ? undefined : 'Sign in to claim'}
+      className={`${size} inline-flex items-center justify-center gap-1.5 rounded-lg font-mono font-black uppercase text-black transition-all hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed`}
+      style={{ background: color, boxShadow: `0 0 16px ${color}66` }}
+    >
+      {busy ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+      {signedIn ? `Claim ${amount}` : `Sign in · ${amount}`}
+    </button>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BombshellsPage() {
   const [, setLocation] = useLocation();
-  const { fragments } = useVaultStore();
+  const collection = useVaultStore((st) => st.collection);
+  const refreshTokenBalance = useVaultStore((st) => st.refreshTokenBalance);
+  const user = useAuthStore((st) => st.user);
 
-  const monthStats = useMemo(() => {
-    let grandCovers = 0;
-    return MONTHS.map((m) => {
-      let covers = 0;
-      let tracked = 0;
-      const daysInMonth = m.end - m.start + 1;
-      for (let d = m.start; d <= m.end; d++) {
-        const entry = BOMBSHELL_COVERS_MAP[String(d)];
-        if (entry) covers += entry.totalCovers || 0;
-        if ((fragments?.[`bombshell-${d}`] ?? 0) >= 1) tracked += 1;
-      }
-      grandCovers += covers;
-      return { ...m, daysInMonth, covers, tracked, complete: tracked >= daysInMonth };
-    });
-  }, [fragments]);
-
-  const grandTotal = useMemo(
-    () => monthStats.reduce((a, m) => a + m.covers, 0),
-    [monthStats]
-  );
+  const monthStats = useMemo(() => getBombshellMonthProgress(collection || []), [collection]);
+  const grandTotal = useMemo(() => monthStats.reduce((a, m) => a + m.covers, 0), [monthStats]);
+  const unlockedTotal = useMemo(() => monthStats.reduce((a, m) => a + m.unlockedCovers, 0), [monthStats]);
   const monthsComplete = monthStats.filter((m) => m.complete).length;
+  const yearComplete = monthsComplete === 12;
+
+  // Claimed rewards come from the server. null = signed out or not reachable.
+  const [claimed, setClaimed] = useState<Set<string> | null>(null);
+  const [claiming, setClaiming] = useState<BombshellRewardKey | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    fetchBombshellClaims().then((c) => { if (live) setClaimed(c); });
+    return () => { live = false; };
+  }, [user?.id]);
+
+  const claim = useCallback(async (key: BombshellRewardKey, label: string) => {
+    if (claiming) return;
+    setClaiming(key);
+    setNotice(null);
+    const res = await claimBombshellReward(key);
+    setClaiming(null);
+    if ('sparks' in res) {
+      setClaimed((c) => new Set([...(c ?? []), key]));
+      setNotice({ tone: 'ok', text: `${label}: +${res.sparks.toLocaleString()} V⚡ added to your balance.` });
+      refreshTokenBalance();
+    } else {
+      if (res.message === 'Already claimed.') setClaimed((c) => new Set([...(c ?? []), key]));
+      setNotice({ tone: 'err', text: res.message });
+    }
+  }, [claiming, refreshTokenBalance]);
+
+  const signedIn = !!user;
+  const isClaimed = (key: BombshellRewardKey) => !!claimed?.has(key);
+  const readyCount = monthStats.reduce((n, m) =>
+    n + (m.complete && !isClaimed(monthRewardKey(m.month, 'complete')) ? 1 : 0)
+      + (m.isMastered && !isClaimed(monthRewardKey(m.month, 'mastered')) ? 1 : 0), 0)
+    + (yearComplete && !isClaimed('year') ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-[#0c0710] text-white relative overflow-hidden">
@@ -304,43 +363,98 @@ export default function BombshellsPage() {
 
         {/* ── MONTH TABLE + REWARDS ── */}
         <motion.section
+          id="rewards"
           initial={{ y: 40, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.6 }}
-          className="mb-12"
+          className="mb-12 scroll-mt-24"
         >
           <SectionTitle icon={Trophy} title="Complete the month, get paid" accent="#4ade80"
-            sub={`${monthsComplete} of 12 months complete. Finish every day of a month — sparks rain.`} />
+            sub={`${monthsComplete} of 12 months complete · ${unlockedTotal.toLocaleString()} of ${grandTotal.toLocaleString()} covers unlocked. Finish every day of a month and claim your sparks here.`} />
+
+          {/* status strip */}
+          <div className="mb-5 flex flex-wrap items-center gap-2 text-[11px] font-mono uppercase tracking-wider">
+            {!signedIn ? (
+              <span className="px-2.5 py-1 rounded-md border border-white/15 bg-white/[0.04] text-white/60 flex items-center gap-1.5">
+                <Lock size={12} /> Sign in to claim rewards
+              </span>
+            ) : readyCount > 0 ? (
+              <span className="px-2.5 py-1 rounded-md border border-[#4ade80]/50 bg-[#4ade80]/10 text-[#4ade80] flex items-center gap-1.5">
+                <Zap size={12} /> {readyCount} reward{readyCount === 1 ? '' : 's'} ready to claim
+              </span>
+            ) : (
+              <span className="px-2.5 py-1 rounded-md border border-white/15 bg-white/[0.04] text-white/60">
+                No rewards ready yet
+              </span>
+            )}
+            {notice && (
+              <span
+                role="status"
+                className="px-2.5 py-1 rounded-md border normal-case tracking-normal"
+                style={notice.tone === 'ok'
+                  ? { borderColor: '#4ade8066', background: '#4ade8014', color: '#4ade80' }
+                  : { borderColor: '#ff6b6b66', background: '#ff6b6b14', color: '#ff9b9b' }}
+              >
+                {notice.text}
+              </span>
+            )}
+          </div>
+
           {/* reward tiers */}
           <div className="grid md:grid-cols-3 gap-4 mb-6">
-            {REWARD_TIERS.map((tier, i) => (
-              <motion.div
-                key={tier.name}
-                initial={{ y: 24, opacity: 0, scale: 0.96 }}
-                whileInView={{ y: 0, opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.12, duration: 0.5 }}
-                whileHover={{ scale: 1.03 }}
-                className="p-5 rounded-xl bg-white/[0.03] border relative overflow-hidden"
-                style={{ borderColor: `${tier.color}44`, boxShadow: `0 0 24px ${tier.color}18` }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap size={18} style={{ color: tier.color }} />
-                  <span className="font-black uppercase tracking-wide text-sm">{tier.name}</span>
-                </div>
-                <div className="text-3xl font-black font-mono mb-2" style={{ color: tier.color }}>
-                  {tier.sparks.toLocaleString()} <span className="text-sm">V⚡</span>
-                </div>
-                <p className="text-xs text-white/60 leading-relaxed">{tier.desc}</p>
-                <p className="mt-2 text-[11px] font-mono text-white/40">{tier.equiv}</p>
-              </motion.div>
-            ))}
+            {REWARD_TIERS.map((tier, i) => {
+              const earned = tier.kind === 'year' ? (yearComplete ? 1 : 0)
+                : monthStats.filter((m) => (tier.kind === 'complete' ? m.complete : m.isMastered)).length;
+              const paid = tier.kind === 'year' ? (isClaimed('year') ? 1 : 0)
+                : monthStats.filter((m) => isClaimed(monthRewardKey(m.month, tier.kind as 'complete' | 'mastered'))).length;
+              return (
+                <motion.div
+                  key={tier.name}
+                  initial={{ y: 24, opacity: 0, scale: 0.96 }}
+                  whileInView={{ y: 0, opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.12, duration: 0.5 }}
+                  className="p-5 rounded-xl bg-white/[0.03] border relative overflow-hidden flex flex-col"
+                  style={{ borderColor: `${tier.color}44`, boxShadow: `0 0 24px ${tier.color}18` }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap size={18} style={{ color: tier.color }} />
+                    <span className="font-black uppercase tracking-wide text-sm">{tier.name}</span>
+                  </div>
+                  <div className="text-3xl font-black font-mono mb-2" style={{ color: tier.color }}>
+                    {tier.sparks.toLocaleString()} <span className="text-sm">V⚡</span>
+                  </div>
+                  <p className="text-xs text-white/60 leading-relaxed">{tier.desc}</p>
+                  <p className="mt-2 text-[11px] font-mono text-white/40">{tier.equiv}</p>
+                  <div className="mt-auto pt-4">
+                    {tier.kind === 'year' ? (
+                      <ClaimButton
+                        color={tier.color}
+                        sparks={tier.sparks}
+                        state={isClaimed('year') ? 'claimed' : yearComplete ? 'ready' : 'locked'}
+                        lockedLabel={`${monthsComplete}/12 months`}
+                        busy={claiming === 'year'}
+                        signedIn={signedIn}
+                        onClaim={() => claim('year', 'Full Year')}
+                      />
+                    ) : (
+                      <div className="text-[11px] font-mono uppercase tracking-wider text-white/50">
+                        {earned}/12 months earned · {paid} claimed
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
-          {/* month progress */}
+
+          {/* month progress + per-month claims */}
           <div className="rounded-xl bg-white/[0.02] border border-white/10 overflow-hidden">
             {monthStats.map((m, i) => {
-              const pct = Math.round((m.tracked / m.daysInMonth) * 100);
+              const pct = Math.round((m.owned / m.days) * 100);
+              const kComplete = monthRewardKey(m.month, 'complete');
+              const kMastered = monthRewardKey(m.month, 'mastered');
               return (
                 <motion.div
                   key={m.name}
@@ -348,36 +462,56 @@ export default function BombshellsPage() {
                   whileInView={{ x: 0, opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: Math.min(i * 0.04, 0.4), duration: 0.4 }}
-                  className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
+                  className="flex flex-wrap md:flex-nowrap items-center gap-x-3 gap-y-2 px-4 py-3 border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
                 >
                   <span className="w-24 flex-shrink-0 text-xs font-mono uppercase text-white/70">{m.name}</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      whileInView={{ width: `${pct}%` }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.7, ease: 'easeOut' }}
-                      className="h-full rounded-full"
-                      style={{
-                        background: m.complete ? '#4ade80' : '#ff1493',
-                        boxShadow: `0 0 8px ${m.complete ? '#4ade80' : '#ff1493'}`,
-                      }}
+                  <div className="flex-1 min-w-[120px]">
+                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        whileInView={{ width: `${pct}%` }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                        className="h-full rounded-full"
+                        style={{
+                          background: m.isMastered ? '#3b82f6' : m.complete ? '#4ade80' : '#ff1493',
+                          boxShadow: `0 0 8px ${m.isMastered ? '#3b82f6' : m.complete ? '#4ade80' : '#ff1493'}`,
+                        }}
+                      />
+                    </div>
+                    <div className="mt-1 text-[10px] font-mono text-white/45">
+                      {m.owned}/{m.days} days · {m.mastered}/{m.days} both cuts · {m.unlockedCovers}/{m.covers} covers
+                    </div>
+                  </div>
+                  <div className="flex gap-2 w-full md:w-auto justify-end">
+                    <ClaimButton
+                      compact
+                      color="#4ade80"
+                      sparks={BOMBSHELL_REWARD_SPARKS.complete}
+                      state={isClaimed(kComplete) ? 'claimed' : m.complete ? 'ready' : 'locked'}
+                      lockedLabel="Complete"
+                      busy={claiming === kComplete}
+                      signedIn={signedIn}
+                      onClaim={() => claim(kComplete, `${m.name} complete`)}
+                    />
+                    <ClaimButton
+                      compact
+                      color="#3b82f6"
+                      sparks={BOMBSHELL_REWARD_SPARKS.mastered}
+                      state={isClaimed(kMastered) ? 'claimed' : m.isMastered ? 'ready' : 'locked'}
+                      lockedLabel="Mastered"
+                      busy={claiming === kMastered}
+                      signedIn={signedIn}
+                      onClaim={() => claim(kMastered, `${m.name} mastered`)}
                     />
                   </div>
-                  <span className="w-28 flex-shrink-0 text-right text-[11px] font-mono text-white/50">
-                    {m.tracked}/{m.daysInMonth} days · {m.covers} covers
-                  </span>
-                  {m.complete && (
-                    <span className="flex-shrink-0 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#4ade80]/15 border border-[#4ade80]/40 text-[#4ade80]">
-                      1,000 V⚡
-                    </span>
-                  )}
                 </motion.div>
               );
             })}
           </div>
           <p className="mt-3 text-[11px] font-mono text-white/35">
-            Progress tracks days with at least one bombshell shard. Rewards are granted per completed month; mastering light + dark doubles down to 2,500 V⚡.
+            Progress counts bombshell cards in your vault, the same covers the Artwork tab unlocks. Each reward pays once per account and the vault checks your cards before paying.
+            Days that ship only one cut need just that cut for Mastered.
           </p>
         </motion.section>
 
