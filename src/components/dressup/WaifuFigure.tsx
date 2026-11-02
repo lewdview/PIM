@@ -302,6 +302,8 @@ function Garment({ id, choice, paths: frontPaths = [], mirror: frontMirror = [],
   // Tops wrap their pattern over the bust, bottoms around the hips.
   const wrap: Wrap | undefined = id === 'top' ? 'bust' : id === 'bottom' ? 'hips' : undefined;
   const wrapId = `${uid}-wrap`;
+  const formClip = `${uid}-form`;
+  const formLight = `${uid}-light`;
   const layer = (d: string, key: string, transform?: string) => (
     <g key={key} transform={transform}>
       <Cel d={d} fill={paint.base} fillOpacity={paint.baseOpacity} texture={paint.texture} textureFilter={wrap && paint.texture ? `url(#${wrapId})` : undefined} line={paint.stroke} mirrored={!!transform} />
@@ -312,6 +314,19 @@ function Garment({ id, choice, paths: frontPaths = [], mirror: frontMirror = [],
       <defs>
         {paint.defs}
         {wrap && paint.texture && <WrapFilter id={wrapId} wrap={wrap} />}
+        {/* Form light: a broad glow from the upper-left key light falling off into shade at the lower right,
+            clipped to the garment so every fabric turns with the body instead of reading flat. */}
+        <radialGradient id={formLight} gradientUnits="userSpaceOnUse" cx="105" cy="190" r="300">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.22" />
+          <stop offset="0.3" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="0.65" stopColor="#2a0a3e" stopOpacity="0.1" />
+          <stop offset="1" stopColor="#2a0a3e" stopOpacity="0.2" />
+        </radialGradient>
+        <clipPath id={formClip}>
+          {paths.map((d, i) => <path key={`p${i}`} d={d} />)}
+          {mirror.map((d, i) => <path key={`m${i}`} d={d} />)}
+          {mirror.map((d, i) => <path key={`r${i}`} d={d} transform={MIRROR} />)}
+        </clipPath>
       </defs>
       {paths.map((d, i) => layer(d, `p${i}`))}
       {mirror.map((d, i) => (
@@ -320,6 +335,9 @@ function Garment({ id, choice, paths: frontPaths = [], mirror: frontMirror = [],
           {layer(d, `mr${i}`, MIRROR)}
         </g>
       ))}
+      {(paths.length > 0 || mirror.length > 0) && (
+        <rect x="0" y="0" width="300" height="600" fill={`url(#${formLight})`} clipPath={`url(#${formClip})`} pointerEvents="none" />
+      )}
       {back ? backDetails : details}
     </g>
   );
@@ -360,7 +378,7 @@ const SPORTS_BRA = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C1
 // that follows the ribcage under the shoulder blades.
 const BRA_RACER = 'M116 199 L126 197.6 C132 214 140 230 150 242 L150 254 L143 254 C138 236 126 216 116 199 Z';
 const BRA_BACK_BAND = 'M98 248 Q150 256 202 248 C202 252 201 256 200 258 C197 266 187 272 179 276 Q150 282 121 276 C113 272 103 266 100 258 C99 256 98 252 98 248 Z';
-const BRA_STRAP = 'M112 214 C114 207 118 201 122 197 L131 196 C128 201 126 207 125.4 213 Z';
+const BRA_STRAP = 'M112 214 C114 207 117 200.6 119.6 195.8 L130.6 191.6 C127.8 198.6 126 206 125.4 213 Z';
 // Mid-thigh bike shorts: waistband at the navel line, snug over the hips, hems curving round each thigh.
 const SHORTS = 'M108 318 Q150 324 192 318 C201 328 211.6 338 211.8 352 C212.2 372 207.6 390 201.6 406 Q178 412 154 408 L150 392 L146 408 Q122 412 98.4 406 C92.4 390 87.8 372 88.2 352 C88.4 338 99 328 108 318 Z';
 const TOES = 'M141 580 L141.4 575.4 M136.8 580.2 L137 575.8 M132.6 579.8 L132.6 575.6 M128.8 579.2 L128.4 575.4';
@@ -653,9 +671,15 @@ const HAIR_MASS_BEHIND = HAIR_MASS.replace('C86 46 214 46', 'C86 26 214 26');
 function HairBack({ item, color, behind = false }: { item: string; color: string; behind?: boolean }) {
   const { defs, p, dark } = useHairPaint(color);
   const strands = (d: string) => <path d={d} fill="none" stroke={dark} strokeOpacity="0.45" strokeWidth="1" />;
+  const tailClip = useSvgId('tailclip');
+  const ponyClip = useSvgId('ponyclip');
   return (
     <g>
-      <defs>{defs}</defs>
+      <defs>
+        {defs}
+        <clipPath id={tailClip}><path d={TWIN_TAIL} /></clipPath>
+        <clipPath id={ponyClip}><path d={PONYTAIL} /></clipPath>
+      </defs>
       {item === 'long' && <>
         <Cel d={LONG_BACK} fill={p.fill} line={p.stroke} />
         {strands('M114 190 C110 250 112 300 113.8 344 M128 186 C126 260 127 310 128.2 344 M147 190 C148 260 143 310 142.8 344 M172 186 C174 260 173 310 171.8 344 M186 190 C190 250 188 300 186.2 344')}
@@ -665,6 +689,12 @@ function HairBack({ item, color, behind = false }: { item: string; color: string
           <g className="wf-sway" style={{ transformOrigin: '108px 92px', animationDelay: right ? '-2.2s' : '0s' }}>
             <Cel d={TWIN_TAIL} fill={p.fill} line={p.stroke} mirrored={right} />
             {strands('M98 120 C80 170 78 260 84.5 325 M104 112 C92 170 90 260 91.6 324')}
+            {/* A sheen band where the tail curves out under the tie, and ends that darken toward the tips. */}
+            <g clipPath={`url(#${tailClip})`}>
+              <path d="M62 170 C70 160 90 156 104 162 L103 174 C90 168 72 172 63 182 Z" fill="#ffffff" fillOpacity="0.3" />
+              <path d="M66 166 L70 186 M76 162 L79 182 M88 160 L89 178" stroke="#ffffff" strokeOpacity="0.35" strokeWidth="1.2" strokeLinecap="round" />
+              <path d="M56 280 C70 292 86 296 100 290 L100 360 L56 360 Z" fill={dark} fillOpacity="0.28" />
+            </g>
           </g>
         </g>
       ))}
@@ -672,6 +702,10 @@ function HairBack({ item, color, behind = false }: { item: string; color: string
         <g className="wf-sway" style={{ transformOrigin: '170px 66px' }}>
           <Cel d={PONYTAIL} fill={p.fill} line={p.stroke} />
           {strands('M190 90 C220 130 220 220 233 288 M180 86 C206 140 210 230 222 286')}
+          <g clipPath={`url(#${ponyClip})`}>
+            <path d="M200 120 C212 112 228 114 238 124 L237 136 C228 126 212 124 201 132 Z" fill="#ffffff" fillOpacity="0.3" />
+            <path d="M198 250 C214 262 234 266 250 258 L250 320 L198 320 Z" fill={dark} fillOpacity="0.28" />
+          </g>
         </g>
       )}
       <Cel d={behind ? HAIR_MASS_BEHIND : HAIR_MASS} fill={p.fill} line={p.stroke} />
@@ -758,7 +792,8 @@ const LID_CREASE = 'M117.5 107.5 C124 101.5 137.5 101 145 109.5';
 const LID_SHADOW = 'M116 118.5 C121 110 135 108.5 145 121 C135 113.5 123 113.5 117.5 121.5 Z';
 const LOWER_LASH = 'M116.8 121.5 C119.2 128 125.2 131 132.5 130.8';
 // Brows sit high with a gentle arch and the inner end lifted, which reads soft rather than stern.
-const BROW = 'M145.5 96.5 C140 92 131 90 122.5 91 C118.5 91.5 115.5 92.8 113.5 95 C117.5 93.8 121 93.2 125 93.3 C132.8 93.6 139.6 94.6 145.5 96.5 Z';
+// Soft arched brow: the inner end sits level with the arch so she reads relaxed, not stern.
+const BROW = 'M145 93.8 C139.6 90.2 131.4 88.8 123.2 89.4 C118.8 89.8 115.6 91.4 113.4 94 C117.4 92.6 121 92 125 92 C132.4 92 139.2 92.8 145 93.8 Z';
 const EYESHADOW = 'M116.5 117 C118 106 136 100.5 146 112 C146.5 106 136 98 124 100 C117.5 101.2 113.5 108 116.5 117 Z';
 const UPPER_LIP = 'M142 152.6 C144.4 150.4 146.6 148.4 148.7 149.3 Q150 150.1 151.3 149.3 C153.4 148.4 155.6 150.4 158 152.6 Q150 154 142 152.6 Z';
 const LOWER_LIP = 'M142.9 153.1 Q150 154.6 157.1 153.1 C156 157.6 153.4 159.8 150 159.8 C146.6 159.8 144 157.6 142.9 153.1 Z';
@@ -816,8 +851,12 @@ function Face({ eyeColor }: { eyeColor: string }) {
           {[0, 1].map((side) => (
             <g key={side} transform={side ? MIRROR : undefined}>
               {/* Iris tucked under the upper lid, pupil, the lid's shadow on the white. */}
-              <ellipse cx="131" cy="121.5" rx="8.6" ry="10.8" fill={`url(#${irisId})`} />
-              <ellipse cx="131" cy="121.5" rx="8.6" ry="10.8" fill="none" stroke={mix(eyeColor, '#000000', 0.6)} strokeWidth="1" />
+              <ellipse cx="131" cy="121.2" rx="9.2" ry="11.4" fill={`url(#${irisId})`} />
+              {/* Iris fibres radiating from the pupil, and the bright crescent where light pools at the bottom. */}
+              <path d="M131 116 L131 111 M134.6 117.6 L137.6 113.4 M127.4 117.6 L124.4 113.4 M136.4 122 L140 122 M125.6 122 L122 122 M134.8 126.6 L137.6 130 M127.2 126.6 L124.4 130" stroke={mix(eyeColor, '#ffffff', 0.55)} strokeOpacity="0.45" strokeWidth="0.7" strokeLinecap="round" />
+              <path d="M124.4 126.6 Q131 133.4 137.6 126.6 Q131 130.6 124.4 126.6 Z" fill={mix(eyeColor, '#ffffff', 0.7)} opacity="0.75" />
+              <ellipse cx="131" cy="121.2" rx="9.2" ry="11.4" fill="none" stroke={mix(eyeColor, '#000000', 0.6)} strokeWidth="1.1" />
+              <ellipse cx="131" cy="121.6" rx="5.2" ry="6.6" fill="none" stroke={mix(eyeColor, '#000000', 0.35)} strokeOpacity="0.5" strokeWidth="0.6" />
               <ellipse cx="131" cy="122" rx="3.4" ry="5" fill="#120a20" />
               <path d={LID_SHADOW} fill="#3b1d5e" opacity="0.22" />
             </g>
@@ -834,7 +873,7 @@ function Face({ eyeColor }: { eyeColor: string }) {
             <path d={LOWER_LASH} fill="none" stroke={LINE} strokeOpacity="0.7" strokeWidth="0.9" strokeLinecap="round" />
             <path d={LID_CREASE} fill="none" stroke={LINE} strokeOpacity="0.45" strokeWidth="0.9" strokeLinecap="round" />
             {/* Inner corner of the eye. */}
-            <path d="M145.6 121.6 Q147.6 122.6 146 124.2" fill="none" stroke="#c97a7a" strokeWidth="1" strokeLinecap="round" />
+            <path d="M144.6 119.8 Q146.2 120.6 145.2 122" fill="none" stroke="#c97a7a" strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
           </g>
         ))}
       </g>
@@ -857,6 +896,8 @@ function Face({ eyeColor }: { eyeColor: string }) {
       <path d="M141.6 152.4 Q146 153.8 150 153.5 Q154 153.8 158.4 152.4" fill="none" stroke="#5c0f30" strokeWidth="1" strokeLinecap="round" />
       <path d="M140.8 151.8 L142.2 152.8 M159.2 151.8 L157.8 152.8" stroke="#5c0f30" strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
       <path d="M145.6 155.6 Q148 154.9 150.2 155.5" fill="none" stroke="#ffffff" strokeOpacity="0.75" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M152.6 156.4 L154.2 156.2" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="0.9" strokeLinecap="round" />
+      <path d="M147.4 150.6 Q148.6 149.9 149.6 150.5" fill="none" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="0.7" strokeLinecap="round" />
       <path d="M147 161.8 Q150 162.8 153 161.8" fill="none" stroke="#d9826e" strokeOpacity="0.6" strokeWidth="0.9" strokeLinecap="round" />
 
       {/* Pin-up beauty mark. */}
@@ -953,8 +994,8 @@ function UpperBody({ base }: { base: string }) {
           <g mask={`url(#${armClip}-a)`}><Skin d={ARM} mirrored={m} /></g>
           <Hand />
           {/* Deltoid edge, elbow crease at the waistline, tendons on the back of the hand. */}
-          <path d="M86.5 250 Q90 240 97 233" fill="none" strokeOpacity="0.3" strokeWidth="0.8" />
-          <path d="M79.4 281.6 Q83.4 284.4 87.8 283" fill="none" strokeOpacity="0.45" strokeWidth="0.8" />
+          <path d="M86.5 250 Q90 240 97 233" fill="none" strokeOpacity="0.14" strokeWidth="0.7" />
+          <path d="M80.4 282.4 Q83.6 284 86.6 283.2" fill="none" strokeOpacity="0.2" strokeWidth="0.7" />
           {/* Forearm muscle: the brachioradialis swell turning toward the slimmer wrist. */}
           <path d="M77.6 290 C75.4 302 73.6 314 72.6 324" fill="none" strokeOpacity="0.18" strokeWidth="0.7" />
           <path d="M68.4 343 L67.6 351 M72 344 L71.6 352 M75.6 343.6 L75.8 351.6" fill="none" strokeOpacity="0.16" strokeWidth="0.6" strokeLinecap="round" />
@@ -993,6 +1034,14 @@ function UpperBody({ base }: { base: string }) {
           <path d="M106 216 C104 226 106 236 112 242" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="2" />
         </g>
       ) : <path d="M130 200 Q138 203 145 200 M155 200 Q162 203 170 200 M147.5 198 Q150 200 152.5 198" fill="none" strokeOpacity="0.4" />}
+      {/* Where the arms hang against the ribcage the torso's side contour is redrawn finer, so the
+          shoulder flows into the arm instead of reading as a ball joint. */}
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined} fill="none" strokeLinecap="round">
+          <path d="M98.4 248 C94.4 230 99.6 208 115.6 196.4" stroke={SKIN} strokeWidth={m ? 2.6 : 1.8} />
+          <path d="M98.4 248 C94.4 230 99.6 208 115.6 196.4" stroke={m ? SKIN_SHADE : SKIN_LINE} strokeOpacity={m ? 0.9 : 0.45} strokeWidth="0.8" />
+        </g>
+      ))}
       {/* Bust volumes sit in front of the collarbones; the sports bra neckline follows their curve. */}
       {!back && [0, 1].map((side) => (
         <g key={side} transform={side ? MIRROR : undefined}>
@@ -1024,9 +1073,22 @@ function UpperBody({ base }: { base: string }) {
         <path d="M125.4 283 C128.6 291 128 299 119 309" />
       </g>
       <Cel d={SHORTS} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
+      {/* Inner shading: a defined shadow wedge along the inseam where the fabric turns between the legs,
+          and from behind, the seat seam with a crease under each side of the seat and a lit upper curve. */}
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined}>
+          <path d="M150 362 C147.4 376 145 390 143.6 405.4 Q145.2 406.6 146 408 L150 392 Z" fill={BASE_SHADE} stroke="none" opacity={m ? 0.7 : 0.5} />
+          {back && <>
+            <path d="M149.6 380 C141 394 126 400.4 106 400.6 C122 405 139 403.6 148.6 396 Z" fill={BASE_SHADE} stroke="none" opacity="0.7" />
+            <path d="M149 382 C141 395 127 400 108 400.4" fill="none" stroke={BASE_LINE} strokeOpacity="0.45" strokeWidth="0.9" strokeLinecap="round" />
+            <path d="M106 352 C110 340 122 334 136 337" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.25 : 0.5} strokeWidth="2.4" strokeLinecap="round" />
+            <path d="M146 336 C143 352 143 368 146 380" fill="none" stroke={BASE_SHADE} strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round" />
+          </>}
+        </g>
+      ))}
       <g fill="none" stroke={BASE_LINE} strokeLinecap="round">
         <path d="M108.6 325 Q150 331 191.4 325" strokeOpacity="0.45" />
-        <path d="M150 352 L150 392" strokeOpacity="0.35" />
+        <path d={back ? 'M150 330 L150 392' : 'M150 352 L150 392'} strokeOpacity={back ? 0.5 : 0.35} />
         <path d="M99.6 399 Q122 405 145 401.6 M155 401.6 Q178 405 200.4 399" strokeOpacity="0.4" />
       </g>
       {/* The shorts' hems cast a thin shadow round each thigh. */}
@@ -1075,7 +1137,6 @@ function BustShading({ opacity = 0.35, upper = true }: { opacity?: number; upper
       <path d="M98 252 Q110 268 124 268 Q140 268 148 256" />
       <path d="M202 252 Q190 268 176 268 Q160 268 152 256" />
       <path d="M150 230 L150 246" strokeOpacity={opacity * 0.8} />
-      <path d="M126 290 Q150 296 174 290" strokeOpacity={opacity * 0.5} />
     </g>
   );
 }
