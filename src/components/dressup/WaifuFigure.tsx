@@ -302,6 +302,8 @@ function Garment({ id, choice, paths: frontPaths = [], mirror: frontMirror = [],
   // Tops wrap their pattern over the bust, bottoms around the hips.
   const wrap: Wrap | undefined = id === 'top' ? 'bust' : id === 'bottom' ? 'hips' : undefined;
   const wrapId = `${uid}-wrap`;
+  const formClip = `${uid}-form`;
+  const formLight = `${uid}-light`;
   const layer = (d: string, key: string, transform?: string) => (
     <g key={key} transform={transform}>
       <Cel d={d} fill={paint.base} fillOpacity={paint.baseOpacity} texture={paint.texture} textureFilter={wrap && paint.texture ? `url(#${wrapId})` : undefined} line={paint.stroke} mirrored={!!transform} />
@@ -312,6 +314,19 @@ function Garment({ id, choice, paths: frontPaths = [], mirror: frontMirror = [],
       <defs>
         {paint.defs}
         {wrap && paint.texture && <WrapFilter id={wrapId} wrap={wrap} />}
+        {/* Form light: a broad glow from the upper-left key light falling off into shade at the lower right,
+            clipped to the garment so every fabric turns with the body instead of reading flat. */}
+        <radialGradient id={formLight} gradientUnits="userSpaceOnUse" cx="105" cy="190" r="300">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.22" />
+          <stop offset="0.3" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="0.65" stopColor="#2a0a3e" stopOpacity="0.1" />
+          <stop offset="1" stopColor="#2a0a3e" stopOpacity="0.2" />
+        </radialGradient>
+        <clipPath id={formClip}>
+          {paths.map((d, i) => <path key={`p${i}`} d={d} />)}
+          {mirror.map((d, i) => <path key={`m${i}`} d={d} />)}
+          {mirror.map((d, i) => <path key={`r${i}`} d={d} transform={MIRROR} />)}
+        </clipPath>
       </defs>
       {paths.map((d, i) => layer(d, `p${i}`))}
       {mirror.map((d, i) => (
@@ -320,6 +335,9 @@ function Garment({ id, choice, paths: frontPaths = [], mirror: frontMirror = [],
           {layer(d, `mr${i}`, MIRROR)}
         </g>
       ))}
+      {(paths.length > 0 || mirror.length > 0) && (
+        <rect x="0" y="0" width="300" height="600" fill={`url(#${formLight})`} clipPath={`url(#${formClip})`} pointerEvents="none" />
+      )}
       {back ? backDetails : details}
     </g>
   );
@@ -1047,9 +1065,22 @@ function UpperBody({ base }: { base: string }) {
         <path d="M125.4 283 C128.6 291 128 299 119 309" />
       </g>
       <Cel d={SHORTS} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
+      {/* Inner shading: a defined shadow wedge along the inseam where the fabric turns between the legs,
+          and from behind, the seat seam with a crease under each side of the seat and a lit upper curve. */}
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined}>
+          <path d="M150 362 C147.4 376 145 390 143.6 405.4 Q145.2 406.6 146 408 L150 392 Z" fill={BASE_SHADE} stroke="none" opacity={m ? 0.7 : 0.5} />
+          {back && <>
+            <path d="M149.6 380 C141 394 126 400.4 106 400.6 C122 405 139 403.6 148.6 396 Z" fill={BASE_SHADE} stroke="none" opacity="0.7" />
+            <path d="M149 382 C141 395 127 400 108 400.4" fill="none" stroke={BASE_LINE} strokeOpacity="0.45" strokeWidth="0.9" strokeLinecap="round" />
+            <path d="M106 352 C110 340 122 334 136 337" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.25 : 0.5} strokeWidth="2.4" strokeLinecap="round" />
+            <path d="M146 336 C143 352 143 368 146 380" fill="none" stroke={BASE_SHADE} strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round" />
+          </>}
+        </g>
+      ))}
       <g fill="none" stroke={BASE_LINE} strokeLinecap="round">
         <path d="M108.6 325 Q150 331 191.4 325" strokeOpacity="0.45" />
-        <path d="M150 352 L150 392" strokeOpacity="0.35" />
+        <path d={back ? 'M150 330 L150 392' : 'M150 352 L150 392'} strokeOpacity={back ? 0.5 : 0.35} />
         <path d="M99.6 399 Q122 405 145 401.6 M155 401.6 Q178 405 200.4 399" strokeOpacity="0.4" />
       </g>
       {/* The shorts' hems cast a thin shadow round each thigh. */}
