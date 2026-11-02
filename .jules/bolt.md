@@ -8,3 +8,7 @@
 ## 2024-05-24 - AudioPreview Re-render Optimization
 **Learning:** Found that `AudioPreview` was subscribing to `duration` from the Zustand global player store. Since duration can update asynchronously (e.g. metadata loading), this caused the parent component to re-render.
 **Action:** Extracted the `duration` subscription into the smaller, dedicated `AudioPreviewTime` subcomponent along with the formatting logic.
+
+## 2024-11-09 - LaunchPage Progress Re-renders
+**Learning:** `LaunchPage` was subscribing directly to `progress` and `currentTime` from the `useGlobalPlayer` Zustand store. Because this component is huge and these properties update up to 60 times a second, it caused major performance bottlenecks and CPU utilization during audio playback on the marketing launchpad page.
+**Action:** Extracted the progress bar and time readout into a standalone `TransmissionTransportProgress` subcomponent and passed the static `isThisTrack` and `duration` values as props, avoiding the massive parent component from re-rendering on every audio tick.

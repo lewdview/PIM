@@ -37,6 +37,30 @@ import { useAuthStore } from '../store/useAuthStore';
 import { logAnalyticsEvent } from '../services/telemetryService';
 import '../styles/LaunchPage.css';
 
+// ── Extracted Components ──────────────────────────────────────────────────────
+
+function TransmissionTransportProgress({ isThisTrack, duration }: { isThisTrack: boolean; duration: number }) {
+  const progress = useGlobalPlayer((s) => (isThisTrack ? s.progress : 0));
+  const currentTime = useGlobalPlayer((s) => (isThisTrack ? s.currentTime : 0));
+
+  const fmt = (s: number) => {
+    const m = Math.floor(s / 60);
+    const rs = Math.floor(s % 60);
+    return `${m}:${rs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <>
+      <div className="lp-tx-progress" aria-hidden="true">
+        <div className="lp-tx-progress-fill" style={{ width: `${isThisTrack ? progress * 100 : 0}%` }} />
+      </div>
+      <span className="lp-tx-time">
+        {fmt(isThisTrack ? currentTime : 0)} / {duration ? fmt(duration) : '—'}
+      </span>
+    </>
+  );
+}
+
 // ── Static data ──────────────────────────────────────────────────────────────
 
 const TOTAL_BOMBSHELL_VARIANTS = Object.values(BOMBSHELL_COVERS_MAP).reduce(
@@ -416,8 +440,6 @@ function TransmissionSection({
   // Live player wiring — the global singleton, so playback survives navigating into the game.
   const currentTrack = useGlobalPlayer((s) => s.currentTrack);
   const isPlaying = useGlobalPlayer((s) => s.isPlaying);
-  const progress = useGlobalPlayer((s) => s.progress);
-  const currentTime = useGlobalPlayer((s) => s.currentTime);
   const play = useGlobalPlayer((s) => s.play);
   const pause = useGlobalPlayer((s) => s.pause);
 
@@ -553,12 +575,7 @@ function TransmissionSection({
                   {live ? <Pause size={18} /> : <Play size={18} />}
                   {live ? 'Pause' : isThisTrack ? 'Resume' : 'Listen now'}
                 </button>
-                <div className="lp-tx-progress" aria-hidden="true">
-                  <div className="lp-tx-progress-fill" style={{ width: `${isThisTrack ? progress * 100 : 0}%` }} />
-                </div>
-                <span className="lp-tx-time">
-                  {fmt(isThisTrack ? currentTime : 0)} / {duration ? fmt(duration) : '—'}
-                </span>
+                <TransmissionTransportProgress isThisTrack={isThisTrack} duration={duration} />
               </div>
 
               <div className="lp-tx-actions">
