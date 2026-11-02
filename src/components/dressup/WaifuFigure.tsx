@@ -355,13 +355,13 @@ const TORSO = 'M116 196 C126 193 133 191 138 190 Q150 199 162 190 C167 191 174 1
 // Arms sit in a slight A-pose so they frame the curves instead of hiding them.
 // The arm runs into the back of the hand in one contour, so there is no seam at the wrist. The
 // outer forearm swells just below the elbow (brachioradialis) and the inner edge narrows to the wrist.
-const ARM = 'M118 198 C98 200 88 212 85 230 C82.6 246 80.4 262 78.6 278 C77.4 286 75 292 72.6 302 C70.6 314 69.2 326 68 336 C64.6 342 62.4 348 62.4 353.6 C62.2 357.4 62.6 361.4 63.6 364 C64.4 366 66.2 366 66.6 363.8 C66.8 362.6 66.8 361.4 66.9 360.4 C67 363.4 67.4 367.6 68.6 369.2 C69.8 370.6 71.1 369.6 71.2 367.6 C71.3 365 71.3 362.6 71.3 361 C71.5 364.6 72 369.6 73.4 371 C74.8 372.2 75.9 370.8 75.9 368.4 C75.9 365.6 75.9 363 76 361 C76.3 364 76.8 368.2 78 369.2 C79.4 370.2 80.3 367.8 80.4 364.6 C80.6 361 80.7 358 80.6 355.6 C80.6 350 79.6 345 78.2 340.6 C79.4 330 82.6 316 85.6 304 C87.4 296 89.4 291 90.6 287 C93.4 270 98 252 104 238 Z';
+const ARM = 'M118 198 C98 200 88 212 85 230 C82.6 246 80.4 262 78.6 278 C77.4 286 75 292 72.6 302 C70.6 314 69.2 326 68 336 C65.5 341.8 63.6 347.4 63.6 352.5 C63.4 356 63.8 359.7 64.6 362.1 C65.3 363.9 66.9 363.9 67.2 361.9 C67.4 360.8 67.4 359.7 67.5 358.8 C67.6 361.5 67.9 365.4 68.9 366.9 C70 368.2 71.1 367.2 71.2 365.4 C71.3 363 71.3 360.8 71.3 359.3 C71.4 362.6 71.9 367.2 73.1 368.5 C74.3 369.6 75.2 368.3 75.2 366.1 C75.2 363.6 75.2 361.2 75.3 359.3 C75.6 362.1 76 365.9 77 366.9 C78.2 367.8 79 365.6 79.1 362.6 C79.3 359.3 79.3 356.6 79.3 354.4 C79.3 349.2 78.4 344.6 77.2 340.6 C79.4 330 82.6 316 85.6 304 C87.4 296 89.4 291 90.6 287 C93.4 270 98 252 104 238 Z';
 // Relaxed hanging hand (her right; mirrored for the left), seen from the front with the palm to
 // the thigh: the back of the hand, four fingers in length order (middle > ring >= index > little,
 // little finger on the outside), knuckles on an arc, and the thumb in front on the inner side.
 // Thumb tucked behind the index finger on the inner side: drawn under the arm, so only a smooth
 // sliver shows along the edge of the hand.
-const THUMB = 'M77.4 341.4 C81.4 344.4 83.6 349.4 83.6 354.6 C83.6 359.2 82.4 362.6 80.4 364.4 L76 360 L75.6 344 Z';
+const THUMB = 'M76.5 341.3 C79.9 344 81.8 348.6 81.8 353.4 C81.8 357.7 80.8 360.8 79.1 362.4 L75.3 358.4 L75 343.7 Z';
 // Leg and foot in one contour, front view. Outer calf swells high, inner calf low; the knee is the
 // narrow point; the ankle tapers to the malleoli; the foot flares to five toes, big toe inside.
 const LEG = 'M89.4 344 L150 344 C150.5 372 148.5 404 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141 540 140 548 140.8 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 C142.2 581.4 141.4 580.8 141 580 C140 581.6 137.6 581.8 136.8 580.2 C135.8 581.4 133.4 581.4 132.6 579.8 C131.6 580.8 129.4 580.6 128.8 579.2 C127.4 579.8 125 579.2 124.8 577.4 C124.4 574.4 125.4 570.4 126 567 C126.8 562 127.8 558 127.4 552 C127 536 120.4 516 114.6 500 C110.8 488 110.6 474 113 464 C114.6 458 117.4 453 117.4 448 C112 436 103 422 97.6 404 C92.4 386 88.8 366 89.4 344 Z';
@@ -992,7 +992,8 @@ function UpperBody({ base }: { base: string }) {
           <Skin d={THUMB} depth={0.35} mirrored={m} />
           <Cel d={ARM} fill={SKIN} shade="#d9826e" shadeOpacity={0.55} line={SKIN_LINE} depth={0.3} weight={0.8} mirrored={m} />
           <g mask={`url(#${armClip}-a)`}><Skin d={ARM} mirrored={m} /></g>
-          <Hand />
+          {/* Hand details drawn in the original hand space, squeezed to the slimmer hand. */}
+          <g transform="matrix(0.86 0 0 0.92 9.94 27.2)"><Hand /></g>
           {/* Deltoid edge, elbow crease at the waistline, tendons on the back of the hand. */}
           <path d="M86.5 250 Q90 240 97 233" fill="none" strokeOpacity="0.14" strokeWidth="0.7" />
           <path d="M80.4 282.4 Q83.6 284 86.6 283.2" fill="none" strokeOpacity="0.2" strokeWidth="0.7" />
