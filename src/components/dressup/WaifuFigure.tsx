@@ -939,8 +939,9 @@ function Body() {
             <path d="M130.4 574 Q136 578.6 142 576" fill="none" stroke={SKIN_SHADE} strokeWidth="1.6" strokeLinecap="round" />
           </> : <>
             {/* Knee: the kneecap's lower edge and the dimple above it. */}
-            <path d="M124 460 Q131 464 138 460 M127.5 449 Q131 447 135 449" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.9" />
-            <path d="M125 461.6 Q131 467 137.4 461.6 Q131 470 125 461.6 Z" fill={SKIN_SHADE} stroke="none" opacity="0.8" />
+            {/* Kept faint and open-ended so the knee reads as form, not a doll's joint. */}
+            <path d="M126 460.6 Q131 463.6 136 460.6 M128.4 449.4 Q131 448 133.6 449.4" fill="none" stroke={SKIN_LINE} strokeOpacity="0.22" strokeWidth="0.8" strokeLinecap="round" />
+            <path d="M126 462 Q131 466 136.4 462 Q131 468 126 462 Z" fill={SKIN_SHADE} stroke="none" opacity="0.5" />
             <path d="M134 472 C135 490 134.6 508 132.6 526" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.25 : 0.55} strokeWidth="2.2" strokeLinecap="round" />
             <path d={TOES} fill="none" stroke={SKIN_LINE} strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
             {/* Toenails on every toe (big toe largest), a crease where the toes meet the ball of the foot,
