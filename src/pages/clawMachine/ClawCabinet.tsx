@@ -185,7 +185,12 @@ export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled
       if (typing()) return;
       if (e.key === 'ArrowLeft') { dirRef.current = -1; e.preventDefault(); }
       else if (e.key === 'ArrowRight') { dirRef.current = 1; e.preventDefault(); }
-      else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); drop(); }
+      else if (e.key === ' ' || e.key === 'ArrowDown') {
+        // Let Space activate whatever button or link has focus (prize door, tabs…).
+        if (e.key === ' ' && (document.activeElement as HTMLElement | null)?.closest('button, a, [role="button"], [role="tab"]')) return;
+        e.preventDefault();
+        drop();
+      }
     };
     const up = (e: KeyboardEvent) => {
       if ((e.key === 'ArrowLeft' && dirRef.current < 0) || (e.key === 'ArrowRight' && dirRef.current > 0)) dirRef.current = 0;
