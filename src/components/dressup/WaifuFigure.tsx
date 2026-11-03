@@ -949,138 +949,229 @@ function Body() {
 }
 
 
-/** Torso, arms and the base layer; `base` colours the sports bra and bike shorts. */
-function UpperBody({ base }: { base: string }) {
+/** Torso, arms and the base layer.
+ *  When nude=true the sports bra + shorts are omitted and soft nipple outlines
+ *  are drawn on the front view only.
+ */
+function UpperBody({ base, nude = false }: { base: string; nude?: boolean }) {
   const BASE_FILL = base;
   const BASE_SHADE = mix(base, '#7a1f52', 0.35);
   const BASE_LINE = mix(base, '#2a0a1e', 0.62);
   const hipClip = useSvgId('hip');
   const armClip = useSvgId('arm');
+  const braClip = useSvgId('bra');
   const back = useBack();
+
   return (
     <g stroke={SKIN_LINE} strokeWidth="1.1" strokeLinejoin="round">
-      {/* Below the knuckles the arm fades to a finer cel and contour drawn underneath it: at the arm's full depth
-          the shadow and the heavy shadow-side line fray in the narrow gaps between the fingers. */}
+      {/* Below the knuckles the arm fades to a finer cel and contour drawn underneath it */}
       <defs>
-        <clipPath id={hipClip} clipPathUnits="userSpaceOnUse"><rect x="60" y="344.8" width="90" height="40" /></clipPath>
-        <linearGradient id={`${armClip}-g`} gradientUnits="userSpaceOnUse" x1="0" y1="351" x2="0" y2="361">
+        <clipPath id={hipClip} clipPathUnits="userSpaceOnUse">
+          <rect x="60" y="344.8" width="90" height="40" />
+        </clipPath>
+        <linearGradient
+          id={`${armClip}-g`}
+          gradientUnits="userSpaceOnUse"
+          x1="0"
+          y1="351"
+          x2="0"
+          y2="361"
+        >
           <stop offset="0" stopColor="#fff" />
           <stop offset="1" stopColor="#000" />
         </linearGradient>
-        <mask id={`${armClip}-a`} {...MASK_BOX}><rect x="-320" y="-120" width="940" height="840" fill={`url(#${armClip}-g)`} /></mask>
+        <mask id={`${armClip}-a`} {...MASK_BOX}>
+          <rect x="-320" y="-120" width="940" height="840" fill={`url(#${armClip}-g)`} />
+        </mask>
       </defs>
+
+      {/* Arms + hands */}
       {[false, true].map((m) => (
         <g key={String(m)} transform={m ? MIRROR : undefined}>
           <Skin d={THUMB} depth={0.35} mirrored={m} />
-          <Cel d={ARM} fill={SKIN} shade="#d9826e" shadeOpacity={0.55} line={SKIN_LINE} depth={0.3} weight={0.8} mirrored={m} />
-          <g mask={`url(#${armClip}-a)`}><Skin d={ARM} mirrored={m} /></g>
-          <Hand />
-          {/* Deltoid edge, elbow crease at the waistline, tendons on the back of the hand. */}
-          <path d="M86.5 250 Q90 240 97 233" fill="none" strokeOpacity="0.3" strokeWidth="0.8" />
-          <path d="M79.4 281.6 Q83.4 284.4 87.8 283" fill="none" strokeOpacity="0.45" strokeWidth="0.8" />
-          {/* Forearm muscle: the brachioradialis swell turning toward the slimmer wrist. */}
+          <Cel
+            d={ARM}
+            fill={SKIN}
+            shade="#d9826e"
+            shadeOpacity={0.55}
+            line={SKIN_LINE}
+            depth={0.3}
+            weight={0.8}
+            mirrored={m}
+          />
+          <g mask={`url(#${armClip}-a)`}>
+            <Skin d={ARM} mirrored={m} />
+          </g>
+
+          {/* Hand details drawn in the original hand space, squeezed to the slimmer hand */}
+          <g transform="matrix(0.86 0 0 0.92 9.94 27.2)">
+            <Hand />
+          </g>
+
+          {/* Deltoid edge, elbow crease, tendons */}
+          <path d="M86.5 250 Q90 240 97 233" fill="none" strokeOpacity="0.14" strokeWidth="0.7" />
+          <path d="M80.4 282.4 Q83.6 284 86.6 283.2" fill="none" strokeOpacity="0.2" strokeWidth="0.7" />
           <path d="M77.6 290 C75.4 302 73.6 314 72.6 324" fill="none" strokeOpacity="0.18" strokeWidth="0.7" />
-          <path d="M68.4 343 L67.6 351 M72 344 L71.6 352 M75.6 343.6 L75.8 351.6" fill="none" strokeOpacity="0.16" strokeWidth="0.6" strokeLinecap="round" />
-          {/* Highlights down the outer edge of the upper arm and forearm, brighter on the lit arm. */}
-          <path d="M97 204 C91 212 88.4 224 87.6 238 M80.6 290 C78.8 300 77 310 75.6 320" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.2 : 0.5} strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M68.4 343 L67.6 351 M72 344 L71.6 352 M75.6 343.6 L75.8 351.6"
+            fill="none"
+            strokeOpacity="0.16"
+            strokeWidth="0.6"
+            strokeLinecap="round"
+          />
         </g>
       ))}
-      <Skin d={NECK} depth={0.5} />
-      {/* Chin shadow, neck tendons and the notch between the collarbones. */}
-      {!back && <path d="M141 168 Q150 182 159 168 L159 178 Q150 188 141 178 Z" fill={SKIN_SHADE} stroke="none" opacity="0.85" />}
+
+      {/* Torso skin always present */}
       <Skin d={TORSO} />
-      {/* Soft neck base: hide the torso's top contour so the neck flows into the chest, then the
-          tendons converge into the notch between the collarbones. */}
-      <path d="M137.6 187.6 Q150 197.4 162.4 187.6 L164 199.6 Q150 205 136 199.6 Z" fill={SKIN} stroke="none" />
-      {!back && <>
-        <path d="M143.4 180 Q145.6 189 148.6 197 M156.6 180 Q154.4 189 151.4 197" fill="none" strokeOpacity="0.16" />
-        <path d="M137 194 Q141 197.6 146 198.4 M163 194 Q159 197.6 154 198.4" fill="none" stroke={SKIN_SHADE} strokeWidth="2.4" strokeLinecap="round" />
-      </>}
-      {/* Trapezius: the slope from the neck down to each shoulder, over the torso's top edge. */}
-      {[false, true].map((m) => (
-        <g key={String(m)} transform={m ? MIRROR : undefined}>
-          <path d="M141.4 170 C140.4 183 131 191 111 197.6 L122 201 L139 196 Z" fill={SKIN} stroke="none" />
-          {m && <path d="M141.4 170 C140.4 183 131 191 111 197.6 L118 199.6 C130 195 137.6 189 140 180 Z" fill="#d9826e" fillOpacity="0.4" stroke="none" />}
-          <path d="M141.4 170 C140.4 183 131 191 111 197.6" fill="none" strokeWidth={m ? 1.8 : 1.1} />
-        </g>
-      ))}
-      {back ? (
-        // From behind: the nape, the spine running down the back, and the shoulder blades.
-        <g fill="none" strokeLinecap="round">
-          <path d="M150 178 L150 196" strokeOpacity="0.22" />
-          <path d="M150 204 C149.4 240 149.4 280 150 318" strokeOpacity="0.2" strokeWidth="1" />
-          <path d="M146 258 C147.6 280 147.6 300 146.4 316 M154 258 C152.4 280 152.4 300 153.6 316" stroke={SKIN_SHADE} strokeWidth="2" />
-          {[false, true].map((m) => (
-            <path key={String(m)} transform={m ? MIRROR : undefined} d="M118 212 C110 222 110 238 120 246 C128 250 136 244 139 236" strokeOpacity="0.22" strokeWidth="1" />
-          ))}
-          <path d="M106 216 C104 226 106 236 112 242" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="2" />
-        </g>
-      ) : <path d="M130 200 Q138 203 145 200 M155 200 Q162 203 170 200 M147.5 198 Q150 200 152.5 198" fill="none" strokeOpacity="0.4" />}
-      {/* Bust volumes sit in front of the collarbones; the sports bra neckline follows their curve. */}
-      {!back && [0, 1].map((side) => (
-        <g key={side} transform={side ? MIRROR : undefined}>
+
+      {/* Bust volumes (always drawn so clothing can sit on top) */}
+      {[false, true].map((side) => (
+        <g key={String(side)} transform={side ? MIRROR : undefined}>
           <Skin d={BUST} mirrored={!!side} depth={0.8} />
-          <path d="M104 216 Q107 211 112 209" fill="none" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="2.2" strokeLinecap="round" />
         </g>
       ))}
-      {[false, true].map((m) => (
-        <g key={String(m)} transform={m ? MIRROR : undefined}>
-          {/* Skin patch over the hip where the torso and leg shapes meet, so the high leg cut shows no seam. */}
-          <path d="M93.4 334 C90.4 340 89.6 346 89.6 352 C89.6 358 90 362 90.6 366 L150 378 L150 334 Z" fill={SKIN} stroke="none" />
-          {/* Redraw the top of the leg over the patch so its contour and cel shadow run unbroken up to the leg cut. */}
-          <g clipPath={`url(#${hipClip})`}><Skin d={LEG} mirrored={m} /></g>
-          <path d="M89.2 343 L89.4 345.4" fill="none" strokeWidth={m ? 1.8 : 1.1} />
-          <path d="M90 345 C102 350 124 360 141 373" fill="none" stroke={SKIN_SHADE} strokeWidth="4" strokeLinecap="round" />
-        </g>
-      ))}
-      {/* Midriff form: the bra band's cast shadow, the waist turning away on the shadow side, a soft
-          line down the centre and a highlight along the lit side of the waist. */}
-      <path d="M121 276 Q150 282 179 276 L176.4 282 Q150 289 123.6 282 Z" fill={SKIN_SHADE} stroke="none" />
-      <path d="M177 278 C172 288 173 298 186 312 L192 318 L183 318 C174 308 168 296 171.4 283 Z" fill={SKIN_SHADE} stroke="none" />
-      <path d="M123 278 C128 288 127 298 114 312 L111 315 C120 304 124 294 121.6 284 Z" fill={SKIN_SHADE} stroke="none" opacity="0.6" />
-      {!back && <path d="M150 284 L150 293" fill="none" strokeOpacity="0.18" strokeWidth="0.9" strokeLinecap="round" />}
-      <path d="M126.4 286 C127.6 294 125 302 118 310" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round" />
-      {!back && <path d="M150 296 Q148.6 300 150 304" fill="none" strokeOpacity="0.35" strokeWidth="1" strokeLinecap="round" />}
-      {/* Cool rim light on the shadow side: outer upper arm, forearm and waist. */}
-      <g transform={MIRROR} fill="none" stroke="#dbeafe" strokeOpacity="0.7" strokeWidth="1.3" strokeLinecap="round">
-        <path d="M87.2 228 C85.8 242 84.2 256 82.6 268 M74.2 300 C72.8 310 71.6 320 70.6 330" />
-        <path d="M125.4 283 C128.6 291 128 299 119 309" />
-      </g>
-      <Cel d={SHORTS} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
-      <g fill="none" stroke={BASE_LINE} strokeLinecap="round">
-        <path d="M108.6 325 Q150 331 191.4 325" strokeOpacity="0.45" />
-        <path d="M150 352 L150 392" strokeOpacity="0.35" />
-        <path d="M99.6 399 Q122 405 145 401.6 M155 401.6 Q178 405 200.4 399" strokeOpacity="0.4" />
-      </g>
-      {/* The shorts' hems cast a thin shadow round each thigh. */}
-      <path d="M98.4 406 Q122 412 146 408 L146.4 412.4 Q123 416.6 100 411 Z M201.6 406 Q178 412 154 408 L153.6 412.4 Q177 416.6 200 411 Z" fill={SKIN_SHADE} stroke="none" />
-      <g fill="none" stroke="#ffffff" strokeLinecap="round">
-        <path d="M94 352 C94 366 96 380 100 392" strokeWidth="2.6" strokeOpacity="0.6" />
-        <path d="M112 330 C108 336 104 342 102 348" strokeWidth="2" strokeOpacity="0.45" />
-      </g>
-      {back ? <>
-        {/* Racerback: the straps run from the shoulders into a centre panel down to a wide band. */}
-        {[false, true].map((m) => (
-          <g key={String(m)} transform={m ? MIRROR : undefined}>
-            <Cel d={BRA_RACER} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} mirrored={m} weight={0.8} />
+
+      {/* ---------- Clothing / Nude switch ---------- */}
+      {!nude ? (
+        /* ===== CLOTHED VERSION (sports bra + fabric form from PR #229) ===== */
+        <>
+          <Cel d={SPORTS_BRA} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
+
+          {/* Knit form: each cup darkens as it turns under and away from the light */}
+          <clipPath id={braClip}>
+            <path d={SPORTS_BRA} />
+          </clipPath>
+          <g clipPath={`url(#${braClip})`} stroke="none">
+            <path
+              d="M96 244 C100 258 112 266 126 266 C138 266 146 258 149 248 C147 262 139 272 124 272 C110 272 99 264 96 252 Z"
+              fill={BASE_SHADE}
+              fillOpacity="0.55"
+            />
+            <path
+              d="M151 248 C154 258 162 266 176 266 C190 266 200 258 204 244 L204 252 C201 264 190 272 176 272 C161 272 153 262 151 248 Z"
+              fill={BASE_SHADE}
+              fillOpacity="0.7"
+            />
+            <path
+              d="M190 214 C199 220 204 230 204 244 C198 236 192 226 182 220 Z"
+              fill={BASE_SHADE}
+              fillOpacity="0.5"
+            />
+            <path
+              d="M146.4 228 Q150 236 153.6 228 L151.4 254 Q150 256 148.6 254 Z"
+              fill={BASE_SHADE}
+              fillOpacity="0.4"
+            />
+            <path
+              d="M98 270 Q150 280 202 270 L202 290 L98 290 Z"
+              fill={BASE_SHADE}
+              fillOpacity="0.35"
+            />
           </g>
-        ))}
-        <Cel d={BRA_BACK_BAND} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
-        <path d="M100 258 Q150 264 200 258" fill="none" stroke={BASE_LINE} strokeOpacity="0.35" strokeLinecap="round" />
-      </> : <>
-        {[false, true].map((m) => (
-          <g key={String(m)} transform={m ? MIRROR : undefined}>
-            <Cel d={BRA_STRAP} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} mirrored={m} weight={0.8} />
+
+          {/* Seams + topstitching */}
+          <g fill="none" stroke={BASE_LINE} strokeLinecap="round">
+            <path d="M107.4 220 C102 232 102 248 110 262" strokeOpacity="0.32" strokeWidth="0.9" />
+            <path d="M192.6 220 C198 232 198 248 190 262" strokeOpacity="0.38" strokeWidth="0.9" />
+            <path
+              d="M100.6 232 C104 220 113 214.4 124 215.6 C134 216.8 142.4 222 146.6 231"
+              strokeOpacity="0.4"
+              strokeWidth="0.7"
+              strokeDasharray="1.6 1.6"
+            />
+            <path
+              d="M153.4 231 C157.6 222 166 216.8 176 215.6 C187 214.4 196 220 199.4 232"
+              strokeOpacity="0.4"
+              strokeWidth="0.7"
+              strokeDasharray="1.6 1.6"
+            />
+            <path d="M121 271.4 Q150 278.4 179 271.4" strokeOpacity="0.3" strokeWidth="0.7" strokeDasharray="1.6 1.6" />
+            <path
+              d="M132 273.6 L131.6 278.6 M141 275 L140.8 280 M150 275.6 L150 280.6 M159 275 L159.2 280 M168 273.6 L168.4 278.6"
+              strokeOpacity="0.22"
+              strokeWidth="0.8"
+            />
+            <path
+              d="M120.4 213.4 Q118.6 219 116.4 223 M125 214 Q124.4 219.6 122.6 224"
+              strokeOpacity="0.2"
+              strokeWidth="0.8"
+            />
           </g>
-        ))}
-        <Cel d={SPORTS_BRA} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
-        <path d="M119 268 Q150 275 181 268" fill="none" stroke={BASE_LINE} strokeOpacity="0.45" strokeLinecap="round" />
-        <g fill="none" stroke="#ffffff" strokeLinecap="round">
-          <path d="M103 238 C103 227 109 219 119 216.5" strokeWidth="3" strokeOpacity="0.75" />
-          <path d="M157 233 C159 225 165 220 173 218.5" strokeWidth="2.2" strokeOpacity="0.45" />
-        </g>
-      </>}
-      <BustShading upper={false} />
+
+          <path d="M119 268 Q150 275 181 268" fill="none" stroke={BASE_LINE} strokeOpacity="0.45" strokeLinecap="round" />
+
+          <g fill="none" stroke="#ffffff" strokeLinecap="round">
+            <path d="M103 238 C103 227 109 219 119 216.5" strokeWidth="3" strokeOpacity="0.75" />
+            <path d="M157 233 C159 225 165 220 173 218.5" strokeWidth="2.2" strokeOpacity="0.45" />
+          </g>
+        </>
+      ) : (
+        /* ===== NUDE VERSION ===== */
+        !back && (
+          <g>
+            {/* Soft areolas – warmer than skin, low opacity */}
+            <ellipse
+              cx="121"
+              cy="238"
+              rx="9.8"
+              ry="8.4"
+              fill={mix(SKIN, '#d9826e', 0.42)}
+              fillOpacity="0.58"
+              stroke={SKIN_LINE}
+              strokeOpacity="0.16"
+              strokeWidth="0.7"
+            />
+            <ellipse
+              cx="179"
+              cy="238"
+              rx="9.8"
+              ry="8.4"
+              fill={mix(SKIN, '#d9826e', 0.42)}
+              fillOpacity="0.58"
+              stroke={SKIN_LINE}
+              strokeOpacity="0.16"
+              strokeWidth="0.7"
+            />
+
+            {/* Nipples */}
+            <ellipse
+              cx="121"
+              cy="238.6"
+              rx="3.2"
+              ry="2.8"
+              fill={mix(SKIN_SHADE, '#7a1f52', 0.38)}
+              fillOpacity="0.88"
+              stroke={SKIN_LINE}
+              strokeOpacity="0.22"
+              strokeWidth="0.55"
+            />
+            <ellipse
+              cx="179"
+              cy="238.6"
+              rx="3.2"
+              ry="2.8"
+              fill={mix(SKIN_SHADE, '#7a1f52', 0.38)}
+              fillOpacity="0.88"
+              stroke={SKIN_LINE}
+              strokeOpacity="0.22"
+              strokeWidth="0.55"
+            />
+
+            {/* Tiny light-side highlights */}
+            <ellipse cx="119.5" cy="237.1" rx="1.15" ry="0.95" fill="#ffffff" fillOpacity="0.38" />
+            <ellipse cx="177.5" cy="237.1" rx="1.15" ry="0.95" fill="#ffffff" fillOpacity="0.38" />
+          </g>
+        )
+      )}
+
+      {/* Always keep under-bust contour so the form stays readable */}
+      <BustShading upper={!nude} opacity={nude ? 0.28 : 0.35} />
+
+      {/* Shorts – also gated by nude */}
+      {!nude && (
+        <Cel d={SHORTS} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
+      )}
     </g>
   );
 }
@@ -1090,15 +1181,38 @@ function BustShading({ opacity = 0.35, upper = true }: { opacity?: number; upper
   if (useBack()) return null;
   return (
     <g fill="none" stroke="#000" strokeOpacity={opacity} strokeWidth="1.4" strokeLinecap="round">
-      {/* Upper curves give tops the same rounded shape as the bust underneath. */}
-      {upper && <path d="M96 236 C96 220 104 208 116 206 C128 204.5 140 210 147 222" strokeOpacity={opacity * 0.6} />}
-      {upper && <path d="M204 236 C204 220 196 208 184 206 C172 204.5 160 210 153 222" strokeOpacity={opacity * 0.6} />}
-      {upper && <path d="M104 238 C104 227 110 219 120 216.5" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="3" />}
-      {upper && <path d="M158 233 C160 225 166 220 174 218.5" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="2.2" />}
+      {/* Upper curves give tops the same rounded shape as the bust underneath */}
+      {upper && (
+        <path
+          d="M96 236 C96 220 104 208 116 206 C128 204.5 140 210 147 222"
+          strokeOpacity={opacity * 0.6}
+        />
+      )}
+      {upper && (
+        <path
+          d="M204 236 C204 220 196 208 184 206 C172 204.5 160 210 153 222"
+          strokeOpacity={opacity * 0.6}
+        />
+      )}
+      {upper && (
+        <path
+          d="M104 238 C104 227 110 219 120 216.5"
+          stroke="#ffffff"
+          strokeOpacity="0.5"
+          strokeWidth="3"
+        />
+      )}
+      {upper && (
+        <path
+          d="M158 233 C160 225 166 220 174 218.5"
+          stroke="#ffffff"
+          strokeOpacity="0.3"
+          strokeWidth="2.2"
+        />
+      )}
       <path d="M98 252 Q110 268 124 268 Q140 268 148 256" />
       <path d="M202 252 Q190 268 176 268 Q160 268 152 256" />
       <path d="M150 230 L150 246" strokeOpacity={opacity * 0.8} />
-      <path d="M126 290 Q150 296 174 290" strokeOpacity={opacity * 0.5} />
     </g>
   );
 }
