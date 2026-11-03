@@ -1,4 +1,5 @@
 import { PACK_CONFIGS, type PackCategory, type PackSize } from '../../utils/rarity';
+import { getTokenPackCost } from '../../services/vaultService';
 
 /** One pack sitting in the claw pit. Grabbing it opens checkout for that exact tier. */
 export interface PitPack {
@@ -65,7 +66,8 @@ export function packsForPit(pit: ClawPit, bombshellArt: 'dark' | 'light'): PitPa
       accent: cfg.accent,
       gradient: cfg.gradient,
       cardCount: tier.cardCount,
-      price: tier.price,
+      // Vault Pack cost is admin-configurable; the packs.json label is only the default.
+      price: category === 'vault_token' ? `${getTokenPackCost()} V⚡` : tier.price,
       priceValue: tier.priceValue,
       currency: isSpark ? 'spark' : (tier.price === 'FREE' || tier.priceValue <= 0 ? 'free' : 'usd'),
       coverImage: cover,
