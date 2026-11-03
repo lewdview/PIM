@@ -70,7 +70,7 @@ function lazyWithRetry<T extends React.ComponentType<any>>(
 
 // ── Lazy-loaded Route Components (Chunk-split for instant initial load) ─────
 const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
-const ClawMachinePage = lazyWithRetry(() => import('./pages/clawMachine/ClawMachinePage'));
+const VaultShopPage = lazyWithRetry(() => import('./pages/vaultShop/VaultShopPage'));
 const HeroLandingPage = lazyWithRetry(() => import('./pages/HeroLandingPage'));
 const RhythmHome = lazyWithRetry(() => import('./pages/RhythmHome'));
 const SongSelect = lazyWithRetry(() => import('./pages/SongSelect'));
@@ -370,7 +370,7 @@ export default function App() {
               <Switch>
                 {/* 1. Primary Public Landing & PIM Rhythm Routes */}
                 <Route path="/" component={LandingPage} />
-                <Route path="/next-vault" component={ClawMachinePage} />
+                <Route path="/next-vault" component={VaultShopPage} />
                 <Route path="/launch" component={LaunchPage} />
                 <Route path="/launchpad" component={LaunchPage} />
                 <Route path="/play-pim" component={LaunchPage} />

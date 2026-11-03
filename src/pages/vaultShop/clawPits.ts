@@ -79,3 +79,27 @@ export function packsForPit(pit: ClawPit, bombshellArt: 'dark' | 'light'): PitPa
 export function sparkCost(pack: PitPack): number {
   return parseInt(pack.price.replace(/[^0-9]/g, ''), 10) || 0;
 }
+
+/**
+ * Vending machine layout: five shelves of six coils (A1–E6).
+ * Each entry is a [category, size]; null leaves a coil empty.
+ */
+export const VENDING_ROWS: Array<Array<[PackCategory, PackSize] | null>> = [
+  [['bombshell', 'single'], ['bombshell', 'double'], ['bombshell', 'five' as PackSize], ['bombshell', 'ten'], ['bombshell', 'twentyfive'], ['bombshell', 'fifty']],
+  [['taste', 'single'], ['taste', 'triple'], ['taste', 'bulk'], ['light', 'single'], ['light', 'triple'], ['light', 'bulk']],
+  [['dark', 'single'], ['dark', 'triple'], ['dark', 'bulk'], ['miss_out', 'single'], ['miss_out', 'triple'], ['free', 'single']],
+  [['month', 'single'], ['month', 'triple'], ['special_picks', 'single'], ['special_picks', 'triple'], ['prophecy', 'single'], ['alpha', 'single']],
+  [['vault_token', 'single'], ['bombshell_token', 'single'], ['bombshell_token', 'double'], ['bombshell_token', 'five' as PackSize], ['bombshell_token', 'ten'], null],
+];
+
+export interface VendSlot { code: string; pack: PitPack | null }
+
+export function vendingSlots(bombshellArt: 'dark' | 'light'): VendSlot[][] {
+  const pit: ClawPit = { id: 'vending', name: 'Vending', icon: '', accent: '', blurb: '' };
+  return VENDING_ROWS.map((row, r) => row.map((pick, c) => {
+    const code = `${'ABCDE'[r]}${c + 1}`;
+    if (!pick) return { code, pack: null };
+    const [pack] = packsForPit({ ...pit, picks: [pick] }, bombshellArt);
+    return { code, pack: pack ?? null };
+  }));
+}

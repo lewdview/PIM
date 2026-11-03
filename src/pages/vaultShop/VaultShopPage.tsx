@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'wouter';
 import { Clock, Gift, Play, Zap, Sparkles, X } from 'lucide-react';
@@ -20,12 +20,13 @@ import {
 } from '../../services/vaultService';
 import ClawCabinet, { PackToken } from './ClawCabinet';
 import PrizeCounter, { type CounterTab } from './PrizeCounter';
-import { CLAW_PITS, packsForPit, sparkCost, type PitPack } from './clawPits';
-import '../../styles/clawMachine.css';
+import VendingMachine from './VendingMachine';
+import { CLAW_PITS, packsForPit, sparkCost, vendingSlots, type PitPack } from './clawPits';
+import '../../styles/vaultShop.css';
 
 interface TrayItem { key: string; pack: PitPack; cards: OwnedCard[] }
 
-export default function ClawMachinePage() {
+export default function VaultShopPage() {
   const [, setLocation] = useLocation();
   const user = useAuthStore(s => s.user);
   const {
@@ -34,17 +35,20 @@ export default function ClawMachinePage() {
   } = useVaultStore();
   const today = getCurrentDay();
 
+  const [machine, setMachine] = useState<'vending' | 'claw'>('vending');
   const [pitId, setPitId] = useState('bombshell');
   const [bombshellArt, setBombshellArt] = useState<'dark' | 'light'>('dark');
   const pit = CLAW_PITS.find(p => p.id === pitId) ?? CLAW_PITS[1];
   const packs = useMemo(() => packsForPit(pit, bombshellArt), [pit, bombshellArt]);
+  const vendRows = useMemo(() => vendingSlots(bombshellArt), [bombshellArt]);
 
   const [freeTaken, setFreeTaken] = useState(false);
   const lockedIds = useMemo(() => new Set(freeTaken ? ['free:single'] : []), [freeTaken]);
 
   const [prize, setPrize] = useState<PitPack | null>(null);
   const [paying, setPaying] = useState(false);
-  const [checkout, setCheckout] = useState<PitPack | null>(null);
+  const [checkout, setCheckout] = useState<{ pack: PitPack; resolve: (cards: OwnedCard[] | null) => void } | null>(null);
+  const vendedCards = useRef<OwnedCard[]>([]);
   const [tray, setTray] = useState<TrayItem[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [counterTab, setCounterTab] = useState<CounterTab>('sparks');
@@ -116,40 +120,69 @@ export default function ClawMachinePage() {
     setPrize(null);
   }, [addToCollection]);
 
-  const payForPrize = useCallback(async () => {
-    if (!prize) return;
-    if (!user) { useAuthStore.getState().setShowAuthModal(true); return; }
-    if (prize.currency === 'usd') { setCheckout(prize); return; }
-    if (prize.currency === 'spark' && tokenBalance < sparkCost(prize)) {
+  /**
+   * Charge for one pack, whichever machine it came from.
+   * Resolves with the cards, or null if nothing was bought (no charge).
+   */
+  const buy = useCallback(async (pack: PitPack): Promise<OwnedCard[] | null> => {
+    if (!user) { useAuthStore.getState().setShowAuthModal(true); return null; }
+    if (pack.currency === 'usd') {
+      return new Promise(resolve => setCheckout({ pack, resolve }));
+    }
+    if (pack.currency === 'spark' && tokenBalance < sparkCost(pack)) {
       audioManager.playSfx('not_enough', 0.6);
       setCounterTab('sparks');
       document.getElementById('prize-counter')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setToast(`You need ${sparkCost(prize) - tokenBalance} more V⚡.`);
-      return;
+      setToast(`You need ${sparkCost(pack) - tokenBalance} more V⚡.`);
+      return null;
     }
     setPaying(true);
-    useLoadingToast.getState().show('Opening the prize door…');
+    useLoadingToast.getState().show('Paying…');
     try {
-      const cards = prize.currency === 'spark'
-        ? await buyTokenPack(prize.category as 'vault_token' | 'bombshell_token', prize.size)
-        : await purchasePack(prize.category, prize.size);
-      if (cards === 'insufficient') { setToast('Not enough V⚡ for this pack.'); return; }
-      if (!cards.length) { setToast('That pack didn’t come through. You weren’t charged.'); return; }
-      toTray(prize, cards);
+      const cards = pack.currency === 'spark'
+        ? await buyTokenPack(pack.category as 'vault_token' | 'bombshell_token', pack.size)
+        : await purchasePack(pack.category, pack.size);
+      if (cards === 'insufficient') { setToast('Not enough V⚡ for this pack.'); return null; }
+      if (!cards.length) { setToast('That pack didn’t come through. You weren’t charged.'); return null; }
+      return cards;
     } catch (err: any) {
-      console.error('Prize purchase failed:', err);
+      console.error('Pack purchase failed:', err);
       setToast(err?.message || 'That didn’t go through. Try again.');
+      return null;
     } finally {
       useLoadingToast.getState().hide();
       setPaying(false);
       loadVaultData();
     }
-  }, [prize, user, tokenBalance, toTray, loadVaultData]);
+  }, [user, tokenBalance, loadVaultData]);
+
+  const payForPrize = useCallback(async () => {
+    if (!prize) return;
+    const cards = await buy(prize);
+    if (cards) toTray(prize, cards);
+  }, [prize, buy, toTray]);
+
+  const vend = useCallback(async (pack: PitPack) => {
+    const cards = await buy(pack);
+    if (!cards) return false;
+    vendedCards.current = cards;
+    return true;
+  }, [buy]);
+
+  const vendDropped = useCallback((pack: PitPack) => {
+    toTray(pack, vendedCards.current);
+    vendedCards.current = [];
+  }, [toTray]);
+
+  const closeCheckout = useCallback(() => {
+    checkout?.resolve(null);
+    setCheckout(null);
+  }, [checkout]);
 
   const handlePaymentSelect = useCallback(async (method: 'crypto' | 'stripe') => {
-    const pack = checkout;
+    if (!checkout) return;
+    const { pack, resolve } = checkout;
     setCheckout(null);
-    if (!pack) return;
     if (method === 'stripe') {
       try {
         useLoadingToast.getState().show('Opening checkout…');
@@ -161,23 +194,24 @@ export default function ClawMachinePage() {
         useLoadingToast.getState().hide();
         setToast(err?.message || 'Checkout didn’t open. Try again.');
       }
+      resolve(null);
       return;
     }
     try {
       useLoadingToast.getState().show('Confirm in your wallet…');
       const txHash = await payWithCrypto(pack.priceValue);
-      if (txHash) {
-        useLoadingToast.getState().show('Verifying transaction…');
-        const cards = await purchasePack(pack.category, pack.size, undefined, txHash);
-        if (cards.length) toTray(pack, cards);
-        await loadVaultData();
-      }
+      if (!txHash) { resolve(null); return; }
+      useLoadingToast.getState().show('Verifying transaction…');
+      const cards = await purchasePack(pack.category, pack.size, undefined, txHash);
+      await loadVaultData();
+      resolve(cards.length ? cards : null);
     } catch (err: any) {
       setToast(err?.message || 'Payment failed.');
+      resolve(null);
     } finally {
       useLoadingToast.getState().hide();
     }
-  }, [checkout, toTray, loadVaultData]);
+  }, [checkout, loadVaultData]);
 
   const openTray = useCallback(() => {
     if (!tray.length) return;
@@ -186,8 +220,8 @@ export default function ClawMachinePage() {
     audioManager.playSfx('by_th3scr1b3', 0.9);
     startReveal(cards, {
       category: last.pack.category, size: last.pack.size,
-      label: tray.length === 1 ? last.pack.label : `${tray.length} claw prizes`,
-      icon: tray.length === 1 ? last.pack.icon : '🕹️',
+      label: tray.length === 1 ? last.pack.label : `${tray.length} packs`,
+      icon: tray.length === 1 ? last.pack.icon : '🎰',
       accent: '#ff1493', gradient: 'linear-gradient(145deg, #1a0716, #05010a)',
       price: `${tray.length} pack${tray.length === 1 ? '' : 's'}`,
       cardCount: cards.length, revealType: 'cinematic', redirectPath: '/next-vault',
@@ -212,7 +246,7 @@ export default function ClawMachinePage() {
       <header className="claw-top">
         <div>
           <p className="claw-kicker">Arcade floor · Day {today}</p>
-          <h1 className="claw-title">Claw machine</h1>
+          <h1 className="claw-title">{machine === 'vending' ? 'Vending machine' : 'Bonus claw'}</h1>
         </div>
         <div className="claw-top-actions">
           <button
@@ -230,84 +264,111 @@ export default function ClawMachinePage() {
 
       <main className="claw-layout">
         <div className="claw-main">
-          {/* Pit picker */}
-          <nav className="claw-pits" aria-label="Choose a claw pit">
-            {CLAW_PITS.map(p => (
-              <button
-                key={p.id}
-                type="button"
-                className={`claw-pit${p.id === pitId ? ' is-on' : ''}`}
-                style={{ ['--pit-accent' as string]: p.accent }}
-                disabled={!!prize}
-                onClick={() => { audioManager.playSfx('tap_nav', 0.15); setPitId(p.id); }}
-              >
-                <span aria-hidden>{p.icon}</span>{p.name}
-              </button>
-            ))}
-          </nav>
-          <div className="claw-pit-info">
-            <span>{pit.blurb}</span>
-            {(pit.id === 'bombshell') && (
-              <button type="button" className="claw-link" onClick={() => setBombshellArt(a => (a === 'dark' ? 'light' : 'dark'))}>
-                {bombshellArt === 'dark' ? '🌙 Dark art' : '☀️ Light art'}
-              </button>
-            )}
+          <div className="shop-switch" role="tablist" aria-label="Choose a machine">
+            <button role="tab" aria-selected={machine === 'vending'} className={machine === 'vending' ? 'is-on' : ''} disabled={!!prize} onClick={() => setMachine('vending')}>
+              🥤 Vending machine
+            </button>
+            <button role="tab" aria-selected={machine === 'claw'} className={machine === 'claw' ? 'is-on' : ''} onClick={() => setMachine('claw')}>
+              🕹️ Bonus claw
+            </button>
+            <button type="button" className="claw-link shop-art" onClick={() => setBombshellArt(a => (a === 'dark' ? 'light' : 'dark'))}>
+              {bombshellArt === 'dark' ? '🌙 Dark art' : '☀️ Light art'}
+            </button>
           </div>
 
-          <ClawCabinet
-            packs={packs}
-            accent={pit.accent === '#ffffff' ? '#e5e7eb' : pit.accent}
-            lockedIds={lockedIds}
-            heldId={prize?.id ?? null}
-            disabled={paying || !!checkout}
-            onPrize={setPrize}
-            onEmptyGrab={() => setToast('Nothing under the claw. Line it up over a pack.')}
-            onLockedGrab={() => setToast('Today’s free pack is already yours. Back tomorrow.')}
-            overlay={prize ? (
-              <motion.div key="door" className="claw-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <motion.div
-                  key="prize"
-                  className="claw-ticket"
-                  initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }}
-                  style={{ ['--pack-accent' as string]: prize.accent }}
+          {machine === 'vending' ? (
+            <>
+              <p className="claw-muted">Tap a pack or punch in its code, then hit VEND. Your packs drop into the flap; push it to open them all.</p>
+              <VendingMachine
+                rows={vendRows}
+                lockedIds={lockedIds}
+                credit={tokenBalance}
+                onVend={vend}
+                onDropped={vendDropped}
+                trayPacks={tray.map(t => t.pack)}
+                trayCards={trayCards}
+                onOpenTray={openTray}
+                busy={paying || !!checkout}
+              />
+            </>
+          ) : (
+            <>
+            {/* Pit picker */}
+            <nav className="claw-pits" aria-label="Choose a claw pit">
+              {CLAW_PITS.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`claw-pit${p.id === pitId ? ' is-on' : ''}`}
+                  style={{ ['--pit-accent' as string]: p.accent }}
+                  disabled={!!prize}
+                  onClick={() => { audioManager.playSfx('tap_nav', 0.15); setPitId(p.id); }}
                 >
-                  <div className="claw-ticket-pack"><PackToken pack={prize} /></div>
-                  <div className="claw-ticket-body">
-                    <p className="claw-kicker">You grabbed</p>
-                    <h3>{prize.label}</h3>
-                    <p className="claw-muted">{prize.cardCount} card{prize.cardCount === 1 ? '' : 's'} · {prize.price}</p>
-                    <div className="claw-row">
-                      <button type="button" className="claw-btn claw-btn-gold" disabled={paying} onClick={payForPrize}>{payLabel}</button>
-                      <button type="button" className="claw-btn claw-btn-ghost" disabled={paying} onClick={() => setPrize(null)}>
-                        <X size={14} /> Put it back
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
-            ) : null}
-          />
+                  <span aria-hidden>{p.icon}</span>{p.name}
+                </button>
+              ))}
+            </nav>
+            <div className="claw-pit-info">
+              <span>{pit.blurb}</span>
+              
+            </div>
 
-          {/* Prize door + tray */}
-          <div className="claw-door">
-            <AnimatePresence mode="wait">
-              {!prize && (
-                <motion.div key="tray" className="claw-tray" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <div className="claw-tray-slots">
-                    {tray.length === 0 && <span className="claw-muted">Prizes you take land here. Grab a few, then open them together.</span>}
-                    {tray.map(t => (
-                      <motion.span key={t.key} className="claw-tray-item" initial={{ y: -30, rotate: -12 }} animate={{ y: 0, rotate: 0 }}>
-                        <PackToken pack={t.pack} />
-                      </motion.span>
-                    ))}
-                  </div>
-                  <button type="button" className="claw-btn claw-btn-pink" disabled={!tray.length} onClick={openTray}>
-                    <Sparkles size={16} /> {tray.length ? `Open ${tray.length} · ${trayCards} cards` : 'Tray empty'}
-                  </button>
+            <ClawCabinet
+              packs={packs}
+              accent={pit.accent === '#ffffff' ? '#e5e7eb' : pit.accent}
+              lockedIds={lockedIds}
+              heldId={prize?.id ?? null}
+              disabled={paying || !!checkout}
+              onPrize={setPrize}
+              onEmptyGrab={() => setToast('Nothing under the claw. Line it up over a pack.')}
+              onLockedGrab={() => setToast('Today’s free pack is already yours. Back tomorrow.')}
+              overlay={prize ? (
+                <motion.div key="door" className="claw-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <motion.div
+                    key="prize"
+                    className="claw-ticket"
+                    initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }}
+                    style={{ ['--pack-accent' as string]: prize.accent }}
+                  >
+                    <div className="claw-ticket-pack"><PackToken pack={prize} /></div>
+                    <div className="claw-ticket-body">
+                      <p className="claw-kicker">You grabbed</p>
+                      <h3>{prize.label}</h3>
+                      <p className="claw-muted">{prize.cardCount} card{prize.cardCount === 1 ? '' : 's'} · {prize.price}</p>
+                      <div className="claw-row">
+                        <button type="button" className="claw-btn claw-btn-gold" disabled={paying} onClick={payForPrize}>{payLabel}</button>
+                        <button type="button" className="claw-btn claw-btn-ghost" disabled={paying} onClick={() => setPrize(null)}>
+                          <X size={14} /> Put it back
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
                 </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              ) : null}
+            />
+
+            {/* Prize door + tray */}
+            <div className="claw-door">
+              <AnimatePresence mode="wait">
+                {!prize && (
+                  <motion.div key="tray" className="claw-tray" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <div className="claw-tray-slots">
+                      {tray.length === 0 && <span className="claw-muted">Prizes you take land here. Grab a few, then open them together.</span>}
+                      {tray.map(t => (
+                        <motion.span key={t.key} className="claw-tray-item" initial={{ y: -30, rotate: -12 }} animate={{ y: 0, rotate: 0 }}>
+                          <PackToken pack={t.pack} />
+                        </motion.span>
+                      ))}
+                    </div>
+                    <button type="button" className="claw-btn claw-btn-pink" disabled={!tray.length} onClick={openTray}>
+                      <Sparkles size={16} /> {tray.length ? `Open ${tray.length} · ${trayCards} cards` : 'Tray empty'}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            </>
+          )}
         </div>
 
         <aside className="claw-side">
@@ -352,12 +413,12 @@ export default function ClawMachinePage() {
       {checkout && (
         <PaymentSelectModal
           isOpen
-          onClose={() => setCheckout(null)}
+          onClose={closeCheckout}
           onSelect={handlePaymentSelect}
-          packLabel={checkout.label}
-          price={checkout.price}
-          priceValue={checkout.priceValue}
-          accent={checkout.accent}
+          packLabel={checkout.pack.label}
+          price={checkout.pack.price}
+          priceValue={checkout.pack.priceValue}
+          accent={checkout.pack.accent}
         />
       )}
     </div>

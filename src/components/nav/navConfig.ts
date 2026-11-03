@@ -74,7 +74,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'bombshells', label: 'Bombshells', to: '/bombshells', icon: Bomb, desc: 'Variant covers and month rewards', keywords: ['variants', 'covers', 'month'] },
       { id: 'codex', label: 'Card codex', to: '/vault/codex', icon: BookOpen, desc: 'Full catalog and set completion', keywords: ['registry', 'catalog', 'set', 'tracker'] },
       { id: 'forge', label: 'Fusion lab', to: '/vault/forge', icon: Flame, desc: 'Fuse duplicates into higher rarities', keywords: ['forge', 'fusion', 'upgrade', 'burn', 'catalyst'] },
-      { id: 'next-vault', label: 'Claw machine', to: '/next-vault', icon: Sparkles, desc: 'Steer the claw, grab a pack, open your prizes', keywords: ['claw', 'gacha', 'machine', 'nextgen'] },
+      { id: 'next-vault', label: 'Vending machine', to: '/next-vault', icon: Sparkles, desc: 'Buy packs from the vending machine, plus the bonus claw', keywords: ['vending', 'shop', 'packs', 'claw', 'gacha', 'machine', 'nextgen'] },
       { id: 'hero', label: 'Hero exhibit', to: '/hero', icon: Image, desc: "Today's card, on display", keywords: ['museum', 'showcase', 'exhibit', 'art'] },
     ],
   },
