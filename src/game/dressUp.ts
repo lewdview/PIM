@@ -142,6 +142,8 @@ export interface Outfit {
   extra?: { item: string; color: string };
   /** Colour of the base sports bra and bike shorts. */
   base?: string;
+  /** Free-play base-layer switch: true leaves the sports bra and shorts off. Not scored; missing on older saves. */
+  nude?: boolean;
   /** Eye colour; falls back to the day's palette when unset. */
   eyes?: string;
   scene: string; // art category
