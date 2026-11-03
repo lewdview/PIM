@@ -2045,7 +2045,7 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
       <Pop k={key(outfit.shoes)}><Shoes choice={outfit.shoes} /></Pop>
       {/* Layers, back to front: wings, body, torso and base sports bra and shorts, bottom, top, choker, extras, head. */}
       <g className="wf-breathe">
-        <UpperBody base={outfit.base ?? BASE_COLOR} />
+        <UpperBody base={outfit.base ?? BASE_COLOR} nude={outfit.nude ?? false} />
         <Pop k={key(outfit.bottom)}><Bottom choice={outfit.bottom} /></Pop>
         <Pop k={key(outfit.top)}><Top choice={outfit.top} /></Pop>
         {outfit.accessory.item === 'choker' && <Pop k="choker"><Choker color={accentColor} /></Pop>}
@@ -2085,7 +2085,7 @@ function BackFigure({ outfit, className, celebrate }: { outfit: Outfit; classNam
         <Pop k={key(outfit.legwear)}><Legwear choice={outfit.legwear} /></Pop>
         <Pop k={key(outfit.shoes)}><Shoes choice={outfit.shoes} /></Pop>
         <g className="wf-breathe">
-          <UpperBody base={outfit.base ?? BASE_COLOR} />
+          <UpperBody base={outfit.base ?? BASE_COLOR} nude={outfit.nude ?? false} />
           <Pop k={key(outfit.bottom)}><Bottom choice={outfit.bottom} /></Pop>
           <Pop k={key(outfit.top)}><Top choice={outfit.top} /></Pop>
           {outfit.accessory.item === 'choker' && <Pop k="choker"><Choker color={accentColor} /></Pop>}
