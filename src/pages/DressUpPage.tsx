@@ -163,7 +163,7 @@ export default function DressUpPage() {
 
   const reveal = () => {
     // The day's look doesn't cover the free-play base, eye and head colours or extras, so keep the player's.
-    const target: Outfit = { ...brief.target, base: outfit.base, eyes: outfit.eyes, extra: outfit.extra, accessory: { ...brief.target.accessory, color: outfit.accessory.color } };
+    const target: Outfit = { ...brief.target, base: outfit.base, nude: outfit.nude, eyes: outfit.eyes, extra: outfit.extra, accessory: { ...brief.target.accessory, color: outfit.accessory.color } };
     setRevealed(true);
     setOutfit(target);
     setSaved((prev) => {
@@ -186,6 +186,7 @@ export default function DressUpPage() {
       accessory: { item: r(WARDROBE.accessory).id, color: r(FREE_COLORS) },
       extra: { item: r(WARDROBE.extra).id, color: r(FREE_COLORS) },
       base: outfit.base,
+      nude: outfit.nude,
       eyes: outfit.eyes,
       scene: r(SCENES).category,
     }, true);
@@ -366,7 +367,20 @@ export default function DressUpPage() {
           </div>
 
           {slot === 'base' ? (
-            <p className="text-xs text-white/60">Sports bra and bike shorts, worn under everything. Pick any colour.</p>
+            <div className="flex flex-col gap-3">
+              <p className="text-xs text-white/60">Sports bra and bike shorts, worn under everything. Pick any colour — or switch the base layer off entirely.</p>
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/50 mb-2!">Base layer</div>
+                <div className="flex border border-white/15 self-start" role="group" aria-label="Base layer">
+                  {([['Worn', false], ['Off', true]] as const).map(([label, off]) => (
+                    <button key={label} onClick={() => update({ ...outfit, nude: off })} aria-pressed={!!outfit.nude === off}
+                      className={`px-3! py-1! font-mono text-[10px] uppercase font-bold ${!!outfit.nude === off ? 'bg-[#ff7eb6] text-black' : 'text-white/70 hover:bg-white/5'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/50 mb-2!">Piece</div>
