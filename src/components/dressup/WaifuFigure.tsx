@@ -975,6 +975,7 @@ function UpperBody({ base }: { base: string }) {
   const BASE_LINE = mix(base, '#2a0a1e', 0.62);
   const hipClip = useSvgId('hip');
   const armClip = useSvgId('arm');
+  const braClip = useSvgId('bra');
   const back = useBack();
   return (
     <g stroke={SKIN_LINE} strokeWidth="1.1" strokeLinejoin="round">
@@ -1115,6 +1116,25 @@ function UpperBody({ base }: { base: string }) {
           </g>
         ))}
         <Cel d={SPORTS_BRA} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
+        {/* Knit form: each cup darkens as it turns under and away from the light, the centre gore sinks
+            between them, curved side seams and topstitching follow the cups, and the band is ribbed. */}
+        <clipPath id={braClip}><path d={SPORTS_BRA} /></clipPath>
+        <g clipPath={`url(#${braClip})`} stroke="none">
+          <path d="M96 244 C100 258 112 266 126 266 C138 266 146 258 149 248 C147 262 139 272 124 272 C110 272 99 264 96 252 Z" fill={BASE_SHADE} fillOpacity="0.55" />
+          <path d="M151 248 C154 258 162 266 176 266 C190 266 200 258 204 244 L204 252 C201 264 190 272 176 272 C161 272 153 262 151 248 Z" fill={BASE_SHADE} fillOpacity="0.7" />
+          <path d="M190 214 C199 220 204 230 204 244 C198 236 192 226 182 220 Z" fill={BASE_SHADE} fillOpacity="0.5" />
+          <path d="M146.4 228 Q150 236 153.6 228 L151.4 254 Q150 256 148.6 254 Z" fill={BASE_SHADE} fillOpacity="0.4" />
+          <path d="M98 270 Q150 280 202 270 L202 290 L98 290 Z" fill={BASE_SHADE} fillOpacity="0.35" />
+        </g>
+        <g fill="none" stroke={BASE_LINE} strokeLinecap="round">
+          <path d="M107.4 220 C102 232 102 248 110 262" strokeOpacity="0.32" strokeWidth="0.9" />
+          <path d="M192.6 220 C198 232 198 248 190 262" strokeOpacity="0.38" strokeWidth="0.9" />
+          <path d="M100.6 232 C104 220 113 214.4 124 215.6 C134 216.8 142.4 222 146.6 231" strokeOpacity="0.4" strokeWidth="0.7" strokeDasharray="1.6 1.6" />
+          <path d="M153.4 231 C157.6 222 166 216.8 176 215.6 C187 214.4 196 220 199.4 232" strokeOpacity="0.4" strokeWidth="0.7" strokeDasharray="1.6 1.6" />
+          <path d="M121 271.4 Q150 278.4 179 271.4" strokeOpacity="0.3" strokeWidth="0.7" strokeDasharray="1.6 1.6" />
+          <path d="M132 273.6 L131.6 278.6 M141 275 L140.8 280 M150 275.6 L150 280.6 M159 275 L159.2 280 M168 273.6 L168.4 278.6" strokeOpacity="0.22" strokeWidth="0.8" />
+          <path d="M120.4 213.4 Q118.6 219 116.4 223 M125 214 Q124.4 219.6 122.6 224" strokeOpacity="0.2" strokeWidth="0.8" />
+        </g>
         <path d="M119 268 Q150 275 181 268" fill="none" stroke={BASE_LINE} strokeOpacity="0.45" strokeLinecap="round" />
         <g fill="none" stroke="#ffffff" strokeLinecap="round">
           <path d="M103 238 C103 227 109 219 119 216.5" strokeWidth="3" strokeOpacity="0.75" />
