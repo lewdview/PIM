@@ -4,23 +4,25 @@ import { motion, animate, useMotionValue, useTransform, AnimatePresence } from '
 import { X, Sparkles } from 'lucide-react';
 import { audioManager } from '../../game/audio';
 import type { OwnedCard } from '../../services/vaultService';
-import { PackToken } from './PackToken';
+import { PackToken, MysteryPack, MYSTERY_ACCENTS } from './PackToken';
 import type { PitPack } from './clawPits';
 
 /**
  * Full-screen bonus claw event.
  *
  * One pull buys three tries. The claw swings on its own; tap to stop it and it drops.
- * Tries one and two always slip. Try three wins whatever pack is under the claw: that is
- * when the pull is spent (onWin), so backing out before then costs nothing.
+ * Tries one and two always slip. Try three holds: that is when the pull is spent (onWin),
+ * so backing out before then costs nothing.
+ *
+ * The machine is a heap of covered mystery packs, so where you stop the claw doesn't pick
+ * the prize. The server rolls it, and the win card unwraps it.
  */
 
-export type ClawWinResult = { cards: OwnedCard[] } | { error: string; pullUsed: boolean };
+export type ClawWinResult = { pack: PitPack; cards: OwnedCard[] } | { error: string; pullUsed: boolean };
 
 export interface ClawEventProps {
-  packs: PitPack[];
-  /** Third grab closed on `pack`: spend the pull and mint it. */
-  onWin: (pack: PitPack) => Promise<ClawWinResult>;
+  /** Third grab held: spend the pull, roll the prize and mint it. */
+  onWin: () => Promise<ClawWinResult>;
   /** Player tapped "Open it" on the prize. */
   onOpen: (pack: PitPack, cards: OwnedCard[]) => void;
   onClose: () => void;
@@ -39,26 +41,21 @@ const GRIP = 46;                         // how far the prongs reach down over a
 const FLOOR_PAD = 18;
 const SLIP_LINES = ['SO CLOSE!', 'ARGH! ONE MORE!'];
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventProps) {
+interface Slot { id: string; cx: number; top: number; row: number; tilt: number; accent: string }
+
+export default function ClawEvent({ onWin, onOpen, onClose }: ClawEventProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 900, h: 600 });
   const [phase, setPhase] = useState<Phase>('intro');
   const [tryNo, setTryNo] = useState(0);
   const [open, setOpen] = useState(true);
-  const [carried, setCarried] = useState<PitPack | null>(null);
+  const [carried, setCarried] = useState<Slot | null>(null);
   const [bounce, setBounce] = useState<{ id: string; from: number; key: number } | null>(null);
-  const [falling, setFalling] = useState<PitPack | null>(null);
+  const [falling, setFalling] = useState<Slot | null>(null);
+  const [taken, setTaken] = useState<string | null>(null);
+  const [unwrapped, setUnwrapped] = useState(false);
   const [shout, setShout] = useState<string | null>(null);
   const [prize, setPrize] = useState<{ pack: PitPack; cards: OwnedCard[] } | null>(null);
   const [jamMsg, setJamMsg] = useState('');
@@ -90,21 +87,34 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // A fresh, oversized handful of packs each time the event opens.
-  const n = size.w < 640 ? 5 : 7;
-  const pile = useMemo(() => shuffle(packs), [packs]);
-  const shown = pile.slice(0, n);
-  const packW = Math.round(Math.max(92, Math.min(190, size.w * (n === 5 ? 0.25 : 0.16))));
+  // A heap of covered packs, too many to tell apart. Back rows sit higher; the middle is piled up.
+  const phone = size.w < 640;
+  const rows = phone ? 5 : 4;
+  const cols = phone ? 5 : 9;
+  const packW = Math.round(Math.max(64, Math.min(150, size.w * (phone ? 0.2 : 0.105))));
   const packH = Math.round(packW * 1.36);
-  const backLift = Math.round(packH * 0.32);
-  const slots = shown.map((p, i) => ({
-    p, i,
-    cx: 0.27 + (i / (n - 1)) * 0.66,
-    back: i % 2 === 1,
-    tilt: [-8, 6, -4, 9, -6, 4, -9][i % 7],
-  }));
-
-  const floorTop = (back: boolean) => size.h - FLOOR_PAD - (back ? backLift : 0) - packH;
+  const rowLift = Math.round(packH * 0.28);
+  const heap = Math.round(packH * 0.32);
+  const SPAN_L = phone ? 0.34 : 0.25, SPAN_R = 1 - (packW * 0.62) / Math.max(1, size.w);
+  const step = (SPAN_R - SPAN_L) / (cols - 1);
+  const seeds = useMemo(
+    () => Array.from({ length: 6 * 9 }, () => ({ tilt: Math.random() * 26 - 13, jx: Math.random() - 0.5, jy: Math.random(), hue: Math.floor(Math.random() * MYSTERY_ACCENTS.length) })),
+    [],
+  );
+  const slots = useMemo(() => {
+    const out: Slot[] = [];
+    for (let r = 0; r < rows; r++) {
+      const depth = rows - 1 - r;                         // 0 = front row
+      for (let c = 0; c < cols; c++) {
+        const seed = seeds[r * 9 + c];
+        const cx = Math.min(SPAN_R, SPAN_L + c * step + (r % 2 ? step / 2 : 0) + seed.jx * step * 0.35);
+        const mid = 1 - Math.min(1, Math.abs(cx - (SPAN_L + SPAN_R) / 2) / ((SPAN_R - SPAN_L) / 2));
+        const top = size.h - FLOOR_PAD - packH - depth * rowLift - heap * mid * mid * (0.4 + 0.6 * depth / Math.max(1, rows - 1)) - seed.jy * 8;
+        out.push({ id: `${r}-${c}`, cx, top, row: r, tilt: seed.tilt, accent: MYSTERY_ACCENTS[seed.hue] });
+      }
+    }
+    return out;
+  }, [rows, cols, step, SPAN_L, SPAN_R, size.h, packH, rowLift, heap, seeds]);
 
   // Intro: title card, then the claw starts swinging.
   useEffect(() => {
@@ -147,13 +157,17 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
     setPhase('drop');
     audioManager.playSfx('swipe', 0.6);
 
-    // Nearest pack always: oversized packs cover the floor.
+    // The claw closes on the highest pack under it (the heap covers the whole floor).
     const here = x.get();
-    const target = slots.reduce((best, s) => (Math.abs(s.cx - here) < Math.abs(best.cx - here) ? s : best), slots[0]);
+    const near = slots.filter(s => s.id !== taken && Math.abs(s.cx - here) < step * 0.6);
+    const target = (near.length ? near : slots).reduce((best, s) => {
+      if (!near.length) return Math.abs(s.cx - here) < Math.abs(best.cx - here) ? s : best;
+      return s.top < best.top ? s : best;
+    });
     animate(sway, 0, { type: 'spring', stiffness: 200, damping: 8 });
     await animate(x, target.cx, { duration: 0.28, ease: 'easeOut' });
 
-    const depth = floorTop(target.back) - RAIL_Y - HEAD_H + GRIP;
+    const depth = target.top - RAIL_Y - HEAD_H + GRIP;
     await animate(cable, depth, { duration: 0.75, ease: [0.5, 0, 0.75, 1.25] });
     setPhase('grip');
     setOpen(false);
@@ -161,7 +175,7 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
     await wait(280);
 
     if (isFinal) {
-      const res = await onWin(target.p);
+      const res = await onWin();
       if ('error' in res) {
         setOpen(true);
         await animate(cable, REST_CABLE, { duration: 0.7, ease: 'easeInOut' });
@@ -170,7 +184,8 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
         audioManager.playSfx('locked_out', 0.6);
         return;
       }
-      setCarried(target.p);
+      setCarried(target);
+      setTaken(target.id);
       setPhase('lift');
       await animate(cable, REST_CABLE, { duration: 0.9, ease: [0.3, 0, 0.3, 1] });
       setPhase('carry');
@@ -179,19 +194,21 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
       animate(sway, 0, { type: 'spring', stiffness: 120, damping: 5 });
       setPhase('release');
       setOpen(true);
-      setFalling(target.p);
+      setFalling(target);
       setCarried(null);
       audioManager.playSfx('open_chest', 0.9);
       await wait(650);
       setFalling(null);
-      setPrize({ pack: target.p, cards: res.cards });
+      setPrize({ pack: res.pack, cards: res.cards });
       setPhase('won');
+      await wait(900);
+      setUnwrapped(true);
       audioManager.playSfx('by_th3scr1b3', 0.9);
       return;
     }
 
     // Tries one and two: lift, wobble, and lose it.
-    setCarried(target.p);
+    setCarried(target);
     setPhase('lift');
     const liftTo = REST_CABLE + (depth - REST_CABLE) * 0.42;
     await animate(cable, liftTo, { duration: 0.75, ease: [0.3, 0, 0.3, 1] });
@@ -200,14 +217,14 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
     setOpen(true);
     setCarried(null);
     const dropFrom = (depth - liftTo);
-    setBounce({ id: target.p.id, from: dropFrom, key: Date.now() });
+    setBounce({ id: target.id, from: dropFrom, key: Date.now() });
     audioManager.playSfx('miss', 0.7);
     say(SLIP_LINES[attempt] ?? 'AGAIN!');
     await animate(cable, REST_CABLE, { duration: 0.6, ease: 'easeInOut' });
     await wait(500);
     setTryNo(attempt + 1);
     setPhase('swing');
-  }, [slots, x, sway, cable, onWin, say]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [slots, step, taken, x, sway, cable, onWin, say]);
 
   // Space / Enter also stop the claw; Esc closes when nothing is at stake.
   const closable = phase === 'intro' || phase === 'swing' || phase === 'jammed';
@@ -264,22 +281,22 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
           <span>PRIZE</span>
         </div>
 
-        {/* Oversized pile */}
-        {slots.map(({ p, cx, back, tilt }) => {
-          const hidden = carried?.id === p.id || falling?.id === p.id || prize?.pack.id === p.id;
-          const bouncing = bounce?.id === p.id;
+        {/* The heap of covered packs */}
+        {slots.map(({ id, cx, top, row, tilt, accent }) => {
+          const hidden = carried?.id === id || falling?.id === id || taken === id;
+          const bouncing = bounce?.id === id;
           return (
             <motion.div
-              key={bouncing ? `${p.id}-${bounce!.key}` : p.id}
-              className={`clawx-pack${back ? ' is-back' : ''}`}
-              style={{ left: cx * size.w, top: floorTop(back), width: packW, height: packH, zIndex: back ? 2 : 3 }}
-              initial={bouncing ? { y: -bounce!.from, rotate: tilt * 3, scaleY: 1 } : false}
-              animate={{ y: 0, rotate: tilt, opacity: hidden ? 0 : 1, scaleY: [1, 1] }}
+              key={bouncing ? `${id}-${bounce!.key}` : id}
+              className="clawx-pack"
+              style={{ left: cx * size.w, top, width: packW, height: packH, zIndex: 2 + row, filter: `brightness(${1 - (rows - 1 - row) * 0.1})` }}
+              initial={bouncing ? { y: -bounce!.from, rotate: tilt * 3 } : false}
+              animate={{ y: 0, rotate: tilt, opacity: hidden ? 0 : 1 }}
               transition={bouncing
                 ? { y: { type: 'spring', stiffness: 380, damping: 11 }, rotate: { type: 'spring', stiffness: 200, damping: 8 } }
                 : { duration: 0.08 }}
             >
-              <PackToken pack={p} hidePrice />
+              <MysteryPack accent={accent} />
             </motion.div>
           );
         })}
@@ -295,7 +312,7 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
               animate={{ y: size.h, rotate: 30 }}
               transition={{ duration: 0.6, ease: [0.5, 0, 1, 0.6] }}
             >
-              <PackToken pack={falling} hidePrice />
+              <MysteryPack accent={falling.accent} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -307,7 +324,7 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
           <motion.div className="clawx-head" style={{ y: cable, rotate: sway, width: HEAD_W, marginLeft: -HEAD_W / 2 }}>
             {carried && (
               <div className="clawx-carried" style={{ width: packW, height: packH, top: HEAD_H - GRIP }}>
-                <PackToken pack={carried} hidePrice />
+                <MysteryPack accent={carried.accent} />
               </div>
             )}
             <CartoonClaw open={open} />
@@ -375,23 +392,42 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
             </motion.p>
             <motion.div
               className="clawx-win-pack"
-              style={{ ['--pack-accent' as string]: prize.pack.accent }}
+              style={{ ['--pack-accent' as string]: unwrapped ? prize.pack.accent : '#ffffff' }}
               initial={{ scale: 0.2, y: 200, rotate: 30 }}
               animate={{ scale: 1, y: 0, rotate: 0 }}
               transition={{ type: 'spring', stiffness: 180, damping: 12, delay: 0.15 }}
             >
-              <PackToken pack={prize.pack} hidePrice />
-              <span className="clawx-win-sheen" aria-hidden />
+              {/* Unwrap: the mystery cover shakes, flips away, and the real pack flips in. */}
+              <AnimatePresence mode="wait" initial={false}>
+                {unwrapped ? (
+                  <motion.div key="real" className="clawx-win-face" initial={{ rotateY: -90 }} animate={{ rotateY: 0 }} transition={{ duration: 0.28, ease: 'easeOut' }}>
+                    <PackToken pack={prize.pack} hidePrice />
+                    <span className="clawx-win-sheen" aria-hidden />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="wrap"
+                    className="clawx-win-face"
+                    animate={{ x: [0, -6, 6, -8, 8, -4, 0] }}
+                    exit={{ rotateY: 90, transition: { duration: 0.22, ease: 'easeIn' } }}
+                    transition={{ duration: 0.6, delay: 0.25 }}
+                  >
+                    <MysteryPack accent="#ff1493" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
-            <p className="clawx-win-label">{prize.pack.label} · {prize.pack.cardCount} card{prize.pack.cardCount === 1 ? '' : 's'}</p>
+            <p className="clawx-win-label" aria-live="polite">
+              {unwrapped ? `${prize.pack.label} · ${prize.pack.cardCount} card${prize.pack.cardCount === 1 ? '' : 's'}` : 'What did you get…?'}
+            </p>
             <motion.button
               type="button"
               className="clawx-open"
               onClick={() => onOpen(prize.pack, prize.cards)}
+              disabled={!unwrapped}
               initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              autoFocus
+              animate={{ y: unwrapped ? 0 : 30, opacity: unwrapped ? 1 : 0 }}
+              transition={{ delay: unwrapped ? 0.35 : 0 }}
             >
               <Sparkles size={20} /> Open it!
             </motion.button>

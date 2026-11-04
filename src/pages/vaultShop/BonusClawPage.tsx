@@ -13,11 +13,12 @@ import {
   type OwnedCard,
 } from '../../services/vaultService';
 import ClawEvent, { CartoonClaw, type ClawWinResult } from './ClawEvent';
-import { PackToken } from './PackToken';
-import { clawPrizePacks, type PitPack } from './clawPits';
+import { PackToken, MysteryPack, MYSTERY_ACCENTS } from './PackToken';
+import { clawPrizePacks, clawPrizeWeight, rollClawPrize, type PitPack } from './clawPits';
 import '../../styles/vaultShop.css';
 
 const PENDING_KEY = 'pim_claw_pending_session';
+const LAUNCH_TILTS = [-12, 7, -4, 10, -8, 3, -10, 6, -2, 9];
 const CENTS = CLAW_PULL_PRICE.replace('$0.', '') + '¢';
 
 /** /bonus-claw: the claw machine on its own floor. One pull = one full-screen claw event. */
@@ -27,7 +28,13 @@ export default function BonusClawPage() {
   const { startReveal, addToCollection, loadVaultData } = useVaultStore();
 
   const packs = useMemo(() => clawPrizePacks('dark'), []);
-  const preview = useMemo(() => packs.slice(0, 5), [packs]);
+  // Prize list with the chance of each pack, biggest packs last.
+  const odds = useMemo(() => {
+    const total = packs.reduce((sum, p) => sum + clawPrizeWeight(p.cardCount), 0);
+    return packs
+      .map(p => ({ pack: p, pct: (clawPrizeWeight(p.cardCount) / total) * 100 }))
+      .sort((a, b) => a.pack.cardCount - b.pack.cardCount || b.pct - a.pct);
+  }, [packs]);
   const [credits, setCredits] = useState(0);
   const [code, setCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
@@ -108,14 +115,21 @@ export default function BonusClawPage() {
     }
   }, [code, user, credits]);
 
-  const onWin = useCallback(async (pack: PitPack): Promise<ClawWinResult> => {
-    const res = await clawPull(pack.category, pack.size);
-    if (res.status === 'won') { setCredits(res.credits); return { cards: res.cards }; }
+  const onWin = useCallback(async (): Promise<ClawWinResult> => {
+    // vault-engine rolls the prize; this roll is only a fallback for an older vault-engine.
+    const guess = rollClawPrize(packs);
+    const res = await clawPull(guess.category, guess.size);
+    if (res.status === 'won') {
+      setCredits(res.credits);
+      const p = res.prize;
+      const pack = (p && packs.find(k => k.category === p.category && k.size === p.size)) || guess;
+      return { pack, cards: res.cards };
+    }
     if (res.status === 'slipped') { setCredits(res.credits); return { error: 'It slipped at the last second!', pullUsed: true }; }
     if (res.status === 'no_credits') { setCredits(0); return { error: 'You’re out of pulls.', pullUsed: false }; }
     getClawCredits().then(setCredits);
     return { error: `The claw jammed. ${res.error}`, pullUsed: false };
-  }, []);
+  }, [packs]);
 
   const onOpen = useCallback((pack: PitPack, cards: OwnedCard[]) => {
     addToCollection(cards);
@@ -156,10 +170,14 @@ export default function BonusClawPage() {
             <div className="clawl-rail" aria-hidden />
             <div className="clawl-claw" aria-hidden><CartoonClaw open /></div>
             <div className="clawl-pile" aria-hidden>
-              {preview.map((p, i) => (
-                <span key={p.id} className="clawl-pack" style={{ rotate: `${[-10, 6, -3, 9, -7][i]}deg`, zIndex: i % 2 ? 1 : 2 }}>
-                  <PackToken pack={p} hidePrice />
-                </span>
+              {[0, 1].map(row => (
+                <div key={row} className={`clawl-heap clawl-heap-${row ? 'front' : 'back'}`}>
+                  {Array.from({ length: row ? 8 : 7 }, (_, i) => (
+                    <span key={i} className="clawl-pack" style={{ rotate: `${LAUNCH_TILTS[(i + row * 3) % LAUNCH_TILTS.length]}deg` }}>
+                      <MysteryPack accent={MYSTERY_ACCENTS[(i * 3 + row * 5) % MYSTERY_ACCENTS.length]} />
+                    </span>
+                  ))}
+                </div>
               ))}
             </div>
           </div>
@@ -176,8 +194,21 @@ export default function BonusClawPage() {
           <ol className="clawl-how">
             <li><b>1</b> The claw swings on its own. Tap to drop it.</li>
             <li><b>2</b> Every pull gets you 3 tries.</li>
-            <li><b>3</b> Win any pack in the machine, then watch it open.</li>
+            <li><b>3</b> Every pack is covered. Win one and see what’s inside.</li>
           </ol>
+        </section>
+
+        <section className="clawl-prizes" aria-labelledby="clawl-prizes-h">
+          <h2 id="clawl-prizes-h">What’s in the machine</h2>
+          <p className="claw-muted">Each win is one of these packs, at these odds.</p>
+          <ul>
+            {odds.map(({ pack, pct }) => (
+              <li key={pack.id}>
+                <span className="clawl-prize-pack"><PackToken pack={pack} hidePrice /></span>
+                <span className="clawl-prize-odds">{pct >= 1 ? pct.toFixed(1) : pct.toFixed(2)}%</span>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className="claw-pullbar clawl-bar">
@@ -197,7 +228,7 @@ export default function BonusClawPage() {
       </main>
 
       <AnimatePresence>
-        {playing && <ClawEvent packs={packs} onWin={onWin} onOpen={onOpen} onClose={() => setPlaying(false)} />}
+        {playing && <ClawEvent onWin={onWin} onOpen={onOpen} onClose={() => setPlaying(false)} />}
       </AnimatePresence>
 
       <AnimatePresence>
