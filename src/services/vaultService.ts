@@ -758,12 +758,15 @@ export async function verifyClawPullCheckout(sessionId: string): Promise<{ succe
 }
 
 export type ClawPullResult =
-  | { status: 'won'; cards: OwnedCard[]; credits: number }
+  | { status: 'won'; cards: OwnedCard[]; credits: number; prize?: { category: string; size: string } }
   | { status: 'slipped'; credits: number }
   | { status: 'no_credits' }
   | { status: 'error'; error: string };
 
-/** Spend one pull on the pack under the claw. The server decides if the grip holds. */
+/**
+ * Spend one pull. vault-engine rolls the prize itself and returns it as `prize`; the
+ * category/size sent here is only used by an older vault-engine that predates that roll.
+ */
 export async function clawPull(category: PackCategory, size: PackSize): Promise<ClawPullResult> {
   try {
     const edgePackType = (category as string) === 'bombshell_token' ? 'bombshell' : category;
@@ -777,7 +780,8 @@ export async function clawPull(category: PackCategory, size: PackSize): Promise<
       return { status: 'error', error: msg };
     }
     if (!result.won) return { status: 'slipped', credits: result.credits ?? 0 };
-    return { status: 'won', cards: await mapEdgeCards(result.cards || []), credits: result.credits ?? 0 };
+    const prize = result.prize?.packType ? { category: String(result.prize.packType), size: String(result.prize.size || 'single') } : undefined;
+    return { status: 'won', cards: await mapEdgeCards(result.cards || []), credits: result.credits ?? 0, prize };
   } catch (err: any) {
     return { status: 'error', error: err?.message || 'The claw jammed' };
   }

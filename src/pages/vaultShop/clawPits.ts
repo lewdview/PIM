@@ -1,5 +1,6 @@
 import { PACK_CONFIGS, type PackCategory, type PackSize } from '../../utils/rarity';
 import { getTokenPackCost } from '../../services/vaultService';
+import { getPackCoverFallback } from '../../utils/cardVariants';
 
 /** One pack in a machine: a vending coil or the bonus claw's pile. */
 export interface PitPack {
@@ -40,7 +41,11 @@ export function packsForPit(pit: ClawPit, bombshellArt: 'dark' | 'light'): PitPa
     if (!cfg || !tier) return [];
     const isSpark = category === 'vault_token' || category === 'bombshell_token';
     const t = tier as typeof tier & { coverImage?: string; darkCoverImage?: string; lightCoverImage?: string };
-    const cover = bombshellArt === 'light' ? (t.lightCoverImage ?? t.coverImage) : (t.darkCoverImage ?? t.coverImage);
+    const c = cfg as typeof cfg & { coverImage?: string };
+    // Same art the pack shop's cartridges use: bombshell tiers have their own covers,
+    // every other pack shows a representative day cover.
+    const cover = (bombshellArt === 'light' ? (t.lightCoverImage ?? t.coverImage) : (t.darkCoverImage ?? t.coverImage))
+      ?? c.coverImage ?? getPackCoverFallback(category);
     return [{
       id: `${category}:${size}`,
       category,
@@ -90,13 +95,14 @@ export function vendingSlots(bombshellArt: 'dark' | 'light'): VendSlot[][] {
 }
 
 /**
- * Every pack the bonus claw can grab: the whole vending machine except the daily free pack,
- * shuffled into a fixed order so neighbours in the pile look different.
+ * Every pack the bonus claw can award: the vending machine except the daily free pack.
+ * The V⚡ bombshell coils are the same packs as the paid bombshell row, so they're left out
+ * (vault-engine awards them as 'bombshell'). Must match CLAW_PRIZES in vault-engine.
  */
 export function clawPrizePacks(bombshellArt: 'dark' | 'light'): PitPack[] {
   const all = vendingSlots(bombshellArt).flat()
     .map(s => s.pack)
-    .filter((p): p is PitPack => !!p && p.category !== 'free');
+    .filter((p): p is PitPack => !!p && p.category !== 'free' && p.category !== 'bombshell_token');
   // Deterministic interleave: alternate from the front and back of the machine.
   const out: PitPack[] = [];
   for (let i = 0, j = all.length - 1; i <= j; i++, j--) {
@@ -104,4 +110,30 @@ export function clawPrizePacks(bombshellArt: 'dark' | 'light'): PitPack[] {
     if (i !== j) out.push(all[j]);
   }
   return out;
+}
+
+/**
+ * How likely the claw is to land each pack, by its card count: small packs are common and
+ * the big bundles are rare. vault-engine rolls the real prize with the same table
+ * (CLAW_PRIZE_WEIGHTS); this copy only matters against an older vault-engine that still
+ * takes the client's pick.
+ */
+const CLAW_WEIGHT_BY_CARDS: Array<[number, number]> = [
+  [1, 40], [2, 30], [3, 20], [5, 10], [10, 4], [15, 3], [25, 1], [50, 0.5],
+];
+
+export function clawPrizeWeight(cardCount: number): number {
+  for (const [cards, w] of CLAW_WEIGHT_BY_CARDS) if (cardCount <= cards) return w;
+  return 0.5;
+}
+
+/** Weighted random prize from the claw's packs. */
+export function rollClawPrize(packs: PitPack[]): PitPack {
+  const total = packs.reduce((sum, p) => sum + clawPrizeWeight(p.cardCount), 0);
+  let r = Math.random() * total;
+  for (const p of packs) {
+    r -= clawPrizeWeight(p.cardCount);
+    if (r <= 0) return p;
+  }
+  return packs[0];
 }
