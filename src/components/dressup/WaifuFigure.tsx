@@ -1595,6 +1595,24 @@ function Bottom({ choice }: { choice: GarmentChoice }) {
                 strokeWidth="1.6"
                 strokeLinecap="round"
               />
+              {/* Hip creases where the side strings meet the panel, so the strings sit in the fold. */}
+              <path
+                d="M112 330 C121 336 128 341 134 344 M188 330 C179 336 172 341 166 344"
+                fill="none"
+                stroke={SKIN_SHADE}
+                strokeOpacity="0.5"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              {/* The panel's cast shadow, just under its lower edge, so it rests on the form. */}
+              <path
+                d="M141 350 Q150 358.5 159 350"
+                fill="none"
+                stroke={SKIN_SHADE}
+                strokeOpacity="0.35"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+              />
             </>
           )}
 
