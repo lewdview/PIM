@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'wouter';
-import { Clock, Gift, Play, Zap, Sparkles, Ticket } from 'lucide-react';
+import { Clock, Gift, Play, Zap } from 'lucide-react';
 import Card from '../../components/Card';
 import PaymentSelectModal from '../../components/PaymentSelectModal';
 import { useVaultStore } from '../../store/useVaultStore';
@@ -16,14 +16,11 @@ import {
   getCardByDay, hasClaimedToday, claimDailyCard, silentClaimGuestDailyCard,
   purchasePack, buyTokenPack, hasClaimedFreePackToday,
   createStripeCheckoutSession, redirectToStripeCheckout,
-  getClawCredits, redeemClawCode, createClawPullCheckout, verifyClawPullCheckout, clawPull,
-  CLAW_PULL_PRICE,
   type OwnedCard,
 } from '../../services/vaultService';
-import ClawCabinet, { PackToken } from './ClawCabinet';
 import PrizeCounter, { type CounterTab } from './PrizeCounter';
 import VendingMachine from './VendingMachine';
-import { clawPrizePacks, sparkCost, vendingSlots, type PitPack } from './clawPits';
+import { sparkCost, vendingSlots, type PitPack } from './clawPits';
 import '../../styles/vaultShop.css';
 
 interface TrayItem { key: string; pack: PitPack; cards: OwnedCard[] }
@@ -37,22 +34,15 @@ export default function VaultShopPage() {
   } = useVaultStore();
   const today = getCurrentDay();
 
-  const [machine, setMachine] = useState<'vending' | 'claw'>('vending');
   const [bombshellArt, setBombshellArt] = useState<'dark' | 'light'>('dark');
-  const clawPacks = useMemo(() => clawPrizePacks(bombshellArt), [bombshellArt]);
   const vendRows = useMemo(() => vendingSlots(bombshellArt), [bombshellArt]);
 
   const [freeTaken, setFreeTaken] = useState(false);
   const lockedIds = useMemo(() => new Set(freeTaken ? ['free:single'] : []), [freeTaken]);
 
-  const [prize, setPrize] = useState<PitPack | null>(null);
   const [paying, setPaying] = useState(false);
   const [checkout, setCheckout] = useState<{ pack: PitPack; resolve: (cards: OwnedCard[] | null) => void } | null>(null);
   const vendedCards = useRef<OwnedCard[]>([]);
-  const grabbedCards = useRef<OwnedCard[]>([]);
-  const [clawCredits, setClawCredits] = useState(0);
-  const [clawCode, setClawCode] = useState('');
-  const [redeeming, setRedeeming] = useState(false);
   const [tray, setTray] = useState<TrayItem[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [counterTab, setCounterTab] = useState<CounterTab>('sparks');
@@ -62,40 +52,11 @@ export default function VaultShopPage() {
   const [countdown, setCountdown] = useState(getTimeUntilNextDay());
 
   useEffect(() => { hasClaimedFreePackToday().then(setFreeTaken); }, []);
+  // Old 99¢ claw checkouts returned here; the claw has its own page now.
   useEffect(() => {
-    if (!user) { setClawCredits(0); return; }
-    getClawCredits().then(setClawCredits);
-  }, [user]);
-
-  // Back from a 99¢ claw checkout: credit the pull and open the claw.
-  // The session id is kept until it verifies, so a failed check retries on the next visit.
-  useEffect(() => {
-    const PENDING_KEY = 'pim_claw_pending_session';
-    const fromUrl = new URLSearchParams(window.location.search).get('claw_session');
-    if (fromUrl) {
-      try { localStorage.setItem(PENDING_KEY, fromUrl); } catch { /* storage blocked */ }
-      window.history.replaceState({}, '', '/next-vault');
-    }
-    let sessionId = fromUrl;
-    try { sessionId = sessionId || localStorage.getItem(PENDING_KEY); } catch { /* storage blocked */ }
-    if (!sessionId || !user) return;
-    setMachine('claw');
-    (async () => {
-      useLoadingToast.getState().show('Confirming your pull…');
-      const res = await verifyClawPullCheckout(sessionId);
-      useLoadingToast.getState().hide();
-      if (res.success || /another account|Not a claw checkout/.test(res.error || '')) {
-        try { localStorage.removeItem(PENDING_KEY); } catch { /* storage blocked */ }
-      }
-      if (res.success) {
-        setClawCredits(res.credits ?? await getClawCredits());
-        audioManager.playSfx('open_case', 0.6);
-        setToast('Pull added. Line up the claw and drop!');
-      } else {
-        setToast(`Couldn’t confirm that payment yet. ${res.error || ''}`.trim());
-      }
-    })();
-  }, [user]);
+    const q = window.location.search;
+    if (q.includes('claw_session=')) setLocation(`/bonus-claw${q}`);
+  }, [setLocation]);
   useEffect(() => {
     const t = setInterval(() => setCountdown(getTimeUntilNextDay()), 1000);
     return () => clearInterval(t);
@@ -155,7 +116,6 @@ export default function VaultShopPage() {
     setTray(prev => [...prev, { key: crypto.randomUUID(), pack, cards }]);
     audioManager.playSfx('open_chest', 0.8);
     if (pack.category === 'free') setFreeTaken(true);
-    setPrize(null);
   }, [addToCollection]);
 
   /**
@@ -193,67 +153,6 @@ export default function VaultShopPage() {
       loadVaultData();
     }
   }, [user, tokenBalance, loadVaultData]);
-
-  // ===== Bonus claw =====
-  const buyClawPull = useCallback(async () => {
-    if (!user) { useAuthStore.getState().setShowAuthModal(true); return; }
-    useLoadingToast.getState().show('Opening checkout…');
-    const res = await createClawPullCheckout();
-    useLoadingToast.getState().hide();
-    if (res.success && res.checkoutUrl) await redirectToStripeCheckout(res.checkoutUrl);
-    else setToast(`Checkout didn’t open. ${res.error || 'Try again.'}`);
-  }, [user]);
-
-  const redeemCode = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = clawCode.trim();
-    if (!code) return;
-    if (!user) { useAuthStore.getState().setShowAuthModal(true); return; }
-    setRedeeming(true);
-    const res = await redeemClawCode(code);
-    setRedeeming(false);
-    if (res.success) {
-      setClawCode('');
-      setClawCredits(res.credits ?? clawCredits + (res.pulls ?? 1));
-      audioManager.playSfx('open_case', 0.6);
-      setToast(`${res.pulls ?? 1} pull${res.pulls === 1 ? '' : 's'} added. Go grab something!`);
-    } else {
-      audioManager.playSfx('locked_out', 0.5);
-      setToast(res.error || 'That code didn’t work.');
-    }
-  }, [clawCode, user, clawCredits]);
-
-  /** The claw closed on a pack: spend the pull and see if the grip holds. */
-  const clawGrab = useCallback(async (pack: PitPack) => {
-    const res = await clawPull(pack.category, pack.size);
-    if (res.status === 'won') {
-      grabbedCards.current = res.cards;
-      setClawCredits(res.credits);
-      return true;
-    }
-    if (res.status === 'slipped') {
-      setClawCredits(res.credits);
-      setToast('So close! It slipped out of the claw.');
-    } else if (res.status === 'no_credits') {
-      setClawCredits(0);
-      setToast('You’re out of pulls.');
-    } else {
-      setToast(`The claw jammed. Your pull wasn’t used. ${res.error}`);
-      getClawCredits().then(setClawCredits);
-    }
-    return false;
-  }, []);
-
-  const needPull = useCallback(() => {
-    if (!user) { useAuthStore.getState().setShowAuthModal(true); return; }
-    buyClawPull();
-  }, [user, buyClawPull]);
-
-  const takePrize = useCallback(() => {
-    if (!prize) return;
-    toTray(prize, grabbedCards.current);
-    grabbedCards.current = [];
-  }, [prize, toTray]);
 
   const vend = useCallback(async (pack: PitPack) => {
     const cards = await buy(pack);
@@ -323,8 +222,6 @@ export default function VaultShopPage() {
     setLocation('/vault/reveal');
   }, [tray, startReveal, setLocation]);
 
-  const canDrop = !!user && clawCredits > 0;
-
   const trayCards = tray.reduce((n, t) => n + t.cards.length, 0);
   const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -335,7 +232,7 @@ export default function VaultShopPage() {
       <header className="claw-top">
         <div>
           <p className="claw-kicker">Arcade floor · Day {today}</p>
-          <h1 className="claw-title">{machine === 'vending' ? 'Vending machine' : 'Bonus claw'}</h1>
+          <h1 className="claw-title">Vending machine</h1>
         </div>
         <div className="claw-top-actions">
           <button
@@ -353,20 +250,15 @@ export default function VaultShopPage() {
 
       <main className="claw-layout">
         <div className="claw-main">
-          <div className="shop-switch" role="tablist" aria-label="Choose a machine">
-            <button role="tab" aria-selected={machine === 'vending'} className={machine === 'vending' ? 'is-on' : ''} disabled={!!prize} onClick={() => setMachine('vending')}>
-              🥤 Vending machine
-            </button>
-            <button role="tab" aria-selected={machine === 'claw'} className={machine === 'claw' ? 'is-on' : ''} onClick={() => setMachine('claw')}>
-              🕹️ Bonus claw
+          <div className="shop-switch">
+            <button type="button" className="shop-claw-link" onClick={() => setLocation('/bonus-claw')}>
+              🕹️ Bonus claw →
             </button>
             <button type="button" className="claw-link shop-art" onClick={() => setBombshellArt(a => (a === 'dark' ? 'light' : 'dark'))}>
               {bombshellArt === 'dark' ? '🌙 Dark art' : '☀️ Light art'}
             </button>
           </div>
 
-          {machine === 'vending' ? (
-            <>
               <p className="claw-muted">Tap a pack or punch in its code, then hit VEND. Your packs drop into the flap; push it to open them all.</p>
               <VendingMachine
                 rows={vendRows}
@@ -379,87 +271,6 @@ export default function VaultShopPage() {
                 onOpenTray={openTray}
                 busy={paying || !!checkout}
               />
-            </>
-          ) : (
-            <>
-            <p className="claw-muted">Every pack in the machine is in the pile. One pull, one grab: whatever the claw holds onto is yours.</p>
-            <div className="claw-pullbar">
-              <span className="claw-pulls" aria-live="polite">
-                <Ticket size={16} /> <b>{clawCredits}</b> pull{clawCredits === 1 ? '' : 's'}
-              </span>
-              <button type="button" className="claw-btn claw-btn-gold" onClick={buyClawPull}>
-                {CLAW_PULL_PRICE.replace('$0.', '')}¢ · 1 pull
-              </button>
-              <form className="claw-code" onSubmit={redeemCode}>
-                <input
-                  value={clawCode}
-                  onChange={e => setClawCode(e.target.value)}
-                  placeholder="Bonus code"
-                  aria-label="Bonus code for a claw pull"
-                  autoCapitalize="characters" autoComplete="off" spellCheck={false}
-                />
-                <button type="submit" className="claw-btn claw-btn-ghost" disabled={redeeming || !clawCode.trim()}>Redeem</button>
-              </form>
-            </div>
-
-            <ClawCabinet
-              packs={clawPacks}
-              accent="#ff1493"
-              heldId={prize?.id ?? null}
-              disabled={paying || !!checkout}
-              canDrop={canDrop}
-              onNeedPull={needPull}
-              onGrab={clawGrab}
-              dropLabel={canDrop ? 'DROP' : `${CLAW_PULL_PRICE.replace('$0.', '')}¢`}
-              hidePrices
-              onPrize={setPrize}
-              onEmptyGrab={() => setToast('Nothing under the claw, and your pull is still yours. Line it up over a pack.')}
-              overlay={prize ? (
-                <motion.div key="door" className="claw-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <motion.div
-                    key="prize"
-                    className="claw-ticket"
-                    initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }}
-                    style={{ ['--pack-accent' as string]: prize.accent }}
-                  >
-                    <div className="claw-ticket-pack"><PackToken pack={prize} hidePrice /></div>
-                    <div className="claw-ticket-body">
-                      <p className="claw-kicker">You won</p>
-                      <h3>{prize.label}</h3>
-                      <p className="claw-muted">{prize.cardCount} card{prize.cardCount === 1 ? '' : 's'} · worth {prize.price}</p>
-                      <div className="claw-row">
-                        <button type="button" className="claw-btn claw-btn-gold" onClick={takePrize}>
-                          <Sparkles size={14} /> Into the tray
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              ) : null}
-            />
-
-            {/* Prize door + tray */}
-            <div className="claw-door">
-              <AnimatePresence mode="wait">
-                {!prize && (
-                  <motion.div key="tray" className="claw-tray" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <div className="claw-tray-slots">
-                      {tray.length === 0 && <span className="claw-muted">Prizes you take land here. Grab a few, then open them together.</span>}
-                      {tray.map(t => (
-                        <motion.span key={t.key} className="claw-tray-item" initial={{ y: -30, rotate: -12 }} animate={{ y: 0, rotate: 0 }}>
-                          <PackToken pack={t.pack} />
-                        </motion.span>
-                      ))}
-                    </div>
-                    <button type="button" className="claw-btn claw-btn-pink" disabled={!tray.length} onClick={openTray}>
-                      <Sparkles size={16} /> {tray.length ? `Open ${tray.length} · ${trayCards} cards` : 'Tray empty'}
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            </>
-          )}
         </div>
 
         <aside className="claw-side">

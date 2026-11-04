@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { X } from 'lucide-react';
 import { audioManager } from '../../game/audio';
-import { PackToken } from './ClawCabinet';
+import { PackToken } from './PackToken';
 import type { PitPack, VendSlot } from './clawPits';
 
 type Phase = 'idle' | 'paying' | 'vending' | 'dropped';

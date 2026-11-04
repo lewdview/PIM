@@ -74,7 +74,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'bombshells', label: 'Bombshells', to: '/bombshells', icon: Bomb, desc: 'Variant covers and month rewards', keywords: ['variants', 'covers', 'month'] },
       { id: 'codex', label: 'Card codex', to: '/vault/codex', icon: BookOpen, desc: 'Full catalog and set completion', keywords: ['registry', 'catalog', 'set', 'tracker'] },
       { id: 'forge', label: 'Fusion lab', to: '/vault/forge', icon: Flame, desc: 'Fuse duplicates into higher rarities', keywords: ['forge', 'fusion', 'upgrade', 'burn', 'catalyst'] },
-      { id: 'next-vault', label: 'Vending machine', to: '/next-vault', icon: Sparkles, desc: 'Buy packs from the vending machine, plus the bonus claw', keywords: ['vending', 'shop', 'packs', 'claw', 'gacha', 'machine', 'nextgen'] },
+      { id: 'next-vault', label: 'Vending machine', to: '/next-vault', icon: Sparkles, desc: 'Buy packs from the vending machine', keywords: ['vending', 'shop', 'packs', 'gacha', 'machine', 'nextgen'] },
+      { id: 'bonus-claw', label: 'Bonus claw', to: '/bonus-claw', icon: Gamepad2, desc: '99¢ claw pulls: three tries to win any pack', keywords: ['claw', 'crane', 'bonus', 'pull', 'prize', 'arcade'] },
       { id: 'hero', label: 'Hero exhibit', to: '/hero', icon: Image, desc: "Today's card, on display", keywords: ['museum', 'showcase', 'exhibit', 'art'] },
     ],
   },
@@ -132,7 +133,7 @@ export function sectionForPath(path: string): NavSectionId | null {
   if (starts(['/vault/leaderboard', '/leaderboard', '/vault/earn', '/earn', '/shop', '/store', '/vault/claim', '/claim'])) return 'compete';
   if (starts(['/profile', '/user', '/hub', '/options', '/vault/legal', '/legal', '/admin', '/pitch-deck'])) return 'you';
   if (starts(['/arcade', '/pim', '/play', '/campaign', '/chapter', '/songs', '/song', '/listen', '/tutorial', '/365', '/day', '/daily', '/drop', '/today', '/results', '/chain'])) return 'play';
-  if (starts(['/vault', '/collection', '/reveal', '/vaultfinds', '/bombshells', '/forge', '/codex', '/next-vault', '/hero'])) return 'collect';
+  if (starts(['/vault', '/collection', '/reveal', '/vaultfinds', '/bombshells', '/forge', '/codex', '/next-vault', '/bonus-claw', '/hero'])) return 'collect';
   return null;
 }
 
