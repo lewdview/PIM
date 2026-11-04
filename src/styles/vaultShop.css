@@ -106,120 +106,6 @@
 }
 .claw-link:hover { color: #fff; }
 
-/* ----- Cabinet ----- */
-.claw-cabinet {
-  --claw-accent: #ff1493;
-  border-radius: 22px;
-  padding: 10px;
-  background: linear-gradient(180deg, #1c1a24, #0c0b11 60%, #08070c);
-  border: 2px solid #2a2833;
-  box-shadow:
-    0 0 0 1px rgba(0,0,0,0.8),
-    0 30px 60px rgba(0,0,0,0.6),
-    0 0 60px color-mix(in srgb, var(--claw-accent) 18%, transparent);
-}
-.claw-marquee {
-  position: relative;
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 10px 16px; margin-bottom: 10px;
-  border-radius: 14px;
-  background: linear-gradient(90deg, #12020d, #1f0518 50%, #12020d);
-  border: 1px solid color-mix(in srgb, var(--claw-accent) 50%, #000);
-  overflow: hidden;
-}
-.claw-marquee-bulbs {
-  position: absolute; inset: 3px; border-radius: 11px; pointer-events: none;
-  background-image: radial-gradient(circle, #fde68a 1.6px, transparent 2.2px);
-  background-size: 14px 100%;
-  background-repeat: repeat-x;
-  -webkit-mask: linear-gradient(#000 0 3px, transparent 3px calc(100% - 3px), #000 calc(100% - 3px));
-          mask: linear-gradient(#000 0 3px, transparent 3px calc(100% - 3px), #000 calc(100% - 3px));
-  animation: claw-bulbs 1.2s steps(2) infinite;
-  opacity: 0.8;
-}
-@keyframes claw-bulbs { 50% { background-position: 7px 0; } }
-.claw-marquee-title {
-  position: relative;
-  font-family: 'Outfit', 'Impact', sans-serif;
-  font-weight: 900; font-size: 22px; letter-spacing: 0.3em;
-  color: #fff;
-  text-shadow: 0 0 6px var(--claw-accent), 0 0 18px var(--claw-accent);
-}
-.claw-marquee-status {
-  position: relative;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
-  color: #fde68a;
-}
-
-.claw-glass {
-  position: relative;
-  height: clamp(360px, 48vw, 440px);
-  border-radius: 14px;
-  overflow: hidden;
-  touch-action: manipulation;
-  cursor: crosshair;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.03), transparent 30%),
-    linear-gradient(180deg, #0d0b14, #15101d 70%, #1d1426);
-  border: 1px solid #2f2b3a;
-  box-shadow: inset 0 0 50px rgba(0,0,0,0.85);
-}
-.claw-glass-back {
-  position: absolute; inset: 0; pointer-events: none;
-  background:
-    radial-gradient(70% 50% at 50% 100%, color-mix(in srgb, var(--claw-accent) 22%, transparent), transparent 70%),
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 40px);
-}
-.claw-glass-back::after {
-  /* floor */
-  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 26px;
-  background: linear-gradient(180deg, #2a2236, #120e19);
-  border-top: 1px solid color-mix(in srgb, var(--claw-accent) 45%, #333);
-}
-.claw-glass-glare {
-  position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(115deg, rgba(255,255,255,0.07) 0%, transparent 22%, transparent 70%, rgba(255,255,255,0.04) 85%, transparent 100%);
-}
-.claw-rail {
-  position: absolute; left: 3%; right: 3%; top: 8px; height: 8px; border-radius: 4px;
-  background: linear-gradient(180deg, #9ca3af, #374151);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
-  pointer-events: none;
-}
-
-.claw-chute {
-  position: absolute; bottom: 0; width: 17%; max-width: 110px; height: 44%;
-  transform: translateX(-50%);
-  border-radius: 8px 8px 0 0;
-  background:
-    linear-gradient(180deg, transparent 0, transparent 30%, rgba(0,0,0,0.85) 100%),
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 6px, transparent 6px 12px),
-    rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.18);
-  border-bottom: 0;
-  display: flex; align-items: flex-start; justify-content: center;
-  pointer-events: none;
-  z-index: 3;
-}
-.claw-chute span {
-  margin-top: 8px;
-  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.25em;
-  color: var(--claw-accent);
-}
-
-.claw-pack-slot {
-  position: absolute;
-  transform-origin: 50% 100%;
-  margin-left: 0;
-  translate: -50% 0;
-  padding: 0; border: 0; background: none; cursor: pointer;
-  z-index: 2;
-}
-.claw-pack-slot:disabled { cursor: default; }
-.claw-pack-slot:focus-visible { outline: 2px solid #fff; outline-offset: 4px; border-radius: 6px; }
-.claw-pack-slot.is-locked { filter: grayscale(0.9) brightness(0.6); }
-
 .claw-pack {
   position: relative;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -258,124 +144,6 @@
   padding: 1px 4px; border-radius: 4px;
   background: rgba(0,0,0,0.75); color: #fde68a;
 }
-
-.claw-overlay {
-  position: absolute; inset: 0; z-index: 6;
-  display: grid; place-items: center; padding: 16px;
-  background: rgba(5, 3, 8, 0.6); backdrop-filter: blur(3px);
-}
-.claw-falling {
-  position: absolute; top: 0; translate: -50% 0; z-index: 2; pointer-events: none;
-}
-
-.claw-rig {
-  position: absolute; top: 4px; width: 0; z-index: 4; pointer-events: none;
-}
-.claw-carriage {
-  position: absolute; top: 0; left: -18px; width: 36px; height: 16px; border-radius: 4px;
-  background: linear-gradient(180deg, #e5e7eb, #4b5563);
-  border: 1px solid #111;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--claw-accent) 60%, transparent);
-}
-.claw-carriage::after {
-  content: ''; position: absolute; left: 50%; top: 4px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%;
-  background: var(--claw-accent); box-shadow: 0 0 8px var(--claw-accent);
-}
-.claw-cable {
-  position: absolute; top: 14px; left: -1.5px; width: 3px;
-  background: repeating-linear-gradient(180deg, #d4d4d8 0 3px, #71717a 3px 5px);
-}
-.claw-head {
-  position: absolute; top: 14px; left: -32px; width: 64px;
-  transform-origin: 50% 0;
-}
-.claw-head-svg { position: relative; z-index: 2; display: block; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.6)); }
-.claw-carried {
-  position: absolute; left: 50%; translate: -50% 0; z-index: 1;
-}
-
-/* ----- Control deck ----- */
-.claw-deck {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 12px;
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #17151e, #0d0c12);
-  border: 1px solid #27252f;
-}
-.claw-deck-stick { display: flex; gap: 8px; }
-.claw-dir {
-  width: 60px; height: 60px; border-radius: 14px;
-  display: grid; place-items: center;
-  color: #fff; cursor: pointer;
-  background: linear-gradient(180deg, #3f3f46, #18181b);
-  border: 1px solid #52525b;
-  box-shadow: 0 4px 0 #000, inset 0 1px 0 rgba(255,255,255,0.15);
-  touch-action: none; user-select: none; -webkit-user-select: none;
-}
-.claw-dir:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #000; }
-.claw-dir:disabled, .claw-drop:disabled { opacity: 0.45; cursor: not-allowed; }
-.claw-deck-hint {
-  margin: 0; text-align: center; font-size: 12px; color: #a1a1aa;
-}
-.claw-deck-hint kbd {
-  display: inline-block; margin: 0 2px; padding: 1px 5px; border-radius: 4px;
-  font-family: 'JetBrains Mono', monospace; font-size: 10px;
-  background: #27272a; border: 1px solid #3f3f46; color: #e4e4e7;
-}
-.claw-drop {
-  width: 96px; height: 96px; border-radius: 50%;
-  display: grid; place-items: center; cursor: pointer;
-  border: 3px solid #450a0a;
-  background: radial-gradient(circle at 35% 30%, #fca5a5, #dc2626 45%, #7f1d1d 100%);
-  box-shadow: 0 6px 0 #2a0505, 0 0 26px rgba(239, 68, 68, 0.55), inset 0 -6px 10px rgba(0,0,0,0.35);
-  color: #fff;
-  font-family: 'Outfit', 'Impact', sans-serif; font-weight: 900; font-size: 18px; letter-spacing: 0.12em;
-  text-shadow: 0 2px 2px rgba(0,0,0,0.5);
-  user-select: none;
-}
-.claw-drop:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #2a0505, 0 0 18px rgba(239,68,68,0.5); }
-/* No pull banked: the button becomes a coin slot that opens the 99¢ checkout. */
-.claw-drop.is-coin {
-  border-color: #78350f;
-  background: radial-gradient(circle at 35% 30%, #fef3c7, #f59e0b 45%, #78350f 100%);
-  box-shadow: 0 6px 0 #3b1d04, 0 0 26px rgba(245, 158, 11, 0.55), inset 0 -6px 10px rgba(0,0,0,0.35);
-  font-size: 22px; letter-spacing: 0.02em;
-}
-@media (max-width: 560px) {
-  .claw-deck { grid-template-columns: auto auto; justify-content: space-between; }
-  .claw-deck-hint { grid-column: 1 / -1; grid-row: 2; }
-  .claw-dir { width: 64px; height: 64px; }
-  .claw-drop { width: 88px; height: 88px; }
-  .claw-marquee { padding: 9px 12px; }
-  .claw-marquee-title { font-size: 17px; letter-spacing: 0.2em; }
-  .claw-marquee-status { font-size: 9.5px; letter-spacing: 0.08em; white-space: nowrap; }
-}
-
-/* ----- Prize door & tray ----- */
-.claw-door { min-height: 104px; }
-.claw-ticket { width: min(440px, 100%); background: #0f0e15f2; }
-.claw-ticket, .claw-tray {
-  display: flex; align-items: center; gap: 16px;
-  padding: 14px 16px; border-radius: 16px;
-  background: #0f0e15; border: 1px solid #27252f;
-}
-.claw-ticket {
-  border-color: color-mix(in srgb, var(--pack-accent) 60%, #27252f);
-  box-shadow: 0 0 30px color-mix(in srgb, var(--pack-accent) 22%, transparent);
-}
-.claw-ticket-pack { width: 76px; height: 100px; flex: 0 0 auto; }
-.claw-ticket-body { min-width: 0; flex: 1; }
-.claw-ticket h3 { margin: 2px 0; font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 20px; text-transform: uppercase; }
-.claw-tray { justify-content: space-between; flex-wrap: wrap; }
-.claw-tray-slots { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; overflow-x: auto; min-height: 76px; }
-.claw-tray-item { width: 52px; height: 70px; flex: 0 0 auto; }
-.claw-tray-item .claw-pack-icon { font-size: 16px; }
-.claw-tray-item .claw-pack-count { font-size: 13px; }
-.claw-tray-item .claw-pack-price { display: none; }
 
 /* ----- Shared bits ----- */
 .claw-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
@@ -782,3 +550,233 @@
   .vend-zoom-actions { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .vend-zoom-sheen { animation: none; } }
+
+/* ----- Vending → claw link ----- */
+.shop-claw-link {
+  padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  font-weight: 800; font-size: 13px; color: #fff;
+  background: linear-gradient(180deg, #ff4fb0, #c0126f); border: 2px solid #120814;
+  box-shadow: 0 3px 0 #120814;
+}
+.shop-claw-link:active { transform: translateY(2px); box-shadow: 0 1px 0 #120814; }
+
+/* ===== Bonus claw page (launcher) ===== */
+.clawl {
+  position: relative; z-index: 1;
+  max-width: 760px; margin: 0 auto; padding: 0 16px 48px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.clawl-cab {
+  border-radius: 28px; padding: 14px;
+  background: linear-gradient(180deg, #ff4fb0, #a10d5c);
+  border: 4px solid #120814;
+  box-shadow: 0 10px 0 #120814, 0 30px 60px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.clawl-marquee {
+  width: 100%; text-align: center; padding: 10px;
+  border-radius: 16px; border: 4px solid #120814;
+  background: #fde047; color: #120814;
+  font-family: 'Outfit', 'Impact', sans-serif; font-weight: 900; font-size: clamp(26px, 6vw, 40px); letter-spacing: 0.06em;
+  text-shadow: 3px 3px 0 #fff;
+}
+.clawl-marquee span { color: #c0126f; }
+.clawl-glass {
+  position: relative; width: 100%; height: clamp(260px, 52vw, 380px);
+  border-radius: 18px; border: 4px solid #120814; overflow: hidden; cursor: pointer;
+  background: radial-gradient(120% 90% at 50% 0%, #3b0a5c, #12051d 70%);
+}
+.clawl-rail {
+  position: absolute; left: 4%; right: 4%; top: 18px; height: 14px; border-radius: 7px;
+  background: linear-gradient(180deg, #e5e7eb, #6b7280); border: 3px solid #120814;
+}
+.clawl-claw {
+  position: absolute; top: 26px; left: 50%; width: 120px; margin-left: -60px;
+  animation: clawl-bob 2.4s ease-in-out infinite;
+  transform-origin: 50% 0;
+}
+.clawl-claw::before {
+  content: ''; position: absolute; left: 50%; top: -12px; width: 6px; height: 18px; margin-left: -3px;
+  background: #d4d4d8; border: 2px solid #120814;
+}
+@keyframes clawl-bob {
+  0%, 100% { transform: translateX(-90px) rotate(4deg); }
+  50% { transform: translateX(90px) rotate(-4deg); }
+}
+.clawl-pile {
+  position: absolute; left: 0; right: 0; bottom: 10px;
+  display: flex; justify-content: center; align-items: flex-end;
+}
+.clawl-pack {
+  width: clamp(84px, 17vw, 128px); height: clamp(114px, 23vw, 174px);
+  margin: 0 -10px; transform-origin: 50% 100%;
+  filter: drop-shadow(0 6px 0 #120814);
+}
+.clawl-pack:nth-child(even) { margin-bottom: 26px; }
+.clawl-play {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 40px; border-radius: 999px; cursor: pointer;
+  font-family: 'Outfit', 'Impact', sans-serif; font-weight: 900; font-size: 26px; letter-spacing: 0.06em;
+  color: #120814; background: linear-gradient(180deg, #fef08a, #facc15 60%, #eab308);
+  border: 4px solid #120814; box-shadow: 0 7px 0 #120814;
+}
+.clawl-play:active { box-shadow: 0 2px 0 #120814; translate: 0 5px; }
+.clawl-how {
+  list-style: none; margin: 0; padding: 0; width: 100%;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.clawl-how li {
+  display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px;
+  background: rgba(18, 8, 20, 0.35); color: #fff; font-size: 13px; font-weight: 700; line-height: 1.25;
+}
+.clawl-how b {
+  flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: #fde047; color: #120814; border: 2px solid #120814;
+}
+@media (max-width: 640px) { .clawl-how { grid-template-columns: 1fr; } }
+
+/* ===== Full-screen claw event ===== */
+.clawx {
+  position: fixed; inset: 0; z-index: 400;
+  display: flex; flex-direction: column;
+  background: radial-gradient(120% 80% at 50% 10%, #4c0d6e 0%, #1b0629 55%, #08020d 100%);
+  color: #fff; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.clawx-rays {
+  position: absolute; inset: -50%; pointer-events: none; opacity: 0.18;
+  background: repeating-conic-gradient(from 0deg, #ff4fb0 0deg 10deg, transparent 10deg 20deg);
+  animation: clawx-spin 30s linear infinite;
+}
+.clawx-rays-gold { opacity: 0.35; background: repeating-conic-gradient(from 0deg, #fde047 0deg 9deg, transparent 9deg 18deg); animation-duration: 14s; }
+@keyframes clawx-spin { to { transform: rotate(360deg); } }
+.clawx-spot {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(50% 60% at 50% 70%, rgba(255, 79, 176, 0.25), transparent 70%);
+}
+.clawx-top {
+  position: relative; z-index: 5;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+  padding: 14px 16px 6px;
+}
+.clawx-title {
+  margin: 0; text-align: center;
+  font-family: 'Outfit', 'Impact', sans-serif; font-weight: 900; font-size: clamp(24px, 5vw, 44px); letter-spacing: 0.04em;
+  color: #fde047; -webkit-text-stroke: 2px #120814; paint-order: stroke fill;
+  text-shadow: 4px 4px 0 #120814;
+}
+.clawx-tries { display: flex; gap: 6px; }
+.clawx-try {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 900; font-size: 15px; color: #120814;
+  background: #fde047; border: 3px solid #120814; box-shadow: 0 3px 0 #120814;
+  transition: transform .2s;
+}
+.clawx-try.is-used { background: #3f3f46; color: #a1a1aa; }
+.clawx-try.is-now { transform: scale(1.2); background: #ff4fb0; color: #fff; animation: clawx-pulse 0.8s ease-in-out infinite; }
+@keyframes clawx-pulse { 50% { box-shadow: 0 3px 0 #120814, 0 0 0 6px rgba(255,79,176,0.35); } }
+.clawx-close {
+  justify-self: end; width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center; color: #fff;
+  background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.3);
+}
+.clawx-close:disabled { opacity: 0.3; cursor: default; }
+.clawx-stage { position: relative; flex: 1; min-height: 0; cursor: pointer; }
+.clawx-rail {
+  position: absolute; left: 3%; right: 3%; height: 18px; border-radius: 9px;
+  background: linear-gradient(180deg, #f3f4f6, #6b7280); border: 4px solid #120814;
+  box-shadow: 0 5px 0 #120814;
+}
+.clawx-chute {
+  position: absolute; bottom: 0; translate: -50% 0; z-index: 4;
+  border: 4px solid #120814; border-bottom: 0; border-radius: 16px 16px 0 0;
+  background: repeating-linear-gradient(45deg, #fde047 0 14px, #120814 14px 28px);
+  display: flex; justify-content: center; align-items: flex-start;
+}
+.clawx-chute::after {
+  content: ''; position: absolute; inset: 22px 10px 0; border-radius: 10px 10px 0 0;
+  background: linear-gradient(180deg, #1b0629, #000);
+}
+.clawx-chute span {
+  position: relative; z-index: 1; margin-top: -2px; padding: 0 8px;
+  background: #ff4fb0; border: 3px solid #120814; border-radius: 8px;
+  font-weight: 900; font-size: 12px; letter-spacing: 0.15em; color: #fff;
+}
+.clawx-pack {
+  position: absolute; translate: -50% 0; transform-origin: 50% 100%;
+  filter: drop-shadow(0 8px 0 rgba(18, 8, 20, 0.9));
+  pointer-events: none;
+}
+.clawx-pack .claw-pack, .clawx-carried .claw-pack, .clawx-win-pack .claw-pack, .clawl-pack .claw-pack {
+  border: 4px solid #120814; border-radius: 14px; --pack-s: 1.6;
+}
+.clawx-pack.is-back { filter: drop-shadow(0 8px 0 rgba(18,8,20,0.9)) brightness(0.85); }
+.clawx-falling { z-index: 3; }
+.clawx-rig { position: absolute; width: 0; z-index: 6; pointer-events: none; }
+.clawx-carriage {
+  position: absolute; left: -34px; top: 0; width: 68px; height: 30px; border-radius: 10px;
+  background: linear-gradient(180deg, #ff6ec7, #c0126f); border: 4px solid #120814;
+}
+.clawx-cable {
+  position: absolute; left: -5px; top: 22px; width: 10px;
+  background: repeating-linear-gradient(180deg, #e5e7eb 0 6px, #9ca3af 6px 10px);
+  border: 3px solid #120814; border-top: 0; border-bottom: 0;
+}
+.clawx-head { position: absolute; top: 40px; left: 0; transform-origin: 50% 0; }
+.clawx-claw { position: relative; z-index: 2; display: block; overflow: visible; filter: drop-shadow(0 6px 0 rgba(18,8,20,0.7)); }
+.clawx-carried { position: absolute; left: 50%; translate: -50% 0; z-index: 1; }
+.clawx-shout {
+  position: absolute; left: 50%; top: 38%; translate: -50% -50%; z-index: 10; pointer-events: none;
+  padding: 14px 28px; border-radius: 22px; white-space: nowrap;
+  font-family: 'Outfit', 'Impact', sans-serif; font-weight: 900; font-size: clamp(34px, 8vw, 72px);
+  color: #fff; background: #ff4fb0; border: 5px solid #120814; box-shadow: 8px 8px 0 #120814;
+  -webkit-text-stroke: 2px #120814; paint-order: stroke fill;
+}
+.clawx-shout-intro { background: #fde047; color: #120814; -webkit-text-stroke: 0; }
+.clawx-foot {
+  position: relative; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 16px 22px;
+}
+.clawx-stop {
+  min-width: 200px; padding: 16px 40px; border-radius: 999px; cursor: pointer;
+  font-family: 'Outfit', 'Impact', sans-serif; font-weight: 900; font-size: 32px; letter-spacing: 0.08em;
+  color: #fff; background: radial-gradient(circle at 35% 30%, #fca5a5, #ef4444 45%, #991b1b);
+  border: 5px solid #120814; box-shadow: 0 8px 0 #120814;
+}
+.clawx-stop:active { translate: 0 5px; box-shadow: 0 3px 0 #120814; }
+.clawx-hint { margin: 0; min-height: 20px; font-weight: 800; font-size: 15px; color: #fde68a; text-shadow: 0 2px 0 #120814; }
+.clawx-win {
+  position: absolute; inset: 0; z-index: 20; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px;
+  background: radial-gradient(70% 60% at 50% 45%, rgba(253, 224, 71, 0.25), rgba(8, 2, 13, 0.92) 70%);
+  text-align: center;
+}
+.clawx-win-title {
+  position: relative; margin: 0;
+  font-family: 'Outfit', 'Impact', sans-serif; font-weight: 900; font-size: clamp(48px, 12vw, 110px); line-height: 1;
+  color: #fde047; -webkit-text-stroke: 3px #120814; paint-order: stroke fill; text-shadow: 7px 7px 0 #ff4fb0;
+}
+.clawx-jam { color: #fca5a5; text-shadow: 7px 7px 0 #120814; }
+.clawx-win-pack {
+  position: relative; width: clamp(170px, 42vw, 260px); height: clamp(230px, 57vw, 350px);
+  filter: drop-shadow(0 0 40px var(--pack-accent)) drop-shadow(0 12px 0 #120814);
+}
+.clawx-win-sheen {
+  position: absolute; inset: 0; border-radius: 14px; pointer-events: none; overflow: hidden;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.55) 45%, transparent 60%);
+  background-size: 250% 100%; animation: clawx-sheen 1.8s ease-in-out infinite;
+}
+@keyframes clawx-sheen { from { background-position: 150% 0; } to { background-position: -100% 0; } }
+.clawx-win-label { position: relative; margin: 0; font-weight: 800; font-size: 18px; color: #fff; text-shadow: 0 2px 0 #120814; max-width: 420px; }
+.clawx-open {
+  position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+  padding: 16px 42px; border-radius: 999px;
+  font-family: 'Outfit', 'Impact', sans-serif; font-weight: 900; font-size: 26px; letter-spacing: 0.04em;
+  color: #120814; background: linear-gradient(180deg, #fef08a, #facc15); border: 4px solid #120814; box-shadow: 0 7px 0 #120814;
+}
+.clawx-open:active { translate: 0 5px; box-shadow: 0 2px 0 #120814; }
+.clawx-confetti { position: absolute; inset: 0; pointer-events: none; }
+.clawx-confetti span { position: absolute; top: 0; width: 10px; height: 16px; border-radius: 2px; border: 2px solid #120814; }
+@media (prefers-reduced-motion: reduce) {
+  .clawx-rays, .clawl-claw, .clawx-win-sheen { animation: none; }
+}
