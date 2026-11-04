@@ -968,8 +968,11 @@ function Body() {
 }
 
 
-/** Torso, arms and the base layer; `base` colours the sports bra and bike shorts. */
-function UpperBody({ base }: { base: string }) {
+/** Torso, arms and the base layer.
+ *  When realMode=true the sports bra + shorts are omitted and soft nipple outlines
+ *  are drawn on the front view only.
+ */
+function UpperBody({ base, realMode = false }: { base: string; realMode?: boolean }) {
   const BASE_FILL = base;
   const BASE_SHADE = mix(base, '#7a1f52', 0.35);
   const BASE_LINE = mix(base, '#2a0a1e', 0.62);
@@ -1075,6 +1078,7 @@ function UpperBody({ base }: { base: string }) {
         <path d="M87.2 228 C85.8 242 84.2 256 82.6 268 M74.2 300 C72.8 310 71.6 320 70.6 330" />
         <path d="M125.4 283 C128.6 291 128 299 119 309" />
       </g>
+      {!realMode && <>
       <Cel d={SHORTS} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
       {/* Inner shading: a defined shadow wedge along the inseam where the fabric turns between the legs,
           and from behind, the seat seam with a crease under each side of the seat and a lit upper curve. */}
@@ -1100,7 +1104,8 @@ function UpperBody({ base }: { base: string }) {
         <path d="M94 352 C94 366 96 380 100 392" strokeWidth="2.6" strokeOpacity="0.6" />
         <path d="M112 330 C108 336 104 342 102 348" strokeWidth="2" strokeOpacity="0.45" />
       </g>
-      {back ? <>
+      </>}
+      {!realMode && (back ? <>
         {/* Racerback: the straps run from the shoulders into a centre panel down to a wide band. */}
         {[false, true].map((m) => (
           <g key={String(m)} transform={m ? MIRROR : undefined}>
@@ -1140,8 +1145,21 @@ function UpperBody({ base }: { base: string }) {
           <path d="M103 238 C103 227 109 219 119 216.5" strokeWidth="3" strokeOpacity="0.75" />
           <path d="M157 233 C159 225 165 220 173 218.5" strokeWidth="2.2" strokeOpacity="0.45" />
         </g>
-      </>}
-      <BustShading upper={false} />
+      </>)}
+      {realMode && !back && (
+        <g>
+          {/* Soft areolas – warmer than skin, low opacity */}
+          <ellipse cx="121" cy="238" rx="9.8" ry="8.4" fill={mix(SKIN, '#d9826e', 0.42)} fillOpacity="0.58" stroke={SKIN_LINE} strokeOpacity="0.16" strokeWidth="0.7" />
+          <ellipse cx="179" cy="238" rx="9.8" ry="8.4" fill={mix(SKIN, '#d9826e', 0.42)} fillOpacity="0.58" stroke={SKIN_LINE} strokeOpacity="0.16" strokeWidth="0.7" />
+          {/* Nipples */}
+          <ellipse cx="121" cy="238.6" rx="3.2" ry="2.8" fill={mix(SKIN_SHADE, '#7a1f52', 0.38)} fillOpacity="0.88" stroke={SKIN_LINE} strokeOpacity="0.22" strokeWidth="0.55" />
+          <ellipse cx="179" cy="238.6" rx="3.2" ry="2.8" fill={mix(SKIN_SHADE, '#7a1f52', 0.38)} fillOpacity="0.88" stroke={SKIN_LINE} strokeOpacity="0.22" strokeWidth="0.55" />
+          {/* Tiny light-side highlights */}
+          <ellipse cx="119.5" cy="237.1" rx="1.15" ry="0.95" fill="#ffffff" fillOpacity="0.38" />
+          <ellipse cx="177.5" cy="237.1" rx="1.15" ry="0.95" fill="#ffffff" fillOpacity="0.38" />
+        </g>
+      )}
+      <BustShading upper={realMode} opacity={realMode ? 0.28 : 0.35} />
     </g>
   );
 }
@@ -1991,7 +2009,7 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
       <Pop k={key(outfit.shoes)}><Shoes choice={outfit.shoes} /></Pop>
       {/* Layers, back to front: wings, body, torso and base sports bra and shorts, bottom, top, choker, extras, head. */}
       <g className="wf-breathe">
-        <UpperBody base={outfit.base ?? BASE_COLOR} />
+        <UpperBody base={outfit.base ?? BASE_COLOR} realMode={outfit.realMode ?? false} />
         <Pop k={key(outfit.bottom)}><Bottom choice={outfit.bottom} /></Pop>
         <Pop k={key(outfit.top)}><Top choice={outfit.top} /></Pop>
         {outfit.accessory.item === 'choker' && <Pop k="choker"><Choker color={accentColor} /></Pop>}
@@ -2031,7 +2049,7 @@ function BackFigure({ outfit, className, celebrate }: { outfit: Outfit; classNam
         <Pop k={key(outfit.legwear)}><Legwear choice={outfit.legwear} /></Pop>
         <Pop k={key(outfit.shoes)}><Shoes choice={outfit.shoes} /></Pop>
         <g className="wf-breathe">
-          <UpperBody base={outfit.base ?? BASE_COLOR} />
+          <UpperBody base={outfit.base ?? BASE_COLOR} realMode={outfit.realMode ?? false} />
           <Pop k={key(outfit.bottom)}><Bottom choice={outfit.bottom} /></Pop>
           <Pop k={key(outfit.top)}><Top choice={outfit.top} /></Pop>
           {outfit.accessory.item === 'choker' && <Pop k="choker"><Choker color={accentColor} /></Pop>}
