@@ -383,6 +383,18 @@ const BRA_STRAP = 'M112 214 C114 207 117 200.6 119.6 195.8 L130.6 191.6 C127.8 1
 const SHORTS = 'M108 318 Q150 324 192 318 C201 328 211.6 338 211.8 352 C212.2 372 207.6 390 201.6 406 Q178 412 154 408 L150 392 L146 408 Q122 412 98.4 406 C92.4 390 87.8 372 88.2 352 C88.4 338 99 328 108 318 Z';
 const TOES = 'M141 580 L141.4 575.4 M136.8 580.2 L137 575.8 M132.6 579.8 L132.6 575.6 M128.8 579.2 L128.4 575.4';
 
+// Soft, rounded buttocks for the back view. Fullness sits low and outside,
+// the cleft is a soft vertical, and the under-curve flows into the thighs.
+const BUTTOCKS = 'M98 318 C102 308 118 302 150 302 C182 302 198 308 202 318 C208 336 210 358 206 378 C200 398 186 412 168 418 C160 420 154 418 150 414 C146 418 140 420 132 418 C114 412 100 398 94 378 C90 358 92 336 98 318 Z';
+
+// Narrow G-string / thong front panel + thin side strings
+const GSTRING_FRONT = 'M136 318 Q150 328 164 318 L160 348 Q150 356 140 348 Z';
+const GSTRING_SIDE = 'M108 322 C118 328 128 334 136 338 M164 338 C172 334 182 328 192 322';
+
+// Thin thong back (string up the cleft + tiny triangle at the top)
+const GSTRING_BACK = 'M148 318 L152 318 L151.2 380 L148.8 380 Z';
+const GSTRING_BACK_TOP = 'M142 316 Q150 322 158 316 L154 328 Q150 332 146 328 Z';
+
 /** Keyframes for the idle loop and outfit-change pop; disabled for reduced motion. */
 const ANIM_CSS = `
 .wf-breathe { animation: wf-breathe 3.8s ease-in-out infinite; }
@@ -1078,6 +1090,8 @@ function UpperBody({ base, realMode = false }: { base: string; realMode?: boolea
         <path d="M87.2 228 C85.8 242 84.2 256 82.6 268 M74.2 300 C72.8 310 71.6 320 70.6 330" />
         <path d="M125.4 283 C128.6 291 128 299 119 309" />
       </g>
+      {/* Buttocks – only visible on the back */}
+      <Buttocks realMode={realMode} />
       {!realMode && <>
       <Cel d={SHORTS} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
       {/* Inner shading: a defined shadow wedge along the inseam where the fabric turns between the legs,
@@ -1177,6 +1191,62 @@ function BustShading({ opacity = 0.35, upper = true }: { opacity?: number; upper
       <path d="M98 252 Q110 268 124 268 Q140 268 148 256" />
       <path d="M202 252 Q190 268 176 268 Q160 268 152 256" />
       <path d="M150 230 L150 246" strokeOpacity={opacity * 0.8} />
+    </g>
+  );
+}
+
+/** Soft glute form for the back view. Only drawn when looking at the back. */
+function Buttocks({ realMode = false }: { realMode?: boolean }) {
+  if (!useBack()) return null;
+
+  return (
+    <g>
+      {/* Base volume */}
+      <Skin d={BUTTOCKS} depth={0.7} />
+
+      {/* Separation / cleft */}
+      <path
+        d="M150 322 C149.2 350 149.4 370 150 392"
+        fill="none"
+        stroke={SKIN_LINE}
+        strokeOpacity={realMode ? 0.28 : 0.18}
+        strokeWidth="1.1"
+        strokeLinecap="round"
+      />
+
+      {/* Soft under-curve + outer highlight */}
+      <path
+        d="M112 370 Q130 392 150 396 Q170 392 188 370"
+        fill="none"
+        stroke={SKIN_SHADE}
+        strokeOpacity="0.45"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M106 340 C104 360 108 380 118 396"
+        fill="none"
+        stroke="#ffffff"
+        strokeOpacity="0.22"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M194 340 C196 360 192 380 182 396"
+        fill="none"
+        stroke="#ffffff"
+        strokeOpacity="0.18"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+
+      {/* Subtle dimples / form when realMode is on */}
+      {realMode && (
+        <g fill="none" stroke={SKIN_LINE} strokeOpacity="0.14" strokeWidth="0.8">
+          <path d="M128 348 Q134 354 140 350" />
+          <path d="M172 348 Q166 354 160 350" />
+        </g>
+      )}
     </g>
   );
 }
@@ -1398,6 +1468,7 @@ function BackZip({ top, bottom, slit }: { top: number; bottom: number; slit?: [n
 
 function Bottom({ choice }: { choice: GarmentChoice }) {
   const id = 'bottom';
+  const back = useBack();
   switch (choice.item) {
     case 'pleated': {
       const pleats = (<g fill="none" strokeLinecap="round">
@@ -1498,6 +1569,58 @@ function Bottom({ choice }: { choice: GarmentChoice }) {
             </g>
           ))}</g>
         </g>} />;
+    case 'gstring':
+    case 'thong': {
+      const stroke = mix(choice.color, '#000000', 0.45);
+      const shade = mix(choice.color, '#000000', 0.35);
+
+      return (
+        <g>
+          {/* Front panel + side strings (hidden on back) */}
+          {!back && (
+            <>
+              <Cel
+                d={GSTRING_FRONT}
+                fill={choice.color}
+                shade={shade}
+                shadeOpacity={0.55}
+                line={stroke}
+                depth={0.4}
+                weight={0.7}
+              />
+              <path
+                d={GSTRING_SIDE}
+                fill="none"
+                stroke={stroke}
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </>
+          )}
+
+          {/* Back string + tiny top triangle */}
+          {back && (
+            <>
+              <path
+                d={GSTRING_BACK}
+                fill={choice.color}
+                stroke={stroke}
+                strokeWidth="0.8"
+              />
+              <Cel
+                d={GSTRING_BACK_TOP}
+                fill={choice.color}
+                shade={shade}
+                shadeOpacity={0.5}
+                line={stroke}
+                depth={0.3}
+                weight={0.6}
+              />
+            </>
+          )}
+        </g>
+      );
+    }
     default:
       return null;
   }
