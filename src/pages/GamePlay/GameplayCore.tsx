@@ -9442,12 +9442,34 @@ export default function Game() {
             let speedBps = 0;
             let lastLoadStateTime = 0; // PERF: Throttle setLoadState to max 10Hz (L3)
 
+            // Stall watchdog: reader.read() has no built-in timeout, so a
+            // stream that stops delivering chunks mid-download would hang
+            // the level on the buffering screen forever. If no chunk
+            // arrives within STALL_TIMEOUT_MS, cancel the stream and throw
+            // so the standard fallback loaders below take over.
+            const STALL_TIMEOUT_MS = 6000;
             while (true) {
               if (cancelled) {
                 reader.cancel();
                 return;
               }
-              const { done, value } = await reader.read();
+              let stallTimer: ReturnType<typeof setTimeout> | undefined;
+              const stallGuard = new Promise<never>((_, reject) => {
+                stallTimer = setTimeout(
+                  () => reject(new Error(`[GamePlay Init] Audio stream stalled (no data for ${STALL_TIMEOUT_MS}ms)`)),
+                  STALL_TIMEOUT_MS
+                );
+              });
+              let readResult: { done: boolean; value?: Uint8Array };
+              try {
+                readResult = await Promise.race([reader.read(), stallGuard]);
+              } catch (stallErr) {
+                try { reader.cancel(); } catch {}
+                throw stallErr;
+              } finally {
+                if (stallTimer) clearTimeout(stallTimer);
+              }
+              const { done, value } = readResult;
               if (done) break;
               if (value) {
                 chunks.push(value);
