@@ -377,7 +377,7 @@ export default function ClawEvent({ packs, onWin, onOpen, onClose }: ClawEventPr
               className="clawx-win-pack"
               style={{ ['--pack-accent' as string]: prize.pack.accent }}
               initial={{ scale: 0.2, y: 200, rotate: 30 }}
-              animate={{ scale: 1, y: 0, rotate: [30, -6, 3, 0] }}
+              animate={{ scale: 1, y: 0, rotate: 0 }}
               transition={{ type: 'spring', stiffness: 180, damping: 12, delay: 0.15 }}
             >
               <PackToken pack={prize.pack} hidePrice />
