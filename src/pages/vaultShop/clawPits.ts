@@ -1,7 +1,7 @@
 import { PACK_CONFIGS, type PackCategory, type PackSize } from '../../utils/rarity';
 import { getTokenPackCost } from '../../services/vaultService';
 
-/** One pack sitting in the claw pit. Grabbing it opens checkout for that exact tier. */
+/** One pack in a machine: a vending coil or the bonus claw's pile. */
 export interface PitPack {
   id: string;
   category: PackCategory;
@@ -29,23 +29,6 @@ export interface ClawPit {
   category?: PackCategory;
   picks?: Array<[PackCategory, PackSize]>;
 }
-
-export const CLAW_PITS: ClawPit[] = [
-  { id: 'free', name: 'Free', icon: '🎁', accent: '#ffffff', blurb: 'A free 1-card pack, once a day.', category: 'free' },
-  { id: 'bombshell', name: 'Bombshells', icon: '💖', accent: '#FF1493', blurb: 'The 365 Days of Light & Dark artwork series.', category: 'bombshell' },
-  { id: 'taste', name: 'Taste', icon: '🎧', accent: '#4ade80', blurb: 'Any card up to today.', category: 'taste' },
-  { id: 'light', name: 'Light', icon: '☀️', accent: '#fbbf24', blurb: 'Only light mood tracks.', category: 'light' },
-  { id: 'dark', name: 'Dark', icon: '🌙', accent: '#8b5cf6', blurb: 'Only dark mood tracks.', category: 'dark' },
-  { id: 'miss_out', name: 'Missed', icon: '⏳', accent: '#f97316', blurb: 'Past daily cards you didn’t claim.', category: 'miss_out' },
-  { id: 'month', name: 'Monthly', icon: '📅', accent: '#06b6d4', blurb: 'Cards from a completed month.', category: 'month' },
-  { id: 'special_picks', name: 'Specials', icon: '⭐', accent: '#ec4899', blurb: 'Curated weekly set, every card Rare or higher.', category: 'special_picks' },
-  { id: 'prophecy', name: 'Prophecy', icon: '🔮', accent: '#a78bfa', blurb: 'One unreleased future track.', category: 'prophecy' },
-  { id: 'alpha', name: 'Alpha', icon: '🎲', accent: '#ef4444', blurb: 'One archival past track.', category: 'alpha' },
-  {
-    id: 'sparks', name: 'Spark pit', icon: '⚡', accent: '#ff9900', blurb: 'Packs you pay for with V⚡.',
-    picks: [['vault_token', 'single'], ['bombshell_token', 'single'], ['bombshell_token', 'double'], ['bombshell_token', 'five' as PackSize], ['bombshell_token', 'ten']],
-  },
-];
 
 export function packsForPit(pit: ClawPit, bombshellArt: 'dark' | 'light'): PitPack[] {
   const pairs: Array<[PackCategory, PackSize]> = pit.picks
@@ -104,4 +87,21 @@ export function vendingSlots(bombshellArt: 'dark' | 'light'): VendSlot[][] {
     const [pack] = packsForPit({ ...pit, picks: [pick] }, bombshellArt);
     return { code, pack: pack ?? null };
   }));
+}
+
+/**
+ * Every pack the bonus claw can grab: the whole vending machine except the daily free pack,
+ * shuffled into a fixed order so neighbours in the pile look different.
+ */
+export function clawPrizePacks(bombshellArt: 'dark' | 'light'): PitPack[] {
+  const all = vendingSlots(bombshellArt).flat()
+    .map(s => s.pack)
+    .filter((p): p is PitPack => !!p && p.category !== 'free');
+  // Deterministic interleave: alternate from the front and back of the machine.
+  const out: PitPack[] = [];
+  for (let i = 0, j = all.length - 1; i <= j; i++, j--) {
+    out.push(all[i]);
+    if (i !== j) out.push(all[j]);
+  }
+  return out;
 }
