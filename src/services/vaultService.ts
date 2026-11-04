@@ -604,6 +604,34 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
   }
 }
 
+/** Map vault_collections rows returned by vault-engine into OwnedCards. */
+async function mapEdgeCards(rawCards: any[]): Promise<OwnedCard[]> {
+  const pool = await fetchAllCards();
+  return rawCards.map((c: any) => {
+    const isBombshell = isBombshellCard(c);
+    const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
+    const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
+    return {
+      id: c.id || crypto.randomUUID(),
+      cardId: parent.id,
+      card: { ...parent, rarity: c.rarity, cardSet: isBombshell ? 'bombshell' : 'gen-0' },
+      source: c.source,
+      cardSet: isBombshell ? 'bombshell' : 'gen-0',
+      coverArtwork: parent.coverArtwork,
+      claimedAt: c.claimed_at,
+      edition: c.edition,
+      maxSupply: c.max_supply,
+      isEcho: c.is_echo,
+      echoGeneration: c.echo_generation,
+      echoSourceDay: c.echo_source_day,
+      proof: c.proof,
+      ultraReward: c.ultra_reward,
+      blockchainStatus: c.blockchain_status,
+      fingerprint: c.fingerprint,
+    };
+  });
+}
+
 // ===== STRIPE CHECKOUT =====
 
 /**
@@ -657,6 +685,104 @@ export async function createStripeCheckoutSession(
   }
 }
 
+// ===== BONUS CLAW PULLS =====
+// A pull is one drop of the bonus claw. Pulls come from bonus codes (redeem_claw_code, SQL)
+// or a 99¢ Stripe checkout (vault-engine). Spending a pull and minting the grabbed pack
+// happen together in vault-engine's clawPull action. See
+// supabase/migrations/20261104090000_claw_pulls.sql.
+
+export const CLAW_PULL_PRICE = '$0.99';
+
+export async function getClawCredits(): Promise<number> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return 0;
+    const { data, error } = await supabase.rpc('get_claw_credits');
+    if (error) throw error;
+    return typeof data === 'number' ? data : 0;
+  } catch (err) {
+    console.warn('Claw credits unavailable:', err);
+    return 0;
+  }
+}
+
+const CLAW_CODE_ERRORS: Record<string, string> = {
+  NOT_SIGNED_IN: 'Sign in to use a claw code.',
+  INVALID_CODE: 'That code isn’t a claw code.',
+  EXPIRED: 'That code has expired.',
+  USED_UP: 'That code has been used up.',
+  ALREADY_REDEEMED: 'You’ve already used that code.',
+};
+
+export async function redeemClawCode(code: string): Promise<{ success: boolean; pulls?: number; credits?: number; error?: string }> {
+  try {
+    const { data, error } = await supabase.rpc('redeem_claw_code', { p_code: code });
+    if (error) throw error;
+    if (!data?.success) return { success: false, error: CLAW_CODE_ERRORS[data?.error] || 'That code didn’t work.' };
+    return { success: true, pulls: data.pulls, credits: data.credits };
+  } catch (err: any) {
+    console.error('Claw code error:', err);
+    return { success: false, error: err?.message || 'That code didn’t work.' };
+  }
+}
+
+export async function createClawPullCheckout(): Promise<{ success: boolean; checkoutUrl?: string; error?: string }> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Sign in first');
+    const { data: result, error } = await supabase.functions.invoke('vault-engine', {
+      body: { action: 'createClawPullCheckout', payload: { origin: window.location.origin } },
+    });
+    if (error || !result?.success) {
+      return { success: false, error: (await extractDetailedError(error)) || result?.error || 'Checkout didn’t open' };
+    }
+    return { success: true, checkoutUrl: result.checkoutUrl };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Checkout didn’t open' };
+  }
+}
+
+/** Called when Stripe sends the player back. Credits the pull once; safe to call again. */
+export async function verifyClawPullCheckout(sessionId: string): Promise<{ success: boolean; credits?: number; error?: string }> {
+  try {
+    const { data: result, error } = await supabase.functions.invoke('vault-engine', {
+      body: { action: 'verifyClawPullCheckout', payload: { sessionId } },
+    });
+    if (error || !result?.success) {
+      return { success: false, error: (await extractDetailedError(error)) || result?.error || 'Payment not confirmed' };
+    }
+    return { success: true, credits: result.credits };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Payment not confirmed' };
+  }
+}
+
+export type ClawPullResult =
+  | { status: 'won'; cards: OwnedCard[]; credits: number }
+  | { status: 'slipped'; credits: number }
+  | { status: 'no_credits' }
+  | { status: 'error'; error: string };
+
+/** Spend one pull on the pack under the claw. The server decides if the grip holds. */
+export async function clawPull(category: PackCategory, size: PackSize): Promise<ClawPullResult> {
+  try {
+    const edgePackType = (category as string) === 'bombshell_token' ? 'bombshell' : category;
+    const { data: result, error } = await supabase.functions.invoke('vault-engine', {
+      body: { action: 'clawPull', payload: { packType: edgePackType, size } },
+    });
+    if (error || !result?.success) {
+      if (result?.error === 'NO_CLAW_CREDITS') return { status: 'no_credits' };
+      const msg = (await extractDetailedError(error)) || result?.error || 'The claw jammed';
+      if (/NO_CLAW_CREDITS/.test(msg)) return { status: 'no_credits' };
+      return { status: 'error', error: msg };
+    }
+    if (!result.won) return { status: 'slipped', credits: result.credits ?? 0 };
+    return { status: 'won', cards: await mapEdgeCards(result.cards || []), credits: result.credits ?? 0 };
+  } catch (err: any) {
+    return { status: 'error', error: err?.message || 'The claw jammed' };
+  }
+}
+
 export interface StripeVerificationOutcome {
   success: boolean;
   isTokenBundle?: boolean;
@@ -697,32 +823,7 @@ export async function verifyStripeSessionDetailed(
       };
     }
 
-    const rawCards = result.cards || [];
-    const pool = await fetchAllCards();
-
-    const cards = rawCards.map((c: any) => {
-      const isBombshell = isBombshellCard(c);
-      const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
-      const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
-      return {
-        id: c.id || crypto.randomUUID(),
-        cardId: parent.id,
-        card: { ...parent, rarity: c.rarity, cardSet: isBombshell ? 'bombshell' : 'gen-0' },
-        source: c.source,
-        cardSet: isBombshell ? 'bombshell' : 'gen-0',
-        coverArtwork: parent.coverArtwork,
-        claimedAt: c.claimed_at,
-        edition: c.edition,
-        maxSupply: c.max_supply,
-        isEcho: c.is_echo,
-        echoGeneration: c.echo_generation,
-        echoSourceDay: c.echo_source_day,
-        proof: c.proof,
-        ultraReward: c.ultra_reward,
-        blockchainStatus: c.blockchain_status,
-        fingerprint: c.fingerprint,
-      };
-    });
+    const cards = await mapEdgeCards(result.cards || []);
 
     return {
       success: true,

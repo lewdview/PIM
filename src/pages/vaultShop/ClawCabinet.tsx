@@ -14,7 +14,8 @@ const CHUTE_X = 0.09;           // chute centre (fraction of glass width)
 const MIN_X = 0.07;
 const MAX_X = 0.95;
 const SPEED = 0.55;             // glass widths per second while a direction is held
-const GRAB_RADIUS = 0.07;       // how close (fraction of width) the claw must be to a pack centre
+const PILE_START = 0.22;        // packs lie from here to PILE_END (fraction of glass width)
+const PILE_END = 0.95;
 
 function packWidth(p: PitPack, scale = 1) {
   return Math.round((70 + Math.min(p.cardCount, 50) / 50 * 40) * scale);
@@ -25,7 +26,11 @@ function packHeight(p: PitPack, scale = 1) {
 /** Spread packs across the floor right of the chute. Deterministic so they don't jump. */
 function packX(i: number, n: number) {
   if (n === 1) return 0.6;
-  return 0.3 + (i / (n - 1)) * 0.6;
+  return PILE_START + (i / (n - 1)) * (PILE_END - PILE_START);
+}
+/** Big piles lie in two layers: odd packs sit on the back row, a little higher. */
+function packRow(i: number, n: number) {
+  return n > 10 && i % 2 === 1 ? 1 : 0;
 }
 function packTilt(i: number) {
   return [-7, 5, -3, 8, -5, 3][i % 6];
@@ -39,20 +44,37 @@ export interface ClawCabinetProps {
   /** Pack currently held at the prize door; it's off the floor until resolved. */
   heldId: string | null;
   disabled?: boolean;
+  /** False when a drop isn't paid for yet; DROP then calls onNeedPull instead. */
+  canDrop?: boolean;
+  onNeedPull?: () => void;
+  /**
+   * Called when the claw closes on a pack. Resolve true if the grip holds (the pack is
+   * the player's), false if it slips. Without it every grab holds.
+   */
+  onGrab?: (pack: PitPack) => Promise<boolean>;
   onPrize: (pack: PitPack) => void;
   onEmptyGrab?: () => void;
   onLockedGrab?: (pack: PitPack) => void;
   /** Rendered over the glass (the prize door ticket). */
   overlay?: React.ReactNode;
+  /** Text on the DROP button, e.g. "DROP · 2 left". */
+  dropLabel?: string;
+  /** Hide prices on the floor packs (prizes, not products). */
+  hidePrices?: boolean;
 }
 
-export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled, onPrize, onEmptyGrab, onLockedGrab, overlay }: ClawCabinetProps) {
+export default function ClawCabinet({
+  packs, accent, lockedIds, heldId, disabled, canDrop = true, onNeedPull, onGrab, onPrize,
+  onEmptyGrab, onLockedGrab, overlay, dropLabel = 'DROP', hidePrices,
+}: ClawCabinetProps) {
   const glassRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 600, h: 420 });
   const [phase, setPhase] = useState<Phase>('idle');
   const [carried, setCarried] = useState<PitPack | null>(null);
   const [falling, setFalling] = useState<PitPack | null>(null);
   const [open, setOpen] = useState(true);
+  const [gripping, setGripping] = useState(false);
+  const [slipped, setSlipped] = useState(false);
 
   const x = useMotionValue(0.55);
   const cable = useMotionValue(REST_CABLE);
@@ -94,24 +116,31 @@ export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled
     return () => cancelAnimationFrame(raf);
   }, [x, sway]);
 
-  // Shrink packs on narrow glass so a full pit still fits.
-  const scale = Math.max(0.55, Math.min(1, (size.w * 0.6 / Math.max(1, packs.length)) / 80 * 1.25));
+  // Shrink packs on narrow glass so a full pit still fits. Two layers fit twice as many.
+  const layers = packs.length > 10 ? 2 : 1;
+  const scale = Math.max(0.5, Math.min(1, (size.w * 0.6 * layers / Math.max(1, packs.length)) / 80 * 1.25));
+  const n = packs.length;
+  // Grab radius: half the gap between neighbours, so anywhere over the pile catches a pack.
+  const grabRadius = n > 1 ? Math.max(0.02, ((PILE_END - PILE_START) / (n - 1)) * 0.6) : 0.07;
+  const backLift = (p: PitPack) => Math.round(packHeight(p, scale) * 0.38);
 
-  const visiblePacks = packs.map((p, i) => ({ p, i, cx: packX(i, packs.length) }));
+  const visiblePacks = packs.map((p, i) => ({ p, i, cx: packX(i, n), row: packRow(i, n) }));
 
   const findTarget = useCallback((at: number) => {
-    let best: { p: PitPack; cx: number } | null = null;
+    let best: { p: PitPack; cx: number; row: number } | null = null;
     let bestD = Infinity;
-    for (const { p, cx } of visiblePacks) {
+    for (const { p, cx, row } of visiblePacks) {
       if (p.id === heldId) continue;
-      const d = Math.abs(cx - at);
-      if (d < bestD) { bestD = d; best = { p, cx }; }
+      // Back-row packs stick up higher, so the claw meets them first when it's close.
+      const d = Math.abs(cx - at) - (row ? grabRadius * 0.1 : 0);
+      if (d < bestD) { bestD = d; best = { p, cx, row }; }
     }
-    return best && bestD <= GRAB_RADIUS ? best : null;
-  }, [visiblePacks, heldId]);
+    return best && bestD <= grabRadius ? best : null;
+  }, [visiblePacks, heldId, grabRadius]);
 
   const drop = useCallback(async () => {
     if (phaseRef.current !== 'idle' || disabled || heldId) return;
+    if (!canDrop) { onNeedPull?.(); return; }
     dirRef.current = 0;
     const target = findTarget(x.get());
     setPhase('dropping');
@@ -119,7 +148,7 @@ export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled
     audioManager.playSfx('swipe', 0.5);
 
     const depth = target
-      ? size.h - FLOOR_PAD - packHeight(target.p, scale) + GRIP_DEPTH - HEAD_H
+      ? size.h - FLOOR_PAD - (target.row ? backLift(target.p) : 0) - packHeight(target.p, scale) + GRIP_DEPTH - HEAD_H
       : size.h - FLOOR_PAD - HEAD_H + 6;
     if (target) {
       // Snap the last few pixels so the prongs land square on the pack.
@@ -131,17 +160,31 @@ export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled
     audioManager.playSfx('cas_slam_down', 0.45);
     await new Promise(r => setTimeout(r, 260));
 
-    const locked = target && lockedIds?.has(target.p.id);
-    if (target && !locked) setCarried(target.p);
+    const locked = !!target && !!lockedIds?.has(target.p.id);
+    let held = !!target && !locked;
+    if (held && onGrab) {
+      setGripping(true);
+      try { held = await onGrab(target!.p); } catch { held = false; }
+      setGripping(false);
+    }
+    const slip = !!target && !locked && !held;
+    if (held) setCarried(target!.p);
+    else if (slip) {
+      // Grip lets go: the prongs spring open and the pack settles back.
+      setSlipped(true);
+      setOpen(true);
+    }
 
     setPhase('lifting');
     await animate(cable, REST_CABLE, { duration: 0.9, ease: [0.3, 0, 0.3, 1] });
+    setSlipped(false);
 
-    if (!target || locked) {
+    if (!held) {
       setOpen(true);
       setPhase('idle');
       if (locked) { audioManager.playSfx('locked_out', 0.5); onLockedGrab?.(target!.p); }
-      else { audioManager.playSfx('miss', 0.45); onEmptyGrab?.(); }
+      else if (!slip) { audioManager.playSfx('miss', 0.45); onEmptyGrab?.(); }
+      else audioManager.playSfx('miss', 0.45);
       return;
     }
 
@@ -163,17 +206,18 @@ export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled
     setPhase('returning');
     await animate(x, 0.55, { duration: 0.8, ease: 'easeInOut' });
     setPhase('idle');
-  }, [disabled, heldId, findTarget, x, cable, sway, size.h, lockedIds, onPrize, onEmptyGrab, onLockedGrab, scale]);
+  }, [disabled, heldId, canDrop, onNeedPull, onGrab, findTarget, x, cable, sway, size.h, lockedIds, onPrize, onEmptyGrab, onLockedGrab, scale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const aimAndDrop = useCallback(async (cx: number) => {
     if (phaseRef.current !== 'idle' || disabled || heldId) return;
+    if (!canDrop) { onNeedPull?.(); return; }
     setPhase('aiming');
     audioManager.playSfx('tap_nav', 0.2);
     await animate(x, cx, { duration: 0.3 + Math.abs(x.get() - cx) * 0.9, ease: 'easeInOut' });
     setPhase('idle');
     phaseRef.current = 'idle';
     drop();
-  }, [disabled, heldId, x, drop]);
+  }, [disabled, heldId, canDrop, onNeedPull, x, drop]);
 
   // Keyboard: ← → to steer, Space / ↓ / Enter to drop.
   useEffect(() => {
@@ -212,8 +256,8 @@ export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled
   const statusText = heldId ? 'Prize at the door ↓'
     : phase === 'idle' ? 'Steer, then drop'
     : phase === 'aiming' ? 'Lining up…'
-    : phase === 'dropping' ? 'Dropping…'
-    : phase === 'lifting' ? (carried ? 'Got it!' : 'Lifting…')
+    : phase === 'dropping' ? (gripping ? 'Gripping…' : 'Dropping…')
+    : phase === 'lifting' ? (carried ? 'Got it!' : slipped ? 'It slipped!' : 'Lifting…')
     : phase === 'carrying' ? 'To the chute…'
     : phase === 'releasing' ? 'Prize!'
     : 'Resetting…';
@@ -247,36 +291,24 @@ export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled
           <span>PRIZE</span>
         </div>
 
-        {/* Back-row stock: decoration only, so the pit reads full */}
-        {visiblePacks.map(({ p, i, cx }) => (
-          <span
-            key={`back-${p.id}`}
-            className="claw-pack-back"
-            aria-hidden
-            style={{ left: `${(cx + (i % 2 ? 0.05 : -0.05)) * 100}%`, bottom: FLOOR_PAD + 34, width: packWidth(p, scale) * 0.8, height: packHeight(p, scale) * 0.8, rotate: `${-packTilt(i) * 1.5}deg` }}
-          >
-            <PackToken pack={p} />
-          </span>
-        ))}
-
         {/* Floor packs */}
-        {visiblePacks.map(({ p, i, cx }) => {
+        {visiblePacks.map(({ p, i, cx, row }) => {
           const hidden = p.id === heldId || carried?.id === p.id || falling?.id === p.id;
           const locked = lockedIds?.has(p.id);
           return (
             <motion.button
               key={p.id}
               type="button"
-              aria-label={`Grab ${p.label}, ${p.cardCount} card${p.cardCount === 1 ? '' : 's'}, ${p.price}`}
+              aria-label={`Grab ${p.label}, ${p.cardCount} card${p.cardCount === 1 ? '' : 's'}${hidePrices ? '' : `, ${p.price}`}`}
               disabled={busy}
               className={`claw-pack-slot${locked ? ' is-locked' : ''}`}
-              style={{ left: `${cx * 100}%`, bottom: FLOOR_PAD, width: packWidth(p, scale), height: packHeight(p, scale) }}
+              style={{ left: `${cx * 100}%`, bottom: FLOOR_PAD + (row ? backLift(p) : 0), width: packWidth(p, scale), height: packHeight(p, scale), zIndex: row ? 2 : 3 }}
               initial={false}
               animate={{ opacity: hidden ? 0 : 1, y: hidden ? -8 : 0, rotate: packTilt(i) }}
               transition={{ duration: hidden ? 0.05 : 0.35 }}
               onClick={() => aimAndDrop(cx)}
             >
-              <PackToken pack={p} locked={locked} />
+              <PackToken pack={p} locked={locked} hidePrice={hidePrices} />
             </motion.button>
           );
         })}
@@ -293,7 +325,7 @@ export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5, ease: [0.5, 0, 1, 0.6] }}
             >
-              <PackToken pack={falling} />
+              <PackToken pack={falling} hidePrice={hidePrices} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -305,7 +337,7 @@ export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled
           <motion.div className="claw-head" style={{ y: headY, rotate: sway }}>
             {carried && (
               <div className="claw-carried" style={{ width: packWidth(carried, scale), height: packHeight(carried, scale), top: HEAD_H - GRIP_DEPTH }}>
-                <PackToken pack={carried} />
+                <PackToken pack={carried} hidePrice={hidePrices} />
               </div>
             )}
             <ClawHeadSVG open={open} />
@@ -327,8 +359,8 @@ export default function ClawCabinet({ packs, accent, lockedIds, heldId, disabled
           </button>
         </div>
         <p className="claw-deck-hint">Hold the arrows or tap a pack. <kbd>←</kbd><kbd>→</kbd> <kbd>Space</kbd></p>
-        <button type="button" className="claw-drop" onClick={drop} disabled={busy}>
-          <span>DROP</span>
+        <button type="button" className={`claw-drop${canDrop ? '' : ' is-coin'}`} onClick={drop} disabled={busy}>
+          <span>{dropLabel}</span>
         </button>
       </div>
     </div>
@@ -361,7 +393,7 @@ function ClawHeadSVG({ open }: { open: boolean }) {
   );
 }
 
-export function PackToken({ pack, locked }: { pack: PitPack; locked?: boolean }) {
+export function PackToken({ pack, locked, hidePrice }: { pack: PitPack; locked?: boolean; hidePrice?: boolean }) {
   return (
     <span
       className="claw-pack"
@@ -374,7 +406,7 @@ export function PackToken({ pack, locked }: { pack: PitPack; locked?: boolean })
     >
       {!pack.coverImage && <span className="claw-pack-icon">{pack.icon}</span>}
       <span className="claw-pack-count">{pack.cardCount}<small>{pack.cardCount === 1 ? 'card' : 'cards'}</small></span>
-      <span className="claw-pack-price">{locked ? 'TAKEN' : pack.price}</span>
+      {!hidePrice && <span className="claw-pack-price">{locked ? 'TAKEN' : pack.price}</span>}
     </span>
   );
 }
