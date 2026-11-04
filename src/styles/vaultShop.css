@@ -517,6 +517,7 @@
 .vend-body { display: grid; grid-template-columns: minmax(0, 1fr) 168px; gap: 14px; }
 
 .vend-window {
+  position: relative;
   padding: 8px; border-radius: 10px;
   background: linear-gradient(180deg, #2b2e35, #16181d);
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.7);
@@ -723,3 +724,63 @@
 @media (prefers-reduced-motion: reduce) {
   .vend-coil.is-spinning, .vend-flap.has-items .vend-flap-door { animation: none; }
 }
+
+/* Close-up of a selected pack */
+.vend-zoom {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: center; gap: clamp(16px, 4vw, 40px);
+  padding: 24px; border-radius: 10px;
+  background: radial-gradient(70% 60% at 40% 50%, rgba(255, 20, 147, 0.22), transparent 70%), rgba(6, 6, 10, 0.86);
+  backdrop-filter: blur(4px);
+  perspective: 900px;
+  color: #f4f4f5;
+}
+.vend-zoom-close {
+  position: absolute; top: 10px; right: 10px;
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff;
+}
+.vend-zoom-pack {
+  position: relative; flex: 0 0 auto;
+  width: clamp(170px, 24vw, 250px); aspect-ratio: 3 / 4;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 30px 40px rgba(0,0,0,0.7)) drop-shadow(0 0 30px rgba(255,20,147,0.35));
+}
+.vend-zoom-pack .claw-pack { border-radius: 10px; }
+.vend-zoom-pack .claw-pack::before, .vend-zoom-pack .claw-pack::after { height: 14px; }
+.vend-zoom-pack .claw-pack-icon { font-size: 64px; }
+.vend-zoom-pack .claw-pack-count { font-size: 52px; margin-top: 6px; }
+.vend-zoom-pack .claw-pack-count small { font-size: 12px; }
+.vend-zoom-pack .claw-pack-price { display: block; bottom: 22px; font-size: 14px; padding: 3px 10px; }
+.vend-zoom-sheen {
+  position: absolute; inset: 0; border-radius: 10px; pointer-events: none;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.28) 45%, transparent 60%);
+  background-size: 250% 100%;
+  animation: vend-sheen 2.8s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+@keyframes vend-sheen { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.vend-zoom-info { max-width: 260px; display: flex; flex-direction: column; gap: 6px; }
+.vend-zoom-code { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 13px; color: #fde68a; letter-spacing: 0.15em; }
+.vend-zoom-info h3 { margin: 0; font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 26px; line-height: 1.05; text-transform: uppercase; }
+.vend-zoom-info p { margin: 0; font-size: 14px; color: #d4d4d8; }
+.vend-zoom-meta { font-family: 'JetBrains Mono', monospace; }
+.vend-zoom-meta b { color: #fde68a; }
+.vend-zoom-actions { display: flex; gap: 8px; margin-top: 8px; }
+.vend-zoom-actions .vend-go { flex: 1; }
+.vend-zoom-back {
+  padding: 0 16px; border-radius: 7px; cursor: pointer; font-weight: 800;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #e4e4e7;
+}
+@media (max-width: 720px) {
+  /* On phones the close-up takes the whole screen so it's never scrolled off. */
+  .vend-zoom { position: fixed; z-index: 120; border-radius: 0; flex-direction: column; justify-content: center; gap: 14px; padding: 24px 16px calc(env(safe-area-inset-bottom, 0px) + 24px); background: radial-gradient(70% 50% at 50% 35%, rgba(255, 20, 147, 0.25), transparent 70%), rgba(6, 6, 10, 0.94); }
+  .vend-zoom-close { top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; }
+  .vend-zoom-pack { width: min(60vw, 230px); }
+  .vend-zoom-pack .claw-pack-icon { font-size: 48px; }
+  .vend-zoom-pack .claw-pack-count { font-size: 40px; }
+  .vend-zoom-info { max-width: none; width: 100%; text-align: center; align-items: center; }
+  .vend-zoom-info h3 { font-size: 20px; }
+  .vend-zoom-actions { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .vend-zoom-sheen { animation: none; } }

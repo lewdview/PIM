@@ -7,6 +7,7 @@ export interface PitPack {
   category: PackCategory;
   size: PackSize;
   label: string;
+  description: string;
   icon: string;
   accent: string;
   gradient: string;
@@ -62,6 +63,7 @@ export function packsForPit(pit: ClawPit, bombshellArt: 'dark' | 'light'): PitPa
       category,
       size,
       label: cfg.label,
+      description: cfg.description,
       icon: cfg.icon,
       accent: cfg.accent,
       gradient: cfg.gradient,

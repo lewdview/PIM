@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { X } from 'lucide-react';
 import { audioManager } from '../../game/audio';
 import { PackToken } from './ClawCabinet';
 import type { PitPack, VendSlot } from './clawPits';
@@ -26,6 +27,8 @@ export default function VendingMachine({ rows, lockedIds, credit, onVend, onDrop
   const glassRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [selected, setSelected] = useState<VendSlot | null>(null);
+  const [zoomed, setZoomed] = useState(false);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [keyBuffer, setKeyBuffer] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const [message, setMessage] = useState<string | null>(null);
@@ -53,7 +56,16 @@ export default function VendingMachine({ rows, lockedIds, credit, onVend, onDrop
     if (lockedIds?.has(slot.pack.id)) { setSelected(slot); setMessage('SOLD OUT · BACK TOMORROW'); return; }
     setSelected(slot);
     setMessage(null);
+    setZoomed(true);
   }, [phase, lockedIds]);
+
+  // Esc closes the close-up.
+  useEffect(() => {
+    if (!zoomed) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setZoomed(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [zoomed]);
 
   const pressKey = useCallback((k: string) => {
     if (phase === 'paying' || phase === 'vending') return;
@@ -68,7 +80,7 @@ export default function VendingMachine({ rows, lockedIds, credit, onVend, onDrop
     setMessage('PICK A ROW FIRST (A–E)');
   }, [phase, keyBuffer, slotByCode, choose]);
 
-  const clear = () => { setKeyBuffer(''); setSelected(null); setMessage(null); if (phase === 'dropped') setPhase('idle'); };
+  const clear = () => { setKeyBuffer(''); setSelected(null); setZoomed(false); setMessage(null); if (phase === 'dropped') setPhase('idle'); };
 
   const vend = useCallback(async () => {
     const slot = selected;
@@ -76,6 +88,11 @@ export default function VendingMachine({ rows, lockedIds, credit, onVend, onDrop
     if (!slot || !pack || phase === 'paying' || phase === 'vending' || busy) return;
     if (lockedIds?.has(pack.id)) { audioManager.playSfx('locked_out', 0.5); setMessage('SOLD OUT · BACK TOMORROW'); return; }
 
+    if (zoomed) {
+      // Let the close-up fly back onto its coil before the machine runs.
+      setZoomed(false);
+      await new Promise(r => setTimeout(r, 380));
+    }
     setPhase('paying');
     const paid = await onVend(pack);
     if (!paid) { setPhase('idle'); return; }
@@ -99,7 +116,7 @@ export default function VendingMachine({ rows, lockedIds, credit, onVend, onDrop
     onDropped(pack);
     setPhase('dropped');
     setSelected(null);
-  }, [selected, phase, busy, lockedIds, onVend, onDropped]);
+  }, [selected, phase, busy, lockedIds, onVend, onDropped, zoomed]);
 
   const sel = selected?.pack;
   const display = message
@@ -115,6 +132,7 @@ export default function VendingMachine({ rows, lockedIds, credit, onVend, onDrop
     : `VEND · ${sel.price}`;
 
   return (
+    <LayoutGroup>
     <div className="vend-cabinet">
       <div className="vend-body">
         {/* Glass front */}
@@ -140,6 +158,7 @@ export default function VendingMachine({ rows, lockedIds, credit, onVend, onDrop
                           {slot.pack && (
                             <motion.span
                               className="vend-pack"
+                              layoutId={zoomed && isSel ? undefined : `vend-pack-${slot.code}`}
                               animate={spinning === slot.code ? { y: [0, -3, 2], rotateX: [0, -14, 0] } : { y: 0 }}
                               transition={{ duration: 0.6 }}
                               style={{ opacity: isFalling ? 0 : 1 }}
@@ -180,6 +199,54 @@ export default function VendingMachine({ rows, lockedIds, credit, onVend, onDrop
             </AnimatePresence>
             <div className="vend-glass-glare" aria-hidden />
           </div>
+
+          <AnimatePresence>
+            {zoomed && sel && selected && (
+              <motion.div
+                key="zoom"
+                className="vend-zoom"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={(e) => { if (e.target === e.currentTarget) setZoomed(false); }}
+              >
+                <button type="button" className="vend-zoom-close" aria-label="Back to the machine" onClick={() => setZoomed(false)}>
+                  <X size={18} />
+                </button>
+                <motion.div
+                  className="vend-zoom-pack"
+                  layoutId={`vend-pack-${selected.code}`}
+                  transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                  onPointerMove={(e) => {
+                    const r = e.currentTarget.getBoundingClientRect();
+                    setTilt({ x: ((e.clientX - r.left) / r.width - 0.5) * 18, y: ((e.clientY - r.top) / r.height - 0.5) * -18 });
+                  }}
+                  onPointerLeave={() => setTilt({ x: 0, y: 0 })}
+                  style={{ rotateY: tilt.x, rotateX: tilt.y }}
+                >
+                  <PackToken pack={sel} locked={lockedIds?.has(sel.id)} />
+                  <span className="vend-zoom-sheen" aria-hidden />
+                </motion.div>
+                <motion.div
+                  className="vend-zoom-info"
+                  initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1, transition: { delay: 0.12 } }} exit={{ y: 10, opacity: 0 }}
+                >
+                  <span className="vend-zoom-code">{selected.code}</span>
+                  <h3>{sel.label}</h3>
+                  <p>{sel.description}</p>
+                  <p className="vend-zoom-meta">{sel.cardCount} card{sel.cardCount === 1 ? '' : 's'} · <b>{sel.price}</b></p>
+                  <div className="vend-zoom-actions">
+                    <button
+                      type="button" className="vend-go"
+                      disabled={phase === 'paying' || phase === 'vending' || busy || lockedIds?.has(sel.id)}
+                      onClick={vend}
+                    >
+                      {lockedIds?.has(sel.id) ? 'SOLD OUT' : vendLabel}
+                    </button>
+                    <button type="button" className="vend-zoom-back" onClick={() => setZoomed(false)}>Back</button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Control panel */}
@@ -250,5 +317,6 @@ export default function VendingMachine({ rows, lockedIds, credit, onVend, onDrop
         <span className="vend-brand">PIM · TH3V4ULT</span>
       </div>
     </div>
+    </LayoutGroup>
   );
 }
