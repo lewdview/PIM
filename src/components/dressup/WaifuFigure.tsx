@@ -383,9 +383,9 @@ const BRA_STRAP = 'M112 214 C114 207 117 200.6 119.6 195.8 L130.6 191.6 C127.8 1
 const SHORTS = 'M108 318 Q150 324 192 318 C201 328 211.6 338 211.8 352 C212.2 372 207.6 390 201.6 406 Q178 412 154 408 L150 392 L146 408 Q122 412 98.4 406 C92.4 390 87.8 372 88.2 352 C88.4 338 99 328 108 318 Z';
 const TOES = 'M141 580 L141.4 575.4 M136.8 580.2 L137 575.8 M132.6 579.8 L132.6 575.6 M128.8 579.2 L128.4 575.4';
 
-// Soft, rounded buttocks for the back view. Fullness sits low and outside,
-// the cleft is a soft vertical, and the under-curve flows into the thighs.
-const BUTTOCKS = 'M98 318 C102 308 118 302 150 302 C182 302 198 308 202 318 C208 336 210 358 206 378 C200 398 186 412 168 418 C160 420 154 418 150 414 C146 418 140 420 132 418 C114 412 100 398 94 378 C90 358 92 336 98 318 Z';
+// More realistic buttocks: lower fullness, soft weight, clear under-curve into the thighs.
+// Designed for the existing pin-up proportions without going full realistic anatomy.
+const BUTTOCKS = 'M94 308 C100 292 122 282 150 282 C178 282 200 292 206 308 C216 336 218 368 212 396 C204 422 186 442 164 448 C156 450 152 448 150 444 C148 448 144 450 136 448 C114 442 96 422 88 396 C82 368 84 336 94 308 Z';
 
 // Narrow G-string / thong front panel + thin side strings
 const GSTRING_FRONT = 'M136 318 Q150 328 164 318 L160 348 Q150 356 140 348 Z';
@@ -1195,62 +1195,92 @@ function BustShading({ opacity = 0.35, upper = true }: { opacity?: number; upper
   );
 }
 
-/** Soft glute form for the back view. Only drawn when looking at the back. */
+/** More realistic glute form for the back view. */
 function Buttocks({ realMode = false }: { realMode?: boolean }) {
   if (!useBack()) return null;
 
   return (
     <g>
       {/* Base volume */}
-      <Skin d={BUTTOCKS} depth={0.7} />
+      <Skin d={BUTTOCKS} depth={0.9} />
 
-      {/* Separation / cleft */}
+      {/* Soft intergluteal cleft – deeper in realMode */}
       <path
-        d="M150 322 C149.2 350 149.4 370 150 392"
+        d="M150 296 C148.6 335 149 370 150 408"
         fill="none"
         stroke={SKIN_LINE}
-        strokeOpacity={realMode ? 0.28 : 0.18}
-        strokeWidth="1.1"
+        strokeOpacity={realMode ? 0.34 : 0.22}
+        strokeWidth="1.4"
         strokeLinecap="round"
       />
 
-      {/* Soft under-curve + outer highlight */}
+      {/* Main under-curve (this is what sells the weight) */}
       <path
-        d="M112 370 Q130 392 150 396 Q170 392 188 370"
+        d="M102 386 Q128 422 150 428 Q172 422 198 386"
         fill="none"
         stroke={SKIN_SHADE}
-        strokeOpacity="0.45"
-        strokeWidth="3.2"
+        strokeOpacity="0.6"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+      />
+
+      {/* Soft outer shadow planes */}
+      <path
+        d="M100 330 C96 358 100 386 112 412"
+        fill={SKIN_SHADE}
+        fillOpacity="0.28"
+        stroke="none"
+      />
+      <path
+        d="M200 330 C204 358 200 386 188 412"
+        fill={SKIN_SHADE}
+        fillOpacity="0.24"
+        stroke="none"
+      />
+
+      {/* Light-side highlight */}
+      <path
+        d="M108 335 C104 360 108 385 118 408"
+        fill="none"
+        stroke="#ffffff"
+        strokeOpacity="0.32"
+        strokeWidth="2.6"
         strokeLinecap="round"
       />
       <path
-        d="M106 340 C104 360 108 380 118 396"
+        d="M192 335 C196 360 192 385 182 408"
         fill="none"
         stroke="#ffffff"
         strokeOpacity="0.22"
         strokeWidth="2.4"
         strokeLinecap="round"
       />
+
+      {/* Soft horizontal form line across the lower glutes */}
       <path
-        d="M194 340 C196 360 192 380 182 396"
+        d="M118 398 Q150 408 182 398"
         fill="none"
-        stroke="#ffffff"
-        strokeOpacity="0.18"
-        strokeWidth="2.2"
+        stroke={SKIN_LINE}
+        strokeOpacity="0.12"
+        strokeWidth="1.1"
         strokeLinecap="round"
       />
 
-      {/* Subtle dimples / form when realMode is on */}
+      {/* Real-mode only: subtle dimples of Venus + soft crease */}
       {realMode && (
-        <g fill="none" stroke={SKIN_LINE} strokeOpacity="0.14" strokeWidth="0.8">
-          <path d="M128 348 Q134 354 140 350" />
-          <path d="M172 348 Q166 354 160 350" />
+        <g fill="none" stroke={SKIN_LINE} strokeLinecap="round">
+          <path d="M124 352 Q132 360 140 354" strokeOpacity="0.18" strokeWidth="0.9" />
+          <path d="M176 352 Q168 360 160 354" strokeOpacity="0.18" strokeWidth="0.9" />
+          <path
+            d="M138 318 Q150 324 162 318"
+            strokeOpacity="0.14"
+            strokeWidth="1"
+          />
         </g>
       )}
     </g>
   );
 }
-
 function Fishnet({ choice }: { choice: GarmentChoice }) {
   const netId = useSvgId('fishnet');
   return (
