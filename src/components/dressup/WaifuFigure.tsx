@@ -1197,12 +1197,27 @@ function BustShading({ opacity = 0.35, upper = true }: { opacity?: number; upper
 
 /** More realistic glute form for the back view. */
 function Buttocks({ realMode = false }: { realMode?: boolean }) {
+  const fadeId = useSvgId('glute');
   if (!useBack()) return null;
 
   return (
     <g>
+      {/* The base volume's lowest tips fade into the thighs (same gradient-mask trick as the
+          arm fade in UpperBody), so the form melts in instead of ending in a hard edge where
+          it overlaps the legs and legwear drawn underneath. Form lines stay unmasked. */}
+      <defs>
+        <linearGradient id={`${fadeId}-g`} gradientUnits="userSpaceOnUse" x1="0" y1="416" x2="0" y2="450">
+          <stop offset="0" stopColor="#fff" />
+          <stop offset="1" stopColor="#000" />
+        </linearGradient>
+        <mask id={`${fadeId}-a`} {...MASK_BOX}>
+          <rect x="-320" y="-120" width="940" height="840" fill={`url(#${fadeId}-g)`} />
+        </mask>
+      </defs>
       {/* Base volume */}
-      <Skin d={BUTTOCKS} depth={0.9} />
+      <g mask={`url(#${fadeId}-a)`}>
+        <Skin d={BUTTOCKS} depth={0.9} />
+      </g>
 
       {/* Soft intergluteal cleft – deeper in realMode */}
       <path
