@@ -68,16 +68,25 @@ export default function VaultShopPage() {
   }, [user]);
 
   // Back from a 99¢ claw checkout: credit the pull and open the claw.
+  // The session id is kept until it verifies, so a failed check retries on the next visit.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get('claw_session');
+    const PENDING_KEY = 'pim_claw_pending_session';
+    const fromUrl = new URLSearchParams(window.location.search).get('claw_session');
+    if (fromUrl) {
+      try { localStorage.setItem(PENDING_KEY, fromUrl); } catch { /* storage blocked */ }
+      window.history.replaceState({}, '', '/next-vault');
+    }
+    let sessionId = fromUrl;
+    try { sessionId = sessionId || localStorage.getItem(PENDING_KEY); } catch { /* storage blocked */ }
     if (!sessionId || !user) return;
-    window.history.replaceState({}, '', '/next-vault');
     setMachine('claw');
     (async () => {
       useLoadingToast.getState().show('Confirming your pull…');
       const res = await verifyClawPullCheckout(sessionId);
       useLoadingToast.getState().hide();
+      if (res.success || /another account|Not a claw checkout/.test(res.error || '')) {
+        try { localStorage.removeItem(PENDING_KEY); } catch { /* storage blocked */ }
+      }
       if (res.success) {
         setClawCredits(res.credits ?? await getClawCredits());
         audioManager.playSfx('open_case', 0.6);
