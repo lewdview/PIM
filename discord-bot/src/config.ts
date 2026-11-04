@@ -10,14 +10,14 @@ const __dirname = path.dirname(__filename);
 
 export const CONFIG = {
   BOT_TOKEN: process.env.DISCORD_BOT_TOKEN || '',
-  CLIENT_ID: process.env.DISCORD_CLIENT_ID || '1554837255514755092',
-  PUBLIC_KEY: process.env.DISCORD_PUBLIC_KEY || '7e9dfa50eb834e87097e19961ce4ef68e4a85a46f3b9b0cca852c0d04f439547',
+  CLIENT_ID: process.env.DISCORD_CLIENT_ID || '',
+  PUBLIC_KEY: process.env.DISCORD_PUBLIC_KEY || '',
   GUILD_ID: process.env.DISCORD_GUILD_ID || '',
   DAILY_ANNOUNCEMENT_CHANNEL_ID: process.env.DAILY_ANNOUNCEMENT_CHANNEL_ID || '',
   
   // Supabase Integration
   SUPABASE_URL: process.env.SUPABASE_URL || 'https://toemkhrfsbkfkutwcjkd.supabase.co',
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvZW1raHJmc2JrZmt1dHdjamtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MTQxNTQsImV4cCI6MjEwMzE5MDE1NH0.nAtlMU_ukqXMkIhKppwv1mxDKpxuwHa6ddQBBwK3Iu8',
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
   
   // PIM Web App Base URLs
   PIM_WEB_URL: process.env.PIM_WEB_URL || 'https://pim.th3scr1b3.art',
