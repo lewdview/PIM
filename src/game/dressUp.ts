@@ -48,6 +48,8 @@ export const WARDROBE: Record<Slot, WardrobeItem[]> = {
     { id: 'pants', label: 'Flare Pants' },
     { id: 'tutu', label: 'Tulle Tutu', bonus: true },
     { id: 'aline', label: 'A-Line Midi', bonus: true },
+    { id: 'gstring', label: 'G-String' },
+    { id: 'thong', label: 'Thong' },
   ],
   legwear: [
     { id: 'none', label: 'Bare' },
