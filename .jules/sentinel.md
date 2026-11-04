@@ -12,3 +12,8 @@
 **Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being passed in the payload of a `supabase.functions.invoke` call in `src/utils/adminConfig.ts`.
 **Learning:** Hardcoded credentials should not be present in background sync functions or client bundles.
 **Prevention:** Always pull credentials dynamically from `sessionStorage` where the authenticated session stores it or handle authorization securely without exposing raw secrets in code.
+
+## 2025-05-24 - [Remove Hardcoded Supabase Keys]
+**Vulnerability:** Hardcoded Supabase Anon Keys and Publishable Keys were embedded in `.env.production`, `discord-bot/.env.example`, client bundles (`src/services/supabaseClient.ts`, `artifacts/...`), and utility scripts (`scratch/list_december_audio.cjs`).
+**Learning:** Including real, production API keys (even Anon or Publishable ones) in client bundles or configuration files exposes them unnecessarily, which could lead to unauthorized access if RLS (Row Level Security) is misconfigured or if keys are picked up by automated secret scanners.
+**Prevention:** Always use placeholder strings (e.g., `your_supabase_anon_key_here`) for tracked `.env` files. For environment variable fallbacks in code, use empty strings (`""`) to enforce fail-fast behavior when variables are absent, instead of providing valid keys. Utility scripts should also rely strictly on `process.env` fallbacks.
