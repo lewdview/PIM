@@ -16,8 +16,8 @@ export const CONFIG = {
   DAILY_ANNOUNCEMENT_CHANNEL_ID: process.env.DAILY_ANNOUNCEMENT_CHANNEL_ID || '',
   
   // Supabase Integration
-  SUPABASE_URL: process.env.SUPABASE_URL || 'https://toemkhrfsbkfkutwcjkd.supabase.co',
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvZW1raHJmc2JrZmt1dHdjamtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MTQxNTQsImV4cCI6MjEwMzE5MDE1NH0.nAtlMU_ukqXMkIhKppwv1mxDKpxuwHa6ddQBBwK3Iu8',
+  SUPABASE_URL: process.env.SUPABASE_URL || '',
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
   
   // PIM Web App Base URLs
   PIM_WEB_URL: process.env.PIM_WEB_URL || 'https://pim.th3scr1b3.art',
