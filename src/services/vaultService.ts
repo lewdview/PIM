@@ -533,7 +533,14 @@ export async function silentClaimGuestDailyCard(day: number): Promise<OwnedCard 
 }
 
 // ===== PACK PURCHASE =====
+/** Why the most recent purchasePack call returned no cards ('' when it succeeded). */
+let lastPurchasePackError = '';
+export function getLastPurchasePackError(): string {
+  return lastPurchasePackError;
+}
+
 export async function purchasePack(category: PackCategory, size: PackSize = 'single', sessionId?: string, txHash?: string, isGameplayReward?: boolean): Promise<OwnedCard[]> {
+  lastPurchasePackError = '';
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Not authenticated');
@@ -559,6 +566,7 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
 
       const errMsg = detailedError || result?.error || 'Unknown Crash';
       console.warn('[purchasePack] Edge Function returned error:', errMsg);
+      lastPurchasePackError = errMsg;
       return [];
     }
 
@@ -600,6 +608,7 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
     });
   } catch (e) {
     console.error('Purchase error:', e);
+    lastPurchasePackError = e instanceof Error ? e.message : String(e);
     return [];
   }
 }
