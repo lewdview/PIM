@@ -310,21 +310,32 @@
 .al-reveal-stage { min-height: 0; display: grid; place-items: center; padding: 6px 0; }
 .al-reveal-row { display: flex; justify-content: center; align-items: flex-start; gap: clamp(8px, 2.5vw, 18px); }
 .al-card--reveal { --cw: clamp(84px, min(26vw, 24vh), 168px); }
-.al-pack {
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  width: clamp(110px, 24vh, 160px);
-  aspect-ratio: 5 / 7;
-  border: 2px solid var(--shell-gold);
-  border-radius: 12px;
-  background: linear-gradient(160deg, #3a2400, #120a00 60%, #3a2400);
-  color: var(--shell-gold);
-  box-shadow: 0 0 40px rgba(255, 184, 0, 0.35);
-  animation: al-shake 0.5s ease-in-out infinite alternate;
+.al-foil {
+  position: relative;
+  width: clamp(120px, min(36vw, 30vh), 200px);
+  aspect-ratio: 2 / 3;
 }
-.al-pack b { font: 400 20px/1 var(--shell-display); letter-spacing: 0.05em; }
-@keyframes al-shake { from { transform: rotate(-2deg) scale(1); } to { transform: rotate(2deg) scale(1.04); } }
+.al-foil-body, .al-foil-strip { position: absolute; inset: 0; }
+.al-foil-body > .fp-tilt, .al-foil-strip > .fp-tilt { position: absolute; inset: 0; }
+.al-foil-strip { transform-origin: 8% 12%; }
+.al-foil[data-tearing] .al-foil-strip { animation: al-foil-strip 0.42s cubic-bezier(.3,.6,.4,1) forwards; }
+.al-foil[data-tearing] .al-foil-body { animation: al-foil-body 0.42s ease-in forwards; }
+@keyframes al-foil-strip {
+  to { transform: translate(28%, -60%) rotate(24deg); opacity: 0; }
+}
+@keyframes al-foil-body {
+  40% { transform: translateY(2%) scale(1.02); opacity: 1; }
+  to { transform: translateY(10%) scale(0.92); opacity: 0; }
+}
+.al-foil-confetti { position: absolute; inset: 0 0 auto; height: 12%; pointer-events: none; }
+.al-foil-confetti i {
+  position: absolute; top: 50%; border-radius: 1px;
+  animation: al-foil-confetti 0.6s ease-out forwards;
+}
+@keyframes al-foil-confetti {
+  from { transform: translate(0, 0) rotate(0); opacity: 1; }
+  to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; }
+}
 .al-reveal-foot { display: grid; gap: 10px; }
 .al-reveal-foot[data-hidden] { visibility: hidden; }
 .al-reveal-note { margin: 0; color: var(--shell-text-2); font-size: 12px; text-align: center; }
@@ -339,7 +350,7 @@
 @media (prefers-reduced-motion: reduce) {
   .al-card-inner { transition: none; }
   .al-card[data-r='2'] .al-card-face::after { animation: none; transform: none; }
-  .al-pack { animation: none; }
+  .al-foil-strip, .al-foil-body, .al-foil-confetti i { animation: none !important; }
   .al-card:not([data-down]) .al-card-tag { animation: none; }
 }
 

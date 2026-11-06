@@ -4,10 +4,15 @@
 // the tab mid-reveal brings the same pack back unopened. Skip jumps straight
 // to the summary. Reduced motion goes straight there too.
 //
-// Pacing: about 6 s for the player's first pack ever, about 3.5 s after that.
+// Pacing: about 6.5 s for the player's first pack ever, about 4 s after that.
+// The pack is the main game's holo foil pack; its top strip tears off first.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen, ChevronRight, FastForward, Package, X } from 'lucide-react';
+import FoilPackFace from '@/components/foil/FoilPackFace';
+import { FOIL_BODY_CLIP, FOIL_CONFETTI, FOIL_STRIP_CLIP } from '@/components/foil/foilTear';
+import { CHAPTERS } from '@/game/campaign';
+import { PLAYGAMA_MONTH } from '@/platform/playgama/month';
 import type { GameSong } from '@/game/api';
 import { audioManager } from '@/game/audio';
 import {
@@ -28,7 +33,10 @@ const reducedMotion = () => {
   }
 };
 
-type Phase = 'sealed' | 'flip' | 'summary';
+type Phase = 'sealed' | 'tear' | 'flip' | 'summary';
+
+const chapter = CHAPTERS.find((c) => c.month === PLAYGAMA_MONTH) ?? CHAPTERS[0];
+const TEAR_MS = 420;
 
 export default function PackReveal({ songs, regularCount, onClose, primary, onAlbum, from }: {
   songs: GameSong[];
@@ -63,10 +71,11 @@ export default function PackReveal({ songs, regularCount, onClose, primary, onAl
   useEffect(() => {
     if (!pack || phase === 'summary') return;
     if (reducedMotion()) { finish('animated'); return; }
-    const sealMs = first ? 1300 : 500;
+    const sealMs = first ? 1600 : 850;
     const cardMs = first ? 1500 : 950;
     const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => { setPhase('flip'); audioManager.playSfx('open_chest', 0.5); }, sealMs));
+    timers.push(setTimeout(() => { setPhase('tear'); audioManager.playSfx('open_chest', 0.5); }, sealMs - TEAR_MS));
+    timers.push(setTimeout(() => setPhase('flip'), sealMs));
     for (let i = 0; i < 3; i++) {
       timers.push(setTimeout(() => {
         setShown(i + 1);
@@ -133,8 +142,8 @@ export default function PackReveal({ songs, regularCount, onClose, primary, onAl
         </div>
 
         <div className="al-reveal-stage" data-phase={phase}>
-          {phase === 'sealed' ? (
-            <span className="al-pack" aria-hidden="true"><Package size={56} /><b>3 cards</b></span>
+          {phase === 'sealed' || phase === 'tear' ? (
+            <FoilPack cover={byId.get(pack.songId ?? pack.cards[0].songId)?.coverArt} tearing={phase === 'tear'} />
           ) : (
             <div className="al-reveal-row">
               {pack.cards.map((c, i) => (
@@ -181,6 +190,30 @@ export default function PackReveal({ songs, regularCount, onClose, primary, onAl
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** The holo foil pack from the main game; its top strip tears off just before the cards come out. */
+function FoilPack({ cover, tearing }: { cover?: string; tearing: boolean }) {
+  const face = (
+    <FoilPackFace accent={chapter.dc} label={chapter.name} coverUrl={cover} cardCount={3}
+      tagline="Chapter cards" brand="PIM · 365 DAYS OF LIGHT & DARK" />
+  );
+  return (
+    <div className="al-foil" data-tearing={tearing || undefined} aria-label="Sealed pack, 3 cards" role="img">
+      <div className="al-foil-body" style={{ clipPath: FOIL_BODY_CLIP }}>{face}</div>
+      <div className="al-foil-strip" style={{ clipPath: FOIL_STRIP_CLIP }}>{face}</div>
+      {tearing && (
+        <div className="al-foil-confetti" aria-hidden="true">
+          {FOIL_CONFETTI.map((c, i) => (
+            <i key={i} style={{
+              left: `${c.x}%`, width: c.w, height: c.h, background: `hsl(${c.hue} 90% 70%)`, animationDelay: `${c.delay}s`,
+              ['--dx' as string]: `${c.dx}px`, ['--dy' as string]: `${c.dy}px`, ['--rot' as string]: `${c.rot}deg`,
+            }} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
