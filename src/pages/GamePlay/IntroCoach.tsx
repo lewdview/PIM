@@ -1,5 +1,5 @@
 // In-song tips for a monthly build's first run (spec section 3, "Embedded
-// teaching"): one short prompt at a time, near the top of the highway, naming
+// teaching"): one short prompt at a time, on the upper highway below the HUD, naming
 // the controls the player is actually using. Tap first; the hold tip only
 // shortly before the first long note. "Hide tips" turns them all off.
 
@@ -79,7 +79,7 @@ export default function IntroCoach({ getT, notes, hits, laneKeys, modality, game
   };
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center px-4" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 84px)' }} role="status" aria-live="polite">
+    <div className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center px-4" style={{ top: 'max(calc(env(safe-area-inset-top, 0px) + 180px), 36vh)' }} role="status" aria-live="polite">
       <div className="pointer-events-auto flex max-w-md items-center gap-3 rounded-xl border border-white/20 bg-black/75 px-4 py-2.5 text-white shadow-lg backdrop-blur">
         <div className="min-w-0 text-sm leading-snug">
           {tip === 'tap' && (

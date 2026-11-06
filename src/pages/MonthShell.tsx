@@ -13,7 +13,7 @@ import GamepadCursor from '@/components/ui/GamepadCursor';
 import { useGlobalPlayer } from '@/store/useGlobalPlayer';
 import { useVaultStore } from '@/store/useVaultStore';
 import { APP_BASE, markGameReady, setMenuBanners } from '@/platform';
-import { setGate } from '@/platform/playgama/audioGate';
+import { useMuted } from '@/platform/playgama/muteSetting';
 import { PLAYGAMA_MONTH, restoreBonusBundle } from '@/platform/playgama/month';
 import { submitMonthScore } from '@/platform/playgama/monthLeaderboard';
 import { TUTORIAL_DONE_KEY } from '@/platform/playgama/tutorialTrack';
@@ -58,7 +58,6 @@ const MonthStoryScene = lazyScreen(() => import('./month/MonthStoryScene'));
 const MonthOptions = lazyScreen(() => import('./month/MonthOptions'));
 
 const HOME = `/chapter/${PLAYGAMA_MONTH}`;
-const MUTE_KEY = 'pg_muted';
 
 /** The tutorial node's run ends on /tutorial; record it and go back to the chapter, on track 1. */
 function TutorialDone() {
@@ -69,19 +68,7 @@ function TutorialDone() {
 }
 
 function MuteButton({ inPlay }: { inPlay: boolean }) {
-  const [muted, setMuted] = useState(() => {
-    try {
-      return localStorage.getItem(MUTE_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    setGate('user', muted);
-    try {
-      localStorage.setItem(MUTE_KEY, String(muted));
-    } catch { /* storage blocked */ }
-  }, [muted]);
+  const [muted, setMuted] = useMuted();
   return (
     <button
       type="button"
@@ -89,7 +76,7 @@ function MuteButton({ inPlay }: { inPlay: boolean }) {
       aria-label={muted ? 'Unmute sound' : 'Mute sound'}
       aria-pressed={muted}
       data-play={inPlay || undefined}
-      onClick={() => setMuted((m) => !m)}
+      onClick={() => setMuted(!muted)}
     >
       {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
     </button>
@@ -154,7 +141,8 @@ export default function MonthShell() {
         `}</style>
         <BackgroundMusic />
         <GamepadCursor />
-        <MuteButton inPlay={location.startsWith('/play/') || location.startsWith('/secret/')} />
+        {/* In a song the HUD carries its own mute button, next to fullscreen. */}
+        {!location.startsWith('/play/') && <MuteButton inPlay={location.startsWith('/secret/')} />}
         <main className="flex-1 flex flex-col relative">
           <ErrorBoundary sectionName="PAGE_ROUTER">
             <Suspense

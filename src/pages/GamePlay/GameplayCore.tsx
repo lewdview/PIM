@@ -39,6 +39,7 @@ import { hasPovScene, usesFlatHighway, hasStraightHitLine, drawPovScene, drawPov
 import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHelpers';
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
 import GameplayVisualizer from './GameplayVisualizer';
+import HudMuteButton from './HudMuteButton';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine } from './trackLyrics';
 import { getStageStarts, stageAtTime } from './stageTimeline';
@@ -11200,6 +11201,7 @@ export default function Game() {
                     )}
                   </svg>
                 </button>
+                {PLAYGAMA_MONTH > 0 && <HudMuteButton variant="beta" />}
               </div>
 
               {/* Center Column: Stage Pill + Completion % + Time Elapsed / Total (Guaranteed Math Center) */}
@@ -11361,6 +11363,7 @@ export default function Game() {
                       )}
                     </svg>
                   </button>
+                  {PLAYGAMA_MONTH > 0 && <HudMuteButton variant="rail" />}
                 </div>
 
                 {/* Stage + time over a rail with one segment per chart stage */}
@@ -11557,6 +11560,7 @@ export default function Game() {
                       )}
                     </svg>
                   </button>
+                  {PLAYGAMA_MONTH > 0 && <HudMuteButton variant="hud" />}
                 </div>
                 <div className="pim-hud-meta">
                   {day ? <span>DAY {String(day).padStart(3, '0')}</span> : null}
