@@ -133,6 +133,18 @@ interface Whisper {
   urgent?: boolean;
 }
 
+// Same as the .pim-verse-enter / .pim-orc-in keyframes in gameplayHud.css
+// (the empty end keyframe animates to the element's own computed values).
+const VERSE_ENTER: Keyframe[] = [{ opacity: 0, filter: 'blur(3px)', transform: 'translateY(4px)' }, {}];
+const ORC_IN: Keyframe[] = [{ opacity: 0, letterSpacing: '0.5em', filter: 'blur(3px)' }, {}];
+let reducedMotionMq: MediaQueryList | null | undefined;
+function prefersReducedMotion(): boolean {
+  if (reducedMotionMq === undefined) {
+    reducedMotionMq = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  }
+  return !!reducedMotionMq?.matches;
+}
+
 export class VerseHud {
   els: VerseEls = { root: null, prev: null, text: null, whisper: null, whisperMain: null, whisperSub: null, ticks: [] };
   private lines: VerseLine[] = [];
@@ -156,9 +168,37 @@ export class VerseHud {
   private statesLen = 0;
   /** Indices of letter-colouring notes, by time. */
   private order: number[] = [];
+  private srcLyrics: TimedLine[] | null = null;
+  private srcTitle = '';
+  private srcStages: number[] | null = null;
+  private srcStagesLen = -1;
+  private srcDuration = -1;
+  private lastInk = '';
+  private inkEl: HTMLElement | null = null;
+  private tickO: string[] = [];
+  private tickEls: (HTMLElement | null)[] = [];
+
+  /** Replay an entrance with the Web Animations API: no class toggle, no forced reflow. */
+  private replay(el: HTMLElement, frames: Keyframe[], duration: number) {
+    if (prefersReducedMotion() || typeof el.animate !== 'function') return;
+    el.getAnimations().forEach((a) => a.cancel());
+    el.animate(frames, { duration, easing: 'ease-out' });
+  }
 
   setSource(lyrics: TimedLine[], states: NoteLike[], title: string, stageStarts: number[], duration: number) {
-    const key = `${lyrics.length}|${title}|${stageStarts.join(',')}|${duration}`;
+    // PERF: called every frame; skip the key string (and its join) when nothing changed.
+    const same =
+      lyrics === this.srcLyrics &&
+      title === this.srcTitle &&
+      stageStarts === this.srcStages &&
+      stageStarts.length === this.srcStagesLen &&
+      duration === this.srcDuration;
+    const key = same ? this.sourceKey : `${lyrics.length}|${title}|${stageStarts.join(',')}|${duration}`;
+    this.srcLyrics = lyrics;
+    this.srcTitle = title;
+    this.srcStages = stageStarts;
+    this.srcStagesLen = stageStarts.length;
+    this.srcDuration = duration;
     if (key !== this.sourceKey) {
       this.sourceKey = key;
       this.lines = buildVerseLines(lyrics, title, stageStarts, duration);
@@ -247,28 +287,35 @@ export class VerseHud {
     const textEl = this.els.text!;
     if (idx !== this.lineIdx) {
       this.lineIdx = idx;
-      textEl.textContent = '';
       this.spans = [];
       this.letters = [];
+      // PERF: build the letters off-DOM and swap them in with one mutation.
+      const frag = document.createDocumentFragment();
       for (const ch of line.text) {
         const s = document.createElement('span');
         s.textContent = ch === ' ' ? ' ' : ch;
         if (ch !== ' ') this.letters.push(this.spans.length);
         this.spans.push(s);
-        textEl.appendChild(s);
+        frag.appendChild(s);
       }
+      textEl.replaceChildren(frag);
       this.els.root!.style.setProperty('--len', String(line.text.length + 4));
       this.els.root!.dataset.filler = String(line.filler);
-      // Retrigger the line's entrance.
-      textEl.classList.remove('pim-verse-enter');
-      void textEl.offsetWidth;
-      textEl.classList.add('pim-verse-enter');
+      // Retrigger the line's entrance (was a class toggle + offsetWidth read, which forced a
+      // synchronous layout mid-frame on every line change).
+      this.replay(textEl, VERSE_ENTER, 350);
       if (this.els.prev) {
         const before = this.lines[idx - 1];
         this.els.prev.textContent = before && !before.filler ? before.text : ' ';
       }
     }
-    this.els.root!.style.setProperty('--ink', comboInk(f.combo));
+    // PERF: only touch the root's custom property when it changes (it restyles the whole HUD).
+    const ink = comboInk(f.combo);
+    if (ink !== this.lastInk || this.inkEl !== this.els.root) {
+      this.lastInk = ink;
+      this.inkEl = this.els.root;
+      this.els.root!.style.setProperty('--ink', ink);
+    }
 
     for (const i of this.letters) {
       const T = line.times[i];
@@ -278,7 +325,7 @@ export class VerseHud {
     }
   }
 
-  private pickWhisper(f: VerseFrame): Whisper | null {
+  private pickWhisper(f: VerseFrame, drift: (number | null)[]): Whisper | null {
     if (f.t - this.lastMissT < 2.4) {
       return {
         key: 'miss',
@@ -316,7 +363,6 @@ export class VerseHud {
         };
       }
     }
-    const drift = laneDrift(f.telemetry);
     let worst = -1;
     drift.forEach((d, i) => {
       if (d !== null && Math.abs(d) >= DRIFT_S && (worst < 0 || Math.abs(d) > Math.abs(drift[worst]!))) worst = i;
@@ -335,35 +381,38 @@ export class VerseHud {
 
   private drawOracle(f: VerseFrame, now: number) {
     const el = this.els.whisper;
+    const drift = laneDrift(f.telemetry);
     if (el && this.els.whisperMain && this.els.whisperSub) {
-      const w = this.pickWhisper(f);
+      const w = this.pickWhisper(f, drift);
       const key = w?.key ?? '';
       if (key !== this.whisperKey && (w?.urgent || now - this.whisperSince > WHISPER_HOLD_MS || !this.whisperKey)) {
         this.whisperKey = key;
         this.whisperSince = now;
-        if (w) {
-          el.classList.remove('pim-orc-in');
-          void el.offsetWidth;
-          el.classList.add('pim-orc-in');
-        }
+        if (w) this.replay(el, ORC_IN, 450);
         el.dataset.on = String(!!w);
         this.els.root!.dataset.calm = String(!w);
       }
       if (w && key === this.whisperKey) {
         if (this.els.whisperMain.textContent !== w.main) this.els.whisperMain.textContent = w.main;
         if (this.els.whisperSub.textContent !== w.sub) this.els.whisperSub.textContent = w.sub;
-        el.style.setProperty('--wc', w.color);
+        if (el.style.getPropertyValue('--wc') !== w.color) el.style.setProperty('--wc', w.color);
       }
     }
-    const drift = laneDrift(f.telemetry);
     this.els.ticks.forEach((tick, lane) => {
       if (!tick) return;
       const d = drift[lane];
       const ms = d === null ? 0 : Math.round(d * 1000);
-      // ±60ms spans the whole tick.
-      tick.style.setProperty('--o', String(Math.max(-1, Math.min(1, ms / 60))));
-      tick.dataset.on = String(d !== null);
-      tick.dataset.drift = String(d !== null && Math.abs(d) >= DRIFT_S);
+      // ±60ms spans the whole tick. PERF: write styles/data only when they change.
+      const o = String(Math.max(-1, Math.min(1, ms / 60)));
+      if (this.tickO[lane] !== o || this.tickEls[lane] !== tick) {
+        this.tickO[lane] = o;
+        this.tickEls[lane] = tick;
+        tick.style.setProperty('--o', o);
+      }
+      const on = String(d !== null);
+      if (tick.dataset.on !== on) tick.dataset.on = on;
+      const dr = String(d !== null && Math.abs(d) >= DRIFT_S);
+      if (tick.dataset.drift !== dr) tick.dataset.drift = dr;
       const label = tick.lastElementChild as HTMLElement | null;
       if (label) {
         const txt = d === null ? '' : Math.abs(ms) < 6 ? 'ON TIME' : `${ms > 0 ? 'LATE' : 'EARLY'} ${Math.abs(ms)}ms`;

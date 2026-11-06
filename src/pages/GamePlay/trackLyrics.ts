@@ -719,12 +719,41 @@ function borderText(ctx: CanvasRenderingContext2D, txt: string, x: number, y: nu
 const BACKDROP_FONT = `Anton, Impact, "Arial Black", sans-serif`;
 const MOTE_COUNT = 34;
 
-function layoutLineCentered(
+type CenteredLayout = { size: number; widths: number[]; spacing: number; total: number };
+// PERF: line layout only changes with the line and the screen size, so measure once, not every frame.
+const centeredLayoutCache = new WeakMap<TimedLine, Map<string, CenteredLayout>>();
+const echoWidthCache = new Map<string, number>();
+// Measurements taken in a fallback font are wrong once Anton (or any web font) arrives,
+// so every finished font load starts a fresh cache generation.
+let fontGen = 0;
+if (typeof document !== 'undefined' && document.fonts?.addEventListener) {
+  document.fonts.addEventListener('loadingdone', () => {
+    fontGen++;
+    echoWidthCache.clear();
+  });
+}
+
+function layoutLineCentered(ctx: CanvasRenderingContext2D, line: TimedLine, maxW: number, fontPx: number): CenteredLayout {
+  const key = `${fontGen}|${Math.round(maxW)}|${Math.round(fontPx * 10)}`;
+  let byLine = centeredLayoutCache.get(line);
+  const hit = byLine?.get(key);
+  if (hit) return hit;
+  const res = measureLineCentered(ctx, line, maxW, fontPx);
+  if (!byLine) {
+    byLine = new Map();
+    centeredLayoutCache.set(line, byLine);
+  }
+  if (byLine.size > 8) byLine.clear();
+  byLine.set(key, res);
+  return res;
+}
+
+function measureLineCentered(
   ctx: CanvasRenderingContext2D,
   line: TimedLine,
   maxW: number,
   fontPx: number
-): { size: number; widths: number[]; spacing: number; total: number } {
+): CenteredLayout {
   ctx.font = `400 ${fontPx}px ${BACKDROP_FONT}`;
   const widths = line.words.map((w) => ctx.measureText(w.text.toUpperCase()).width);
   const spacing = fontPx * 0.24;
@@ -798,8 +827,13 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
     const w = line.words[activeIdx];
     const u = clamp01((t - w.start) / Math.max(0.001, w.end - w.start));
     const txt = w.text.toUpperCase();
-    ctx.font = `400 100px ${BACKDROP_FONT}`;
-    const natW = Math.max(1, ctx.measureText(txt).width);
+    let natW = echoWidthCache.get(txt);
+    if (natW === undefined) {
+      ctx.font = `400 100px ${BACKDROP_FONT}`;
+      natW = Math.max(1, ctx.measureText(txt).width);
+      if (echoWidthCache.size > 256) echoWidthCache.clear();
+      echoWidthCache.set(txt, natW);
+    }
     const size = Math.min(H * 0.62, (100 * W * 0.92) / natW);
     ctx.save();
     ctx.translate(W / 2, H * 0.42);
@@ -878,7 +912,8 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
       ctx.globalAlpha = intro;
       borderText(ctx, txt, 0, 0, L.size, edgeB);
       ctx.shadowColor = cB;
-      ctx.shadowBlur = L.size * 0.45;
+      // PERF: capped; at L.size * 0.45 the blur radius grew to 40px+ on large screens.
+      ctx.shadowBlur = Math.min(18, L.size * 0.45);
       ctx.fillStyle = g;
       ctx.fillText(txt, 0, 0);
       ctx.shadowBlur = 0;
