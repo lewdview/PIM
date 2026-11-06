@@ -133,6 +133,18 @@ interface Whisper {
   urgent?: boolean;
 }
 
+// Same as the .pim-verse-enter / .pim-orc-in keyframes in gameplayHud.css
+// (the empty end keyframe animates to the element's own computed values).
+const VERSE_ENTER: Keyframe[] = [{ opacity: 0, filter: 'blur(3px)', transform: 'translateY(4px)' }, {}];
+const ORC_IN: Keyframe[] = [{ opacity: 0, letterSpacing: '0.5em', filter: 'blur(3px)' }, {}];
+let reducedMotionMq: MediaQueryList | null | undefined;
+function prefersReducedMotion(): boolean {
+  if (reducedMotionMq === undefined) {
+    reducedMotionMq = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  }
+  return !!reducedMotionMq?.matches;
+}
+
 export class VerseHud {
   els: VerseEls = { root: null, prev: null, text: null, whisper: null, whisperMain: null, whisperSub: null, ticks: [] };
   private lines: VerseLine[] = [];
@@ -165,6 +177,13 @@ export class VerseHud {
   private inkEl: HTMLElement | null = null;
   private tickO: string[] = [];
   private tickEls: (HTMLElement | null)[] = [];
+
+  /** Replay an entrance with the Web Animations API: no class toggle, no forced reflow. */
+  private replay(el: HTMLElement, frames: Keyframe[], duration: number) {
+    if (prefersReducedMotion() || typeof el.animate !== 'function') return;
+    el.getAnimations().forEach((a) => a.cancel());
+    el.animate(frames, { duration, easing: 'ease-out' });
+  }
 
   setSource(lyrics: TimedLine[], states: NoteLike[], title: string, stageStarts: number[], duration: number) {
     // PERF: called every frame; skip the key string (and its join) when nothing changed.
@@ -268,22 +287,23 @@ export class VerseHud {
     const textEl = this.els.text!;
     if (idx !== this.lineIdx) {
       this.lineIdx = idx;
-      textEl.textContent = '';
       this.spans = [];
       this.letters = [];
+      // PERF: build the letters off-DOM and swap them in with one mutation.
+      const frag = document.createDocumentFragment();
       for (const ch of line.text) {
         const s = document.createElement('span');
         s.textContent = ch === ' ' ? ' ' : ch;
         if (ch !== ' ') this.letters.push(this.spans.length);
         this.spans.push(s);
-        textEl.appendChild(s);
+        frag.appendChild(s);
       }
+      textEl.replaceChildren(frag);
       this.els.root!.style.setProperty('--len', String(line.text.length + 4));
       this.els.root!.dataset.filler = String(line.filler);
-      // Retrigger the line's entrance.
-      textEl.classList.remove('pim-verse-enter');
-      void textEl.offsetWidth;
-      textEl.classList.add('pim-verse-enter');
+      // Retrigger the line's entrance (was a class toggle + offsetWidth read, which forced a
+      // synchronous layout mid-frame on every line change).
+      this.replay(textEl, VERSE_ENTER, 350);
       if (this.els.prev) {
         const before = this.lines[idx - 1];
         this.els.prev.textContent = before && !before.filler ? before.text : ' ';
@@ -368,11 +388,7 @@ export class VerseHud {
       if (key !== this.whisperKey && (w?.urgent || now - this.whisperSince > WHISPER_HOLD_MS || !this.whisperKey)) {
         this.whisperKey = key;
         this.whisperSince = now;
-        if (w) {
-          el.classList.remove('pim-orc-in');
-          void el.offsetWidth;
-          el.classList.add('pim-orc-in');
-        }
+        if (w) this.replay(el, ORC_IN, 450);
         el.dataset.on = String(!!w);
         this.els.root!.dataset.calm = String(!w);
       }
