@@ -12,3 +12,7 @@
 ## 2024-11-09 - LaunchPage Progress Re-renders
 **Learning:** `LaunchPage` was subscribing directly to `progress` and `currentTime` from the `useGlobalPlayer` Zustand store. Because this component is huge and these properties update up to 60 times a second, it caused major performance bottlenecks and CPU utilization during audio playback on the marketing launchpad page.
 **Action:** Extracted the progress bar and time readout into a standalone `TransmissionTransportProgress` subcomponent and passed the static `isThisTrack` and `duration` values as props, avoiding the massive parent component from re-rendering on every audio tick.
+
+## 2024-11-12 - ListenPage Progress Re-renders
+**Learning:** `ListenPage` was managing `currentTime` state locally using an event listener on the `audio` element's `timeupdate` event. Since `timeupdate` fires rapidly (up to 4 times per second, often more depending on the browser), it caused the entire `ListenPage` component (which is large and complex, containing a canvas visualizer and extensive UI) to re-render constantly during audio playback, resulting in high CPU usage and potential jank.
+**Action:** Extracted the progress slider, time formatting, and `timeupdate` event listener into a new `ListenProgress` child component. This isolates the high-frequency state updates to a small, dedicated component, preventing unnecessary re-renders of the large parent `ListenPage`. Crucially, remember to move any associated event handlers (like `handleSeek`) into the new child component to avoid `ReferenceError` crashes.
