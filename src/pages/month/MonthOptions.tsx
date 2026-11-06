@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { ARROW_LANE_KEYS, DEFAULT_OPTS, keyLabel, loadOpts, type GameOpts, type GfxLevel, type ParticleDensity, type PovMode } from '@/lib/options';
+import { ARROW_LANE_KEYS, DEFAULT_OPTS, keyLabel, loadOpts, type GameOpts, type GfxLevel, type HudStyle, type LyricsMode, type ParticleDensity, type PovMode } from '@/lib/options';
 import { audioManager } from '@/game/audio';
 import { useVaultStore, type ProfileSettings } from '@/store/useVaultStore';
 import { DEFAULT_PROFILE_SETTINGS, persistSettings } from '@/utils/settingsStorage';
@@ -16,11 +16,12 @@ import '@/styles/campaignStory.css';
 import '@/styles/monthBoard.css';
 import '@/styles/monthPanels.css';
 
-type Tab = 'audio' | 'timing' | 'display' | 'play';
+type Tab = 'audio' | 'timing' | 'display' | 'gfx' | 'play';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'audio', label: 'Audio' },
   { id: 'timing', label: 'Timing' },
   { id: 'display', label: 'Display' },
+  { id: 'gfx', label: 'Graphics' },
   { id: 'play', label: 'Gameplay' },
 ];
 
@@ -44,6 +45,12 @@ const VIEWS: { id: PovMode; name: string }[] = [
   { id: 'orbital_halo', name: 'Halo' },
   { id: 'mobius_loop', name: 'Möbius loop' },
 ];
+const HUDS: { id: HudStyle; name: string }[] = [
+  { id: 'stanza', name: 'Poetic GUI' }, { id: 'console', name: 'Console Rail' }, { id: 'beta', name: 'Beta' },
+];
+const LYRICS: { id: LyricsMode; name: string }[] = [
+  { id: 'off', name: 'Off' }, { id: 'track', name: 'On the road' }, { id: 'poetic', name: 'Poetic Lines' },
+];
 const GFX: { id: GfxLevel; name: string }[] = [
   { id: 'low', name: 'Low' }, { id: 'medium', name: 'Medium' }, { id: 'high', name: 'High' }, { id: 'ultra', name: 'Ultra' },
 ];
@@ -51,7 +58,7 @@ const PARTICLES: { id: ParticleDensity; name: string }[] = [
   { id: 'minimal', name: 'Minimal' }, { id: 'half', name: 'Half' }, { id: 'full', name: 'Full' },
 ];
 
-type BoolKey = 'sfxEnabled' | 'bgMusic' | 'autoLatencyAdjust' | 'trackLyrics' | 'bgAnimation' | 'bloomGlow'
+type BoolKey = 'sfxEnabled' | 'bgMusic' | 'autoLatencyAdjust' | 'autoQuality' | 'bgAnimation' | 'bloomGlow'
   | 'stagePovSwitch' | 'judgmentText' | 'comboDisplay' | 'haptics';
 
 function Toggle({ label, hint, on, onChange }: { label: string; hint?: string; on: boolean; onChange: (v: boolean) => void }) {
@@ -99,7 +106,7 @@ function Cycle<T extends string>({ label, value, items, onChange }: {
 // the game keeps playing with the old value.
 function saveProfileSetting(key: string, value: unknown) {
   const settings = useVaultStore.getState().settings;
-  if (!settings || !(key in settings)) return;
+  if (!settings) return;
   const next = { ...settings, [key]: value } as ProfileSettings;
   useVaultStore.setState({ settings: next });
   persistSettings(next);
@@ -172,11 +179,17 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
           {tab === 'display' && <>
             <Cycle label="View" value={opts.povMode} items={VIEWS} onChange={(v) => save('povMode', v)} />
             <Toggle label="Change view each stage" {...bool('stagePovSwitch')} />
+            <Cycle label="HUD" value={opts.hudStyle} items={HUDS} onChange={(v) => save('hudStyle', v)} />
+            {opts.hudStyle === 'stanza'
+              ? <p className="mo-hint">The Poetic GUI inks each lyric line as you play.</p>
+              : <Cycle label="Lyrics" value={opts.lyricsMode} items={LYRICS} onChange={(v) => save('lyricsMode', v)} />}
+            <Toggle label="Moving background" {...bool('bgAnimation')} />
+          </>}
+          {tab === 'gfx' && <>
             <Cycle label="Graphics" value={opts.gfxLevel} items={GFX} onChange={(v) => save('gfxLevel', v)} />
+            <Toggle label="Auto quality" hint="Lowers effects if the game starts to stutter" {...bool('autoQuality')} />
             <Cycle label="Particles" value={opts.particleDensity} items={PARTICLES} onChange={(v) => save('particleDensity', v)} />
             <Toggle label="Glow" {...bool('bloomGlow')} />
-            <Toggle label="Moving background" {...bool('bgAnimation')} />
-            <Toggle label="Lyrics on the road" {...bool('trackLyrics')} />
           </>}
           {tab === 'play' && <>
             <Toggle label="Hit text" hint="Perfect, great and miss" {...bool('judgmentText')} />

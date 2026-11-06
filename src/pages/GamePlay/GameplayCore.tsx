@@ -3848,11 +3848,13 @@ export default function Game() {
       const autoOn = o.autoQuality !== false && !isExportVideoRef.current;
       if (autoOn && phaseRef.current === 'playing' && document.visibilityState === 'visible') {
         if (aq.frame(nowWall, userRank, targetDelta)) {
-          logAnalyticsEvent('auto_quality_change', {
+          const change = {
             from: effGfxRef.current,
             to: gfxAt(aq.effective(userRank)),
             setting: o.gfxLevel,
-          });
+          };
+          logAnalyticsEvent('auto_quality_change', change);
+          trackFunnel('auto_quality_change', { ...change, song: songRef.current?.id });
         }
       } else {
         aq.pause();
