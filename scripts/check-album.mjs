@@ -7,7 +7,7 @@
  *
  *   npm run check:album
  */
-import { build } from 'esbuild';
+import { transformWithEsbuild } from 'vite';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -16,7 +16,10 @@ import os from 'node:os';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'album-')), 'rules.mjs');
-await build({ entryPoints: [path.join(root, 'src/platform/playgama/albumRules.ts')], bundle: true, format: 'esm', platform: 'node', outfile: outFile, logLevel: 'error' });
+// albumRules.ts has no imports, so one transform through vite's esbuild is enough (esbuild itself isn't a direct dependency).
+const src = path.join(root, 'src/platform/playgama/albumRules.ts');
+const { code } = await transformWithEsbuild(fs.readFileSync(src, 'utf8'), src, { format: 'esm', target: 'node18' });
+fs.writeFileSync(outFile, code);
 const A = await import(pathToFileURL(outFile).href);
 
 let passed = 0;
