@@ -740,9 +740,18 @@ type CenteredLayout = { size: number; widths: number[]; spacing: number; total: 
 // PERF: line layout only changes with the line and the screen size, so measure once, not every frame.
 const centeredLayoutCache = new WeakMap<TimedLine, Map<string, CenteredLayout>>();
 const echoWidthCache = new Map<string, number>();
+// Measurements taken in a fallback font are wrong once Anton (or any web font) arrives,
+// so every finished font load starts a fresh cache generation.
+let fontGen = 0;
+if (typeof document !== 'undefined' && document.fonts?.addEventListener) {
+  document.fonts.addEventListener('loadingdone', () => {
+    fontGen++;
+    echoWidthCache.clear();
+  });
+}
 
 function layoutLineCentered(ctx: CanvasRenderingContext2D, line: TimedLine, maxW: number, fontPx: number): CenteredLayout {
-  const key = `${Math.round(maxW)}|${Math.round(fontPx * 10)}`;
+  const key = `${fontGen}|${Math.round(maxW)}|${Math.round(fontPx * 10)}`;
   let byLine = centeredLayoutCache.get(line);
   const hit = byLine?.get(key);
   if (hit) return hit;
