@@ -10,7 +10,7 @@ import { DELUXE_UNLOCK_ACCURACY, deluxeSongId, hasEarnedDeluxe, isDeluxeSongId, 
 import { useVaultStore, ownsCardForDay, isAwardPlayUnlocked, getShardsForDay } from "@/store/useVaultStore";
 import CampaignResults from "./campaign/CampaignResults";
 import { supabase } from "@/services/supabaseClient";
-import { purchasePack, getLastPurchasePackError, requestRunToken, submitGameplayRecord, type OwnedCard } from "@/services/vaultService";
+import { purchasePack, getLastPurchasePackError, getLastPurchasePackVerified, requestRunToken, submitGameplayRecord, type OwnedCard } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { logAnalyticsEvent } from "@/services/telemetryService";
 import OnboardingFlowModal from "@/components/OnboardingFlowModal";
@@ -461,6 +461,25 @@ export default function Results() {
         console.warn('Failed to query gameplay_records from Supabase (using localStorage baseline):', e);
       }
 
+      // The server's payouts ledger is the exact record of tiers paid for this song.
+      try {
+        const { data: payouts, error: payErr } = await supabase
+          .from('gameplay_reward_payouts')
+          .select('tier')
+          .eq('user_id', user!.id)
+          .eq('song_id', songId!);
+        if (!payErr && payouts) {
+          for (const row of payouts) {
+            if (row.tier) {
+              claimedSet.add(row.tier);
+              maxClaimedTierValue = Math.max(maxClaimedTierValue, TIER_ORDER[row.tier] ?? 0);
+            }
+          }
+        }
+      } catch {
+        /* ledger not deployed yet: rely on gameplay_records + localStorage */
+      }
+
       setAlreadyClaimedTiers(claimedSet);
 
       const isPlatinum = result.medal === 'PLATINUM' || accuracy >= 93;
@@ -513,11 +532,38 @@ export default function Results() {
       const paidTiers: ClaimableTier[] = [];
       const heldTiers: { tier: ClaimableTier; reason: string }[] = [];
 
+      // Save the run first: its record (written through the token-checked submit_score) is
+      // the server's proof that the run earned these tiers. Verified rewards skip the daily
+      // pack caps and are paid once per song per tier. Without it, claims fall back to the
+      // capped path.
+      let rewardRecordId: string | undefined;
+      {
+        const proof = await submitGameplayRecord({
+          songId,
+          score: result.score,
+          accuracy: Number(accuracy.toFixed(2)),
+          maxCombo: result.maxCombo,
+          medal: result.medal,
+          packRewarded: false,
+          rewardTier: 'none',
+          runToken: (await ensureRunToken(true)) ?? undefined,
+        });
+        if (proof.success && proof.record?.id != null) {
+          rewardRecordId = String(proof.record.id);
+        } else {
+          console.warn('[GameResults] Could not save the run before claiming; using capped claims:', proof.error);
+        }
+      }
+
+      // True once the server confirms it verified a payout against the run (and so has
+      // already flagged the run record as rewarded).
+      let serverRecordedClaim = false;
       for (const tier of tiersToClaim) {
-        const cards = await purchasePack(tier, size, undefined, undefined, true);
+        const cards = await purchasePack(tier, size, undefined, undefined, true, rewardRecordId);
         if (cards && cards.length > 0) {
           allCards.push(...cards);
           paidTiers.push(tier);
+          if (getLastPurchasePackVerified()) serverRecordedClaim = true;
         } else {
           heldTiers.push({ tier, reason: getLastPurchasePackError() || 'no cards returned' });
         }
@@ -550,21 +596,25 @@ export default function Results() {
           }[highestTierClaimed] || highestTierClaimed
         );
 
-        const { error: dbErr } = await submitGameplayRecord({
-          songId,
-          score: result.score,
-          accuracy: Number(accuracy.toFixed(2)),
-          maxCombo: result.maxCombo,
-          medal: result.medal,
-          packRewarded: true,
-          rewardTier: mappedTier,
-          // Fresh token: the high-score path above already consumed the
-          // countdown token, and tokens are single-use.
-          runToken: (await ensureRunToken(true)) ?? undefined,
-        });
-        
-        if (dbErr) {
-          console.warn('Failed to submit gameplay_records via submit_score RPC:', dbErr);
+        // With a verified run the server already flagged its record as rewarded.
+        // Otherwise (older server, or the run couldn't be saved) record the claim here.
+        if (!serverRecordedClaim) {
+          const { error: dbErr } = await submitGameplayRecord({
+            songId,
+            score: result.score,
+            accuracy: Number(accuracy.toFixed(2)),
+            maxCombo: result.maxCombo,
+            medal: result.medal,
+            packRewarded: true,
+            rewardTier: mappedTier,
+            // Fresh token: the high-score path above already consumed the
+            // countdown token, and tokens are single-use.
+            runToken: (await ensureRunToken(true)) ?? undefined,
+          });
+
+          if (dbErr) {
+            console.warn('Failed to submit gameplay_records via submit_score RPC:', dbErr);
+          }
         }
  
         // Add to collection in store

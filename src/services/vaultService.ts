@@ -538,16 +538,27 @@ let lastPurchasePackError = '';
 export function getLastPurchasePackError(): string {
   return lastPurchasePackError;
 }
+/** Whether the server verified the most recent gameplay-reward purchasePack against its run. */
+let lastPurchasePackVerified = false;
+export function getLastPurchasePackVerified(): boolean {
+  return lastPurchasePackVerified;
+}
 
-export async function purchasePack(category: PackCategory, size: PackSize = 'single', sessionId?: string, txHash?: string, isGameplayReward?: boolean): Promise<OwnedCard[]> {
+/**
+ * @param rewardRecordId gameplay reward only: id of the run's gameplay_records row (written
+ *   through submit_score). The server verifies the run earned the tier, pays each tier once
+ *   per song, and skips the daily pack caps for it.
+ */
+export async function purchasePack(category: PackCategory, size: PackSize = 'single', sessionId?: string, txHash?: string, isGameplayReward?: boolean, rewardRecordId?: string): Promise<OwnedCard[]> {
   lastPurchasePackError = '';
+  lastPurchasePackVerified = false;
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Not authenticated');
 
     const edgePackType = (category as string) === 'bombshell_token' ? 'bombshell' : category;
     const { data: result, error } = await supabase.functions.invoke('vault-engine', {
-      body: { action: 'purchasePack', payload: { packType: edgePackType, size, sessionId, txHash, isGameplayReward } },
+      body: { action: 'purchasePack', payload: { packType: edgePackType, size, sessionId, txHash, isGameplayReward, rewardRecordId } },
     });
 
     if (error || !result?.success) {
@@ -569,6 +580,8 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
       lastPurchasePackError = errMsg;
       return [];
     }
+
+    lastPurchasePackVerified = result?.verifiedReward === true;
 
     if (typeof result?.remainingTokens === 'number') {
       try {
