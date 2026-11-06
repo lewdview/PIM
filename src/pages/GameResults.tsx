@@ -503,8 +503,24 @@ export default function Results() {
       const size = 'single';
       const allCards: OwnedCard[] = [];
 
+      // Record this run before asking for packs: vault-engine grants each tier only
+      // against the player's best server-recorded accuracy for the song.
+      const { error: runErr } = await submitGameplayRecord({
+        songId,
+        score: result.score,
+        accuracy: Number(accuracy.toFixed(2)),
+        maxCombo: result.maxCombo,
+        medal: result.medal,
+        packRewarded: false,
+        rewardTier: 'none',
+        runToken: (await ensureRunToken(true)) ?? undefined,
+      });
+      if (runErr) {
+        console.warn('Failed to record run before reward claim:', runErr);
+      }
+
       for (const tier of tiersToClaim) {
-        const cards = await purchasePack(tier, size, undefined, undefined, true);
+        const cards = await purchasePack(tier, size, undefined, undefined, true, { songId });
         if (cards && cards.length > 0) {
           allCards.push(...cards);
         }

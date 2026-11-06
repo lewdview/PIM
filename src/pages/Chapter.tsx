@@ -442,7 +442,7 @@ export default function Chapter() {
       audioManager.playSfx('tap_nav', 0.2);
     }
 
-    const cards = await purchasePack(category, 'single', undefined, undefined, true);
+    const cards = await purchasePack(category, 'single', undefined, undefined, true, { month: monthNum, milestone: milestoneNum });
     if (cards && cards.length > 0) {
       localStorage.setItem(claimKey, 'true');
       useVaultStore.getState().syncMilestoneClaim(monthNum, milestoneNum);

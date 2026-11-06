@@ -271,7 +271,7 @@ export default function ChapterStory() {
     sfx(0.2);
     const category: 'taste' | 'light' | 'dark' =
       m === 1 ? 'taste' : m === 2 ? (meta.mood === 'light' ? 'light' : 'dark') : (meta.mood === 'light' ? 'dark' : 'light');
-    const cards = await purchasePack(category, 'single', undefined, undefined, true);
+    const cards = await purchasePack(category, 'single', undefined, undefined, true, { month: monthNum, milestone: m });
     if (!cards || !cards.length) return;
     localStorage.setItem(key, 'true');
     useVaultStore.getState().syncMilestoneClaim(monthNum, m);
