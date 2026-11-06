@@ -40,6 +40,7 @@ export interface ProfileSettings {
   fpsTarget?: 'auto' | '60' | '120' | '30';
   particleDensity?: 'full' | 'half' | 'minimal';
   bloomGlow?: boolean;
+  autoQuality?: boolean;
   bgAnimation?: boolean;
   legacyGraphics?: boolean;
   packDesignStyle?: 'classic_foil' | 'cyber_cartridge';
@@ -788,6 +789,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         if (mergedSettings.fpsTarget) localStorage.setItem("opt_fpsTarget", mergedSettings.fpsTarget);
         if (mergedSettings.particleDensity) localStorage.setItem("opt_particleDensity", mergedSettings.particleDensity);
         if (mergedSettings.bloomGlow !== undefined) localStorage.setItem("opt_bloomGlow", String(mergedSettings.bloomGlow));
+        if (mergedSettings.autoQuality !== undefined) localStorage.setItem("opt_autoQuality", String(mergedSettings.autoQuality));
         if (mergedSettings.bgAnimation !== undefined) localStorage.setItem("opt_bgAnimation", String(mergedSettings.bgAnimation));
         if (mergedSettings.legacyGraphics !== undefined) localStorage.setItem("opt_legacyGraphics", String(mergedSettings.legacyGraphics));
         if (mergedSettings.chartVariant) localStorage.setItem("opt_chartVariant", mergedSettings.chartVariant);
@@ -1177,6 +1179,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (newSettings.fpsTarget !== undefined) localStorage.setItem("opt_fpsTarget", String(merged.fpsTarget));
     if (newSettings.particleDensity !== undefined) localStorage.setItem("opt_particleDensity", String(merged.particleDensity));
     if (newSettings.bloomGlow !== undefined) localStorage.setItem("opt_bloomGlow", String(merged.bloomGlow));
+    if (newSettings.autoQuality !== undefined) localStorage.setItem("opt_autoQuality", String(merged.autoQuality));
     if (newSettings.bgAnimation !== undefined) localStorage.setItem("opt_bgAnimation", String(merged.bgAnimation));
     if (newSettings.legacyGraphics !== undefined) localStorage.setItem("opt_legacyGraphics", String(merged.legacyGraphics));
     if (newSettings.visualizerShape !== undefined) localStorage.setItem("opt_visualizerShape", String(merged.visualizerShape));

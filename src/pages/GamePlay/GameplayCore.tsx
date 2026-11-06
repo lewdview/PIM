@@ -7,6 +7,7 @@ import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
 import { loadOpts, activeLyricsMode, keyLabel, laneForKey, normalizeLaneKey, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
 import { gateShadows, shadowScaleFor } from './shadowGate';
+import { AdaptiveQuality, gfxAt, gfxRank } from './adaptiveQuality';
 import { audioManager, AudioManager, HEALING_LANE_FREQUENCIES } from "@/game/audio";
 import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
 import { useGlobalPlayer } from "@/store/useGlobalPlayer";
@@ -1387,6 +1388,10 @@ export default function Game() {
   const masterGainRef = useRef<GainNode | null>(null);
   const masterCompressorRef = useRef<DynamicsCompressorNode | null>(null);
   const lastRenderWallTimeRef = useRef<number>(0);
+  // Auto quality: the graphics level actually rendered this frame (never above the player's setting).
+  const adaptiveQualityRef = useRef(new AdaptiveQuality());
+  const adaptiveSongRef = useRef<unknown>(null);
+  const effGfxRef = useRef<GfxLevel>('high');
   const audioFiltersRef = useRef<BiquadFilterNode[]>([]);
   const laneGainsRef = useRef<GainNode[]>([]);
   const laneSilenced = useRef<boolean[]>([false, false, false]);
@@ -2250,8 +2255,8 @@ export default function Game() {
               : 9;
 
       let particleDensity = optsRef.current?.particleDensity || 'full';
-      if (optsRef.current?.gfxLevel === 'low') particleDensity = 'minimal';
-      else if (optsRef.current?.gfxLevel === 'medium') particleDensity = 'half';
+      if (effGfxRef.current === 'low') particleDensity = 'minimal';
+      else if (effGfxRef.current === 'medium') particleDensity = 'half';
 
       const count = particleDensity === 'minimal'
         ? Math.min(3, Math.ceil(rawCount * 0.25))
@@ -3830,10 +3835,36 @@ export default function Game() {
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
 
+    // Auto quality: measure real frame times while playing and cap the graphics level
+    // when frames run long. Everything below reads effGfxRef instead of the raw setting.
+    {
+      const o = optsRef.current;
+      const aq = adaptiveQualityRef.current;
+      if (adaptiveSongRef.current !== songRef.current) {
+        adaptiveSongRef.current = songRef.current;
+        aq.reset();
+      }
+      const userRank = gfxRank(o.gfxLevel);
+      const autoOn = o.autoQuality !== false && !isExportVideoRef.current;
+      if (autoOn && phaseRef.current === 'playing' && document.visibilityState === 'visible') {
+        if (aq.frame(nowWall, userRank, targetDelta)) {
+          logAnalyticsEvent('auto_quality_change', {
+            from: effGfxRef.current,
+            to: gfxAt(aq.effective(userRank)),
+            setting: o.gfxLevel,
+          });
+        }
+      } else {
+        aq.pause();
+      }
+      effGfxRef.current = gfxAt(autoOn ? aq.effective(userRank) : userRank);
+    }
+    const effGfx = effGfxRef.current;
+
     // GFX level & bloom glow shadow blur optimization
     // PERF: enforced on the context, so every glow below (notes, POV scenes, FX) obeys the
     // setting. Before, this only zeroed the blur once and later draw sites set it again.
-    const glowScale = shadowScaleFor(optsRef.current);
+    const glowScale = shadowScaleFor(optsRef.current.legacyGraphics, optsRef.current.bloomGlow, effGfx);
     gateShadows(ctx, glowScale);
     const allowShadows = glowScale > 0;
     if (!allowShadows) {
@@ -3841,9 +3872,9 @@ export default function Game() {
     }
     // 3D note slabs: full on high, lighter on medium, flat on low/legacy.
     setNote3DQuality(
-      optsRef.current.legacyGraphics || optsRef.current.gfxLevel === 'low'
+      optsRef.current.legacyGraphics || effGfx === 'low'
         ? 'off'
-        : optsRef.current.gfxLevel === 'medium' ? 'low' : 'high'
+        : effGfx === 'medium' ? 'low' : 'high'
     );
     const song = songRef.current;
     // Task 4B: Adaptive BPM & note density lane breathing
@@ -4713,7 +4744,7 @@ export default function Game() {
     const speedFactor = diffLevel <= 3 ? 0.6 : diffLevel <= 6 ? 1.0 : 1.5;
     const particleColor = diffLevel <= 3 ? "#00FFDD" : diffLevel <= 6 ? "#39FF14" : "#FF1493";
 
-    const allowAmbient = optsRef.current.bgAnimation && optsRef.current.gfxLevel !== 'low' && optsRef.current.particleDensity !== 'minimal' && !optsRef.current.legacyGraphics;
+    const allowAmbient = optsRef.current.bgAnimation && effGfx !== 'low' && optsRef.current.particleDensity !== 'minimal' && !optsRef.current.legacyGraphics;
     if (allowAmbient) {
       ctx.save();
       for (const p of ambientParticlesRef.current) {
@@ -4892,7 +4923,7 @@ export default function Game() {
           nowMs: Date.now(),
           pressed: scenePressed,
           energy: Math.min(1, gs.combo / 60),
-          lite: optsRef.current.gfxLevel === 'low' || optsRef.current.gfxLevel === 'medium' || optsRef.current.legacyGraphics,
+          lite: effGfx === 'low' || effGfx === 'medium' || optsRef.current.legacyGraphics,
         };
       };
 
@@ -6399,7 +6430,7 @@ export default function Game() {
 
       // Spawn note trail particles as the note descends (scaled and capped for performance)
       const particleDensity = optsRef.current?.particleDensity || 'full';
-      const gfxLevel = optsRef.current?.gfxLevel || 'high';
+      const gfxLevel = effGfx;
       const allowTrails = particleDensity !== 'minimal' && gfxLevel !== 'low' && !optsRef.current.legacyGraphics;
       if (phase === "playing" && !isMissedNote && allowTrails) {
         const spawnChance = particleDensity === 'half' || gfxLevel === 'medium' ? 0.10 : 0.22;
