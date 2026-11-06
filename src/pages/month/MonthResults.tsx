@@ -96,7 +96,7 @@ interface MonthResultData {
   chapterFirstFinish?: boolean;
   /** Percent of scorable notes the player hit or tried for. */
   participation?: number;
-  /** Chapter Album (--album builds): what this run earned, saved before this screen. */
+  /** Chapter Album (album builds): what this run earned, saved before this screen. */
   album?: { packs: string[]; stamp: boolean; stamps: number; withheld: boolean; saved: boolean };
 }
 

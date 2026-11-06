@@ -3119,7 +3119,7 @@ export default function Game() {
         saveScoreHistory(saveId, gs.score);
       }
 
-      // Chapter Album (build flag --album): packs and stamps for this run, saved before results show them.
+      // Chapter Album (album builds): packs and stamps for this run, saved before results show them.
       let albumResult: Record<string, unknown> | undefined;
       if (ALBUM_ON && songRef.current && !isTutorial) {
         const reward = rewardRun({
@@ -10535,7 +10535,7 @@ export default function Game() {
         </div>
       )}
 
-      {/* ── Chapter Album from the pause menu (--album builds), never over live notes ── */}
+      {/* ── Chapter Album from the pause menu (album builds), never over live notes ── */}
       {ALBUM_ON && paused && albumOpen && (
         <Suspense fallback={null}>
           <MonthAlbum from="pause" onClose={() => setAlbumOpen(false)} />

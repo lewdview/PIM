@@ -1,6 +1,6 @@
 /**
- * Chapter Album for a monthly build (spec sections 6 to 12), switched on by
- * the build flag --album (__PIM_ALBUM__). Rules live in albumRules.ts; this
+ * Chapter Album for a monthly build (spec sections 6 to 12), on in every monthly
+ * build unless it passes --no-album (__PIM_ALBUM__). Rules live in albumRules.ts; this
  * file loads and saves the state and supplies the chapter's entries.
  *
  * The state is one localStorage key per chapter (pg_album_m1 ...), so months
@@ -20,7 +20,7 @@ import {
 
 export * from './albumRules';
 
-/** True in a monthly build made with --album. */
+/** True in a monthly build (unless made with --no-album). */
 export const ALBUM_ON: boolean = __PIM_MONTH__ > 0 && __PIM_ALBUM__;
 
 const CHAPTER = `m${PLAYGAMA_MONTH}`;

@@ -15,7 +15,7 @@ const isPlaygama = process.env.VITE_PLATFORM === "playgama";
 // campaign with its songs bundled. 0 means the full Playgama build.
 const playgamaMonth = isPlaygama ? Math.min(12, Math.max(0, Number(process.env.PIM_PLAYGAMA_MONTH) || 0)) : 0;
 const playgamaBombshell = playgamaMonth > 0 && process.env.PIM_PLAYGAMA_BOMBSHELL === "1";
-// Chapter card album (cards, earned packs). Off unless the build passes --album.
+// Chapter card album. scripts/build-playgama.mjs turns it on unless the build passes --no-album.
 const playgamaAlbum = playgamaMonth > 0 && process.env.PIM_PLAYGAMA_ALBUM === "1";
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 // Must match the productId in the Playgama dashboard's in-app purchase catalog.

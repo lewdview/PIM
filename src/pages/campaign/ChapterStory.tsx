@@ -140,7 +140,7 @@ export default function ChapterStory() {
     setRunModeState(m);
   };
   const [panel, setPanel] = useState<'options' | 'about' | 'song' | 'endings' | 'story' | 'share' | 'album' | 'packs' | null>(null);
-  // Chapter Album (--album builds): unopened packs wait behind the header's Album button.
+  // Chapter Album (album builds): unopened packs wait behind the header's Album button.
   const [packCount, setPackCount] = useState(() => (ALBUM_ON ? unopenedPacks().length : 0));
   useEffect(() => {
     if (!ALBUM_ON) return;
