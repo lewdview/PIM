@@ -669,6 +669,87 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
   return insertedCards || cards;
 }
 
+// ═══════════════════════════════════════════════════════════
+// VERIFIED GAMEPLAY REWARDS
+// A reward claim may name the gameplay_records row of the run that earned it.
+// That row can only be written through the submit_score RPC (single-use run
+// token, score caps, medal/accuracy plausibility), so it is proof of the run.
+// ═══════════════════════════════════════════════════════════
+const REWARD_LADDER = ['free', 'taste', 'special_picks', 'alpha', 'prophecy'];
+const REWARD_DB_TIER: Record<string, string> = {
+  free: 'common', taste: 'enhanced', special_picks: 'rare', alpha: 'epic', prophecy: 'legendary',
+};
+/** How long after the run its reward can be claimed. Matches the run-token lifetime. */
+const REWARD_CLAIM_WINDOW_MS = 30 * 60 * 1000;
+
+/** Accuracy -> reward tier. Mirrors getTierForAccuracy in src/pages/GameResults.tsx. */
+function rewardTierForAccuracy(acc: number): string {
+  if (acc >= 97) return 'prophecy';
+  if (acc >= 93) return 'alpha';
+  if (acc >= 80) return 'special_picks';
+  if (acc >= 60) return 'taste';
+  return 'free';
+}
+
+/**
+ * Check that the run behind `recordId` earned `packType` and reserve the payout.
+ * PLATINUM clears earn every tier up to their accuracy tier (the Platinum bundle);
+ * other clears earn exactly their accuracy tier. Throws if not earned, too old,
+ * or already paid for this song.
+ */
+async function reserveVerifiedGameplayReward(
+  svc: any, userId: string, recordId: string, packType: string,
+): Promise<{ songId: string; recordId: string }> {
+  const rank = REWARD_LADDER.indexOf(packType);
+  if (rank < 0) throw new Error(`"${packType}" is not a run reward tier`);
+
+  const { data: rec, error } = await svc.from('gameplay_records')
+    .select('id, user_id, song_id, accuracy, medal, timestamp')
+    .eq('id', recordId)
+    .maybeSingle();
+  if (error || !rec || rec.user_id !== userId) throw new Error('Run record not found');
+
+  const ranAt = new Date(rec.timestamp).getTime();
+  if (!Number.isFinite(ranAt) || Date.now() - ranAt > REWARD_CLAIM_WINDOW_MS) {
+    throw new Error('This run is too old to claim rewards from');
+  }
+
+  const medal = String(rec.medal || 'NONE').toUpperCase();
+  if (medal === 'NONE') throw new Error('This run did not clear the song');
+  const earned = REWARD_LADDER.indexOf(rewardTierForAccuracy(Number(rec.accuracy) || 0));
+  const allowed = medal === 'PLATINUM' ? rank <= earned : rank === earned;
+  if (!allowed) throw new Error(`This run did not earn a ${packType} reward`);
+
+  const { error: insErr } = await svc.from('gameplay_reward_payouts').insert({
+    user_id: userId, song_id: rec.song_id, tier: packType, record_id: String(rec.id),
+  });
+  if (insErr) {
+    if (insErr.code === '23505') throw new Error(`The ${packType} reward for this song was already claimed`);
+    throw new Error('Could not reserve reward: ' + insErr.message);
+  }
+  return { songId: rec.song_id, recordId: String(rec.id) };
+}
+
+/** Undo a reservation when minting fails, so the tier can be claimed again. */
+async function releaseVerifiedGameplayReward(svc: any, userId: string, songId: string, packType: string) {
+  await svc.from('gameplay_reward_payouts').delete()
+    .eq('user_id', userId).eq('song_id', songId).eq('tier', packType);
+}
+
+/** Flag the run record as rewarded, keeping the highest tier paid from it. */
+async function markGameplayRecordRewarded(svc: any, recordId: string, packType: string) {
+  try {
+    const { data: rec } = await svc.from('gameplay_records')
+      .select('reward_tier').eq('id', recordId).maybeSingle();
+    const DB_RANK = ['none', ...REWARD_LADDER.map((t) => REWARD_DB_TIER[t])];
+    const next = REWARD_DB_TIER[packType];
+    const keep = DB_RANK.indexOf(rec?.reward_tier || 'none') >= DB_RANK.indexOf(next) ? rec?.reward_tier : next;
+    await svc.from('gameplay_records').update({ pack_rewarded: true, reward_tier: keep }).eq('id', recordId);
+  } catch (e) {
+    console.warn('[purchasePack] could not mark run record rewarded:', e);
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) });
 
@@ -990,7 +1071,7 @@ serve(async (req) => {
       // PURCHASE PACK (V2: updated costs, limits, free pack = 1 card)
       // ═══════════════════════════════════════════════════════════
       case 'purchasePack': {
-        const { packType, size, isGameplayReward } = payload;
+        const { packType, size, isGameplayReward, rewardRecordId } = payload;
 
         const tierMap = PACK_TIER_COUNTS[packType] || { single: 1 };
         let count = tierMap[size || 'single'] || tierMap['single'] || 1;
@@ -1018,9 +1099,17 @@ serve(async (req) => {
         const requestedSize = size || 'single';
         let cryptoPaymentKey: string | null = null;
 
+        // Verified gameplay reward: backed by a run saved through the token-checked
+        // submit_score RPC. Paid once per (player, song, tier) via the payouts ledger,
+        // and exempt from the daily pack caps below.
+        let verifiedReward: { songId: string; recordId: string } | null = null;
+
         if (isGameplayReward) {
           if (!GAMEPLAY_REWARD_PACKS.includes(packType) || requestedSize !== 'single') {
             throw new Error(`"${packType}" (${requestedSize}) cannot be claimed as a gameplay reward`);
+          }
+          if (rewardRecordId) {
+            verifiedReward = await reserveVerifiedGameplayReward(svc, user.id, String(rewardRecordId), packType);
           }
         } else if (packType === 'free' || isTokenPack || cost > 0) {
           // free: once-per-day limit enforced below · spark packs: charged atomically below
@@ -1104,7 +1193,7 @@ serve(async (req) => {
         const stdLimit = adminConfig?.dailyStandardLimit || RC1_DAILY_STANDARD_LIMIT;
         const preLimit = adminConfig?.dailyPremiumLimit  || RC1_DAILY_PREMIUM_LIMIT;
 
-        if (!cryptoPaymentKey) {
+        if (!cryptoPaymentKey && !verifiedReward) {
           if (isPremium) {
             if (dailyPremium >= preLimit) {
               // Refund tokens if already charged
@@ -1144,6 +1233,7 @@ serve(async (req) => {
         } catch (genErr) {
           // Don't let a mint failure swallow the player's payment.
           if (cryptoPaymentKey) await releaseCryptoPayment(svc, cryptoPaymentKey);
+          if (verifiedReward) await releaseVerifiedGameplayReward(svc, user.id, verifiedReward.songId, packType);
           if (cost > 0 && !isTokenPack) {
             await svc.rpc('increment_tokens', { user_uuid: user.id, amount: cost });
           }
@@ -1190,14 +1280,20 @@ serve(async (req) => {
           }).eq('stripe_session_id', cryptoPaymentKey);
         }
 
+        if (verifiedReward) {
+          await markGameplayRecordRewarded(svc, verifiedReward.recordId, packType);
+        }
+
         await logTelemetry(svc, 'pack_purchase', user.id, {
-          packType, size, count, cost, rarities: generatedCards.map((c: any) => c.rarity)
+          packType, size, count, cost, rarities: generatedCards.map((c: any) => c.rarity),
+          verifiedReward: !!verifiedReward,
         });
 
         const { data: refreshedProfile } = await svc.from('profiles').select('tokens').eq('id', user.id).single();
 
         return new Response(JSON.stringify({
           success: true,
+          verifiedReward: !!verifiedReward,
           cards: generatedCards,
           tokenCost: cost,
           remainingTokens: refreshedProfile?.tokens ?? ((profile?.tokens || 0) - cost)
