@@ -5,8 +5,10 @@
 
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { DEFAULT_OPTS, loadOpts, type GameOpts, type GfxLevel, type ParticleDensity, type PovMode } from '@/lib/options';
+import { ARROW_LANE_KEYS, DEFAULT_OPTS, keyLabel, loadOpts, type GameOpts, type GfxLevel, type ParticleDensity, type PovMode } from '@/lib/options';
 import { audioManager } from '@/game/audio';
+import { useVaultStore, type ProfileSettings } from '@/store/useVaultStore';
+import { DEFAULT_PROFILE_SETTINGS, persistSettings } from '@/utils/settingsStorage';
 import { BUILD_VERSION } from '@/platform/playgama/month';
 // The panel also opens over gameplay (pause menu), where the chapter screen's styles may not be loaded yet.
 import '@/styles/stageShell.css';
@@ -92,6 +94,17 @@ function Cycle<T extends string>({ label, value, items, onChange }: {
   );
 }
 
+// loadOpts() reads the profile settings (pim_settings) ahead of the opt_* keys, and they're
+// always hydrated with defaults, so a setting that lives there has to change there too or
+// the game keeps playing with the old value.
+function saveProfileSetting(key: string, value: unknown) {
+  const settings = useVaultStore.getState().settings;
+  if (!settings || !(key in settings)) return;
+  const next = { ...settings, [key]: value } as ProfileSettings;
+  useVaultStore.setState({ settings: next });
+  persistSettings(next);
+}
+
 export default function MonthOptions({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>('audio');
   const [opts, setOpts] = useState<GameOpts>(() => loadOpts());
@@ -100,16 +113,30 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
     try {
       localStorage.setItem(`opt_${key}`, String(value));
     } catch { /* storage blocked */ }
+    saveProfileSetting(key, value);
     setOpts((o) => ({ ...o, [key]: value }));
     if (key === 'bgMusic') window.dispatchEvent(new Event('bgmusic_toggle'));
     if (key === 'musicVolume') window.dispatchEvent(new Event('bgmusic_volume_change'));
   };
   const bool = (key: BoolKey) => ({ on: opts[key], onChange: (v: boolean) => { save(key, v); audioManager.playSfx('tap_nav', 0.3); } });
 
+  const arrowLanes = ARROW_LANE_KEYS.every((k, i) => opts.laneAltKeys[i] === k);
+  const setArrowLanes = (on: boolean) => {
+    const keys: [string, string, string] = on ? [...ARROW_LANE_KEYS] : ['', '', ''];
+    try { keys.forEach((k, i) => localStorage.setItem(`opt_laneAltKey_${i}`, k)); } catch { /* storage blocked */ }
+    saveProfileSetting('laneAltKeys', keys);
+    setOpts((o) => ({ ...o, laneAltKeys: keys }));
+    audioManager.playSfx('tap_nav', 0.3);
+  };
+
   const reset = () => {
     (Object.keys(DEFAULT_OPTS) as (keyof GameOpts)[]).forEach((k) => {
       try { localStorage.removeItem(`opt_${k}`); } catch { /* storage blocked */ }
     });
+    [0, 1, 2].forEach((i) => { try { localStorage.removeItem(`opt_laneAltKey_${i}`); } catch { /* storage blocked */ } });
+    const defaults = { ...DEFAULT_PROFILE_SETTINGS };
+    useVaultStore.setState({ settings: defaults });
+    persistSettings(defaults);
     window.dispatchEvent(new Event('bgmusic_toggle'));
     setOpts(loadOpts());
   };
@@ -155,7 +182,8 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
             <Toggle label="Hit text" hint="Perfect, great and miss" {...bool('judgmentText')} />
             <Toggle label="Combo counter" {...bool('comboDisplay')} />
             <Toggle label="Vibration" hint="On phones that support it" {...bool('haptics')} />
-            <p className="mo-hint">Lane keys are {opts.laneKeys.map((k) => k.toUpperCase()).join(' · ')}, and the arrow keys steer slide notes. On touch screens, tap the lanes.</p>
+            <Toggle label="Arrow keys play lanes" hint="← ↓ → alongside the letter keys" on={arrowLanes} onChange={setArrowLanes} />
+            <p className="mo-hint">Lane keys are {opts.laneKeys.map((k) => keyLabel(k)).join(' · ')}{arrowLanes ? ' or ← · ↓ · →' : ''}, and the arrow keys steer slide notes. On touch screens, tap the lanes.</p>
           </>}
         </div>
         <div className="mo-foot">
