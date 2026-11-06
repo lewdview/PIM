@@ -1154,7 +1154,23 @@ export default function Game() {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Poetic Lines words sit on their own see-through canvas above the track and HUD.
-  const lyricOverlayRef = useRef<HTMLCanvasElement>(null);
+  const lyricOverlayRef = useRef<HTMLCanvasElement | null>(null);
+  // PERF: the overlay's CSS size comes from a ResizeObserver, so the draw loop never
+  // reads clientWidth/clientHeight (that forced a layout every frame after HUD DOM writes).
+  const lyricOverlaySizeRef = useRef({ w: 0, h: 0 });
+  const lyricOverlayObserver = useRef<ResizeObserver | null>(null);
+  const setLyricOverlayEl = useCallback((el: HTMLCanvasElement | null) => {
+    lyricOverlayObserver.current?.disconnect();
+    lyricOverlayObserver.current = null;
+    lyricOverlayRef.current = el;
+    if (!el) return;
+    lyricOverlaySizeRef.current = { w: el.clientWidth, h: el.clientHeight };
+    const ro = new ResizeObserver(() => {
+      lyricOverlaySizeRef.current = { w: el.clientWidth, h: el.clientHeight };
+    });
+    ro.observe(el);
+    lyricOverlayObserver.current = ro;
+  }, []);
   // The Beta top bar floats over the canvas; its dials sit just below it.
   const [betaBarH, setBetaBarH] = useState(0);
   const betaBarObserver = useRef<ResizeObserver | null>(null);
@@ -3703,9 +3719,15 @@ export default function Game() {
     const curPlaybackT = getT();
     let densityBreathingFactor = 1.0;
     if (notesRef.current && notesRef.current.length > 0) {
-      const activeWindowNotes = notesRef.current.filter(
-        (n) => !n.hit && !n.missed && n.note.time >= curPlaybackT - 1.5 && n.note.time <= curPlaybackT + 1.5
-      ).length;
+      // PERF: count from the live note window (notes are time-sorted) with no array allocation.
+      const allN = notesRef.current;
+      let activeWindowNotes = 0;
+      for (let i = noteWindowStartRef.current; i < allN.length; i++) {
+        const n = allN[i];
+        const nt = n.note.time;
+        if (nt > curPlaybackT + 1.5) break;
+        if (!n.hit && !n.missed && nt >= curPlaybackT - 1.5) activeWindowNotes++;
+      }
       const nps = activeWindowNotes / 3.0;
       densityBreathingFactor = Math.max(0.90, Math.min(1.15, 1.0 + (nps - 4.5) * 0.025));
     }
@@ -4094,11 +4116,11 @@ export default function Game() {
         layer: 'backdrop',
       });
     }
-    const lyricOverlay = lyricOverlayRef.current;
+    const lyricOverlay = poeticOn ? lyricOverlayRef.current : null;
     if (lyricOverlay) {
       const octx = lyricOverlay.getContext('2d');
-      const oW = lyricOverlay.clientWidth;
-      const oH = lyricOverlay.clientHeight;
+      const oW = lyricOverlaySizeRef.current.w;
+      const oH = lyricOverlaySizeRef.current.h;
       const pw = Math.round(oW * dpr);
       const ph = Math.round(oH * dpr);
       // The overlay is absolutely positioned, so resizing it never moves the layout.
@@ -10880,12 +10902,14 @@ export default function Game() {
         className="relative w-full h-full flex flex-col overflow-hidden"
       >
         {/* Poetic Lines overlay: see-through words above the track, POV changes and HUD. */}
-        <canvas
-          ref={lyricOverlayRef}
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full pointer-events-none z-[45]"
-          style={{ opacity: 0.85 }}
-        />
+        {activeLyricsMode(opts) === 'poetic' && (
+          <canvas
+            ref={setLyricOverlayEl}
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full pointer-events-none z-[45]"
+            style={{ opacity: 0.85 }}
+          />
+        )}
         {/* ── GAMEPLAY HUD · Beta (the original HUD, kept as a selectable style) ── */}
         {opts.hudStyle === 'beta' && (
           <div
