@@ -912,7 +912,8 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
       ctx.globalAlpha = intro;
       borderText(ctx, txt, 0, 0, L.size, edgeB);
       ctx.shadowColor = cB;
-      ctx.shadowBlur = L.size * 0.45;
+      // PERF: capped; at L.size * 0.45 the blur radius grew to 40px+ on large screens.
+      ctx.shadowBlur = Math.min(18, L.size * 0.45);
       ctx.fillStyle = g;
       ctx.fillText(txt, 0, 0);
       ctx.shadowBlur = 0;

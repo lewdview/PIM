@@ -8,6 +8,7 @@ import { getCampaignStage, type CampaignStage } from "@/game/chapterStory";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
 import { loadOpts, activeLyricsMode, keyLabel, laneForKey, normalizeLaneKey, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
+import { gateShadows, shadowScaleFor } from './shadowGate';
 import { audioManager, AudioManager, HEALING_LANE_FREQUENCIES } from "@/game/audio";
 import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
 import { useGlobalPlayer } from "@/store/useGlobalPlayer";
@@ -3702,9 +3703,12 @@ export default function Game() {
     ctx.globalAlpha = 1;
 
     // GFX level & bloom glow shadow blur optimization
-    const allowShadows = !optsRef.current.legacyGraphics && optsRef.current.bloomGlow && optsRef.current.gfxLevel !== 'low';
+    // PERF: enforced on the context, so every glow below (notes, POV scenes, FX) obeys the
+    // setting. Before, this only zeroed the blur once and later draw sites set it again.
+    const glowScale = shadowScaleFor(optsRef.current);
+    gateShadows(ctx, glowScale);
+    const allowShadows = glowScale > 0;
     if (!allowShadows) {
-      ctx.shadowBlur = 0;
       ctx.shadowColor = 'transparent';
     }
     // 3D note slabs: full on high, lighter on medium, flat on low/legacy.
@@ -4129,6 +4133,7 @@ export default function Game() {
         lyricOverlay.height = ph;
       }
       if (octx) {
+        gateShadows(octx, glowScale);
         octx.setTransform(1, 0, 0, 1, 0, 0);
         octx.clearRect(0, 0, pw, ph);
         if (poeticOn) {
