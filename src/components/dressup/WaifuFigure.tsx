@@ -383,9 +383,15 @@ const BRA_STRAP = 'M112 214 C114 207 117 200.6 119.6 195.8 L130.6 191.6 C127.8 1
 const SHORTS = 'M108 318 Q150 324 192 318 C201 328 211.6 338 211.8 352 C212.2 372 207.6 390 201.6 406 Q178 412 154 408 L150 392 L146 408 Q122 412 98.4 406 C92.4 390 87.8 372 88.2 352 C88.4 338 99 328 108 318 Z';
 const TOES = 'M141 580 L141.4 575.4 M136.8 580.2 L137 575.8 M132.6 579.8 L132.6 575.6 M128.8 579.2 L128.4 575.4';
 
-// More realistic buttocks: lower fullness, soft weight, clear under-curve into the thighs.
-// Designed for the existing pin-up proportions without going full realistic anatomy.
-const BUTTOCKS = 'M94 308 C100 292 122 282 150 282 C178 282 200 292 206 308 C216 336 218 368 212 396 C204 422 186 442 164 448 C156 450 152 448 150 444 C148 448 144 450 136 448 C114 442 96 422 88 396 C82 368 84 336 94 308 Z';
+// One glute (her left as seen from behind; mirrored for the right). It grows out of the hip flare
+// with no top edge of its own: the upper boundary sits inside the torso and is never stroked, so
+// the form starts at the hips instead of at the waist. Fullest low and outside, then it turns
+// under into the gluteal fold just below the crotch, where the base shorts still cover it.
+const GLUTE = 'M150 334 C144 322 130 316 116 318 C102 322 92 336 90 352 C88.6 368 90 386 96 398 C102 408 116 412 130 411 C140 410 147 406 150 400 Z';
+// Gluteal fold: a short crease from the inner thigh outward and up, one per side (never one curve across both).
+const GLUTE_FOLD = 'M148.6 403 C142 409 130 412 118 410 C108 408 100 403 95 396';
+// Contact shadow where the glute rests on the back of the thigh.
+const GLUTE_CONTACT = 'M148.4 404 C140 411.6 126 414.6 112 411.6 C126 417.6 142 416 148.4 409.6 Z';
 
 // Narrow G-string / thong front panel + thin side strings
 const GSTRING_FRONT = 'M136 318 Q150 328 164 318 L160 348 Q150 356 140 348 Z';
@@ -1195,33 +1201,26 @@ function BustShading({ opacity = 0.35, upper = true }: { opacity?: number; upper
   );
 }
 
-/** More realistic glute form for the back view. */
+/** Glute form for the back view, in the marker-comic hand: two volumes with a hard cel shadow
+ *  on the side away from the light, a short cleft and a separate fold under each side. */
 function Buttocks({ realMode = false }: { realMode?: boolean }) {
-  const fadeId = useSvgId('glute');
   if (!useBack()) return null;
 
   return (
     <g>
-      {/* The base volume's lowest tips fade into the thighs (same gradient-mask trick as the
-          arm fade in UpperBody), so the form melts in instead of ending in a hard edge where
-          it overlaps the legs and legwear drawn underneath. Form lines stay unmasked. */}
-      <defs>
-        <linearGradient id={`${fadeId}-g`} gradientUnits="userSpaceOnUse" x1="0" y1="416" x2="0" y2="450">
-          <stop offset="0" stopColor="#fff" />
-          <stop offset="1" stopColor="#000" />
-        </linearGradient>
-        <mask id={`${fadeId}-a`} {...MASK_BOX}>
-          <rect x="-320" y="-120" width="940" height="840" fill={`url(#${fadeId}-g)`} />
-        </mask>
-      </defs>
-      {/* Base volume */}
-      <g mask={`url(#${fadeId}-a)`}>
-        <Skin d={BUTTOCKS} depth={0.9} />
-      </g>
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined}>
+          {/* Fill and cel shadow only: no outline, so the top melts into the lower back. */}
+          <Cel d={GLUTE} fill={SKIN} shade="#d9826e" shadeOpacity={0.55} line="none" depth={1.4} mirrored={m} />
+          <path d={GLUTE_CONTACT} fill={SKIN_SHADE} stroke="none" />
+          {/* The fold is the one edge that carries the weight: crisp, and heavier on the shadow side. */}
+          <path d={GLUTE_FOLD} fill="none" stroke={SKIN_LINE} strokeWidth={m ? 1.8 : 1.1} strokeLinecap="round" />
+        </g>
+      ))}
 
-      {/* Soft intergluteal cleft – deeper in realMode */}
+      {/* Short cleft: it starts below the sacrum, not up in the lower back. */}
       <path
-        d="M150 296 C148.6 335 149 370 150 408"
+        d="M150 336 C149.4 360 149.4 384 150 402"
         fill="none"
         stroke={SKIN_LINE}
         strokeOpacity={realMode ? 0.34 : 0.22}
@@ -1229,57 +1228,11 @@ function Buttocks({ realMode = false }: { realMode?: boolean }) {
         strokeLinecap="round"
       />
 
-      {/* Main under-curve (this is what sells the weight) */}
-      <path
-        d="M102 386 Q128 422 150 428 Q172 422 198 386"
-        fill="none"
-        stroke={SKIN_SHADE}
-        strokeOpacity="0.6"
-        strokeWidth="4.5"
-        strokeLinecap="round"
-      />
-
-      {/* Soft outer shadow planes */}
-      <path
-        d="M100 330 C96 358 100 386 112 412"
-        fill={SKIN_SHADE}
-        fillOpacity="0.28"
-        stroke="none"
-      />
-      <path
-        d="M200 330 C204 358 200 386 188 412"
-        fill={SKIN_SHADE}
-        fillOpacity="0.24"
-        stroke="none"
-      />
-
-      {/* Light-side highlight */}
-      <path
-        d="M108 335 C104 360 108 385 118 408"
-        fill="none"
-        stroke="#ffffff"
-        strokeOpacity="0.32"
-        strokeWidth="2.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M192 335 C196 360 192 385 182 408"
-        fill="none"
-        stroke="#ffffff"
-        strokeOpacity="0.22"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-      />
-
-      {/* Soft horizontal form line across the lower glutes */}
-      <path
-        d="M118 398 Q150 408 182 398"
-        fill="none"
-        stroke={SKIN_LINE}
-        strokeOpacity="0.12"
-        strokeWidth="1.1"
-        strokeLinecap="round"
-      />
+      {/* Highlights on the lit (upper-left) side of each volume. */}
+      <g fill="none" stroke="#ffffff" strokeLinecap="round">
+        <path d="M104 344 C100 352 99 362 101 372" strokeOpacity="0.45" strokeWidth="2.4" />
+        <path d="M158 338 C166 332 176 332 184 336" strokeOpacity="0.25" strokeWidth="2" />
+      </g>
 
       {/* Real-mode only: subtle dimples of Venus + soft crease */}
       {realMode && (
