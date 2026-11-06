@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useLocation, useParams } from 'wouter';
-import { ArrowLeft, Film, Gift, Lock, Play, RotateCcw, Share2, Trophy } from 'lucide-react';
+import { ArrowLeft, Film, Gift, Lock, Package, Play, RotateCcw, Share2, Trophy } from 'lucide-react';
 import { getSongById, loadCatalog, type GameSong } from '@/game/api';
 import { CHAPTERS, levelToTier } from '@/game/campaign';
 import { getHighScore } from '@/game/progress';
@@ -41,6 +41,8 @@ import { markResultsShown, resultsDwellMs, track } from '@/platform/playgama/fun
 import { nextEntryAfter } from './nextEntry';
 import { drawRunCard, runText, type RunSummary } from '@/platform/playgama/shareCard';
 import MonthShare from './MonthShare';
+import PackReveal from './album/PackReveal';
+import { ALBUM_ON, ALBUM_EVENT, PACK_SOURCE_LABEL, STAMPS_PER_PACK, MIN_PARTICIPATION, albumSaveFailed, loadAlbum, retryAlbumSave, unopenedPacks } from '@/platform/playgama/album';
 import { shareFileName } from './shareSummary';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
@@ -94,6 +96,8 @@ interface MonthResultData {
   chapterFirstFinish?: boolean;
   /** Percent of scorable notes the player hit or tried for. */
   participation?: number;
+  /** Chapter Album (--album builds): what this run earned, saved before this screen. */
+  album?: { packs: string[]; stamp: boolean; stamps: number; withheld: boolean; saved: boolean };
 }
 
 interface Stage {
@@ -164,6 +168,32 @@ function RunResults({ songId }: { songId: string }) {
   // Trophies this run earned, called out once the tally is done.
   const [trophies, setTrophies] = useState<AchievementState[]>([]);
   const [sharing, setSharing] = useState(false);
+  // Chapter Album: packs waiting to be opened (this run's and any saved earlier).
+  const [revealing, setRevealing] = useState(false);
+  const [packsWaiting, setPacksWaiting] = useState(() => (ALBUM_ON ? unopenedPacks().length : 0));
+  useEffect(() => {
+    if (!ALBUM_ON) return;
+    const sync = () => setPacksWaiting(unopenedPacks().length);
+    window.addEventListener(ALBUM_EVENT, sync);
+    return () => window.removeEventListener(ALBUM_EVENT, sync);
+  }, []);
+  const albumRun = ALBUM_ON ? result?.album : undefined;
+  const runPackSources = useMemo(() => {
+    if (!albumRun?.packs.length) return [];
+    const byId = new Map(loadAlbum().packs.map((p) => [p.id, p]));
+    return albumRun.packs.map((id) => byId.get(id)?.source).filter(Boolean).map((src) => PACK_SOURCE_LABEL[src!]);
+  }, [albumRun]);
+  const albumLine = !albumRun ? null
+    : albumRun.withheld ? `No cards this time: packs need you to play at least ${Math.round(MIN_PARTICIPATION * 100)}% of the notes.`
+    : albumRun.packs.length ? <><b>{albumRun.packs.length === 1 ? 'Pack earned' : `${albumRun.packs.length} packs earned`}</b> · {runPackSources.join(' + ')}{albumRun.stamp ? ` · stamp ${albumRun.stamps}/${STAMPS_PER_PACK}` : ''}</>
+    : albumRun.stamp ? <><b>Replay stamp</b> · {albumRun.stamps}/{STAMPS_PER_PACK} toward a pack</>
+    : packsWaiting ? <>{packsWaiting} saved pack{packsWaiting > 1 ? 's' : ''} to open</>
+    : null;
+  const openPackBtn = packsWaiting > 0 ? (
+    <button type="button" className="btn-3d mr-open-pack" data-size="sm" data-tone="gold" onClick={() => { audioManager.playSfx('tap_nav', 0.3); setRevealing(true); }}>
+      <Package size={14} /> Open pack{packsWaiting > 1 ? `s (${packsWaiting})` : ''}
+    </button>
+  ) : null;
   useEffect(() => {
     if (!stage || !result) return;
     if (!result.failed && result.goods === 0 && result.misses === 0) recordFullCombo(songId);
@@ -648,7 +678,7 @@ function RunResults({ songId }: { songId: string }) {
                 <NextTrack song={next.song} level={levelForMode(nextMode, next.level)} isBonus={next.isBonus} goal={next.goal} />
                 <div className="cs-detail-actions">
                   <button type="button" className="btn-3d mr-next-btn" onClick={() => launch(next.song, next.idx, next.level, false, nextMode, 'results_next')}>
-                    <Play size={16} fill="currentColor" /> {next.goal ? 'Play again' : 'Next entry'}
+                    <Play size={16} fill="currentColor" /> {next.goal ? 'Play again' : packsWaiting > 0 ? 'Play next · save pack' : 'Next entry'}
                     <span className="mr-next-title">· {next.song.title}</span>
                   </button>
                   <span className="mr-mode" role="radiogroup" aria-label="Mode for the next song">
@@ -660,6 +690,7 @@ function RunResults({ songId }: { songId: string }) {
                       </button>
                     ))}
                   </span>
+                  {openPackBtn}
                 </div>
               </>
             )}
@@ -689,7 +720,14 @@ function RunResults({ songId }: { songId: string }) {
               <p className="cs-hook">Every track in {meta.name.toLowerCase()} is cleared. Chase platinum medals to raise your chapter total.</p>
             )}
             {next?.kind === 'done' && <p className="cs-hook">That's the last open track for now.</p>}
-            {stage && (
+            {albumLine ? (
+              <div className="mr-album" role="status">
+                <Package size={14} aria-hidden="true" />
+                <span className="mr-album-text">{albumLine}</span>
+                {albumSaveFailed() && <button type="button" className="mr-album-retry" onClick={() => retryAlbumSave()}>Not saved · Retry</button>}
+                {next?.kind !== 'play' && openPackBtn}
+              </div>
+            ) : stage && (
               <div className="cs-muted mr-progress" style={{ fontSize: 12, marginTop: 8 }}>
                 {meta.name.charAt(0) + meta.name.slice(1).toLowerCase()} {stage.progress.cleared}/{stage.progress.regular.length} finished
                 {stage.progress.bonus.length > 0 && <> · bonus {stage.progress.bonus.filter((b) => hasClearedSong(b)).length}/{stage.progress.bonus.length}</>}
@@ -731,6 +769,16 @@ function RunResults({ songId }: { songId: string }) {
           fileName={shareFileName(`${song?.title ?? 'run'}${deluxe ? '-deluxe' : ''}`)}
           draw={() => drawRunCard(shareRun())}
           onClose={() => setSharing(false)}
+        />
+      )}
+
+      {revealing && stage && (
+        <PackReveal
+          songs={stage.songs}
+          regularCount={stage.progress.regular.length}
+          from="results"
+          onClose={() => setRevealing(false)}
+          primary={next?.kind === 'play' ? { label: next.goal ? 'Play again' : 'Next entry', onClick: () => { setRevealing(false); launch(next.song, next.idx, next.level, false, nextMode, 'results_next_after_pack'); } } : undefined}
         />
       )}
 

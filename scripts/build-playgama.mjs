@@ -11,7 +11,7 @@
  *
  * Monthly build, one campaign chapter as its own game ("PIM: January"):
  *
- *   npm run build:playgama -- --month=1 [--media-dir=PATH] [--no-bombshell] [--bonus-price=2] [--public-token=TOKEN]
+ *   npm run build:playgama -- --month=1 [--media-dir=PATH] [--no-bombshell] [--album] [--bonus-price=2] [--public-token=TOKEN]
  *   npm run build:playgama -- --month=all ...    (all twelve, or a list: --month=2,3)
  *
  *   - ships only that month's charts and lyrics, and bundles its songs, covers
@@ -131,7 +131,7 @@ const buildVersion = (() => {
   const git = (...a) => { try { return execFileSync('git', a, { cwd: root }).toString().trim(); } catch { return ''; } };
   const sha = git('rev-parse', '--short=7', 'HEAD') || 'nogit';
   const dirty = git('status', '--porcelain', '--untracked-files=no') ? '-dirty' : '';
-  return `${month ? `m${p2(month)}` : 'all'}-${stamp}-${sha}${dirty}`;
+  return `${month ? `m${p2(month)}` : 'all'}-${stamp}-${sha}${dirty}${month && args.album ? '-album' : ''}`;
 })();
 
 console.log(`[build-playgama] vite build (VITE_PLATFORM=playgama${month ? `, month ${month}` : ''}, version ${buildVersion})`);
@@ -141,6 +141,7 @@ run('npx', ['vite', 'build', '--config', 'vite.config.ts'], {
     VITE_PLATFORM: 'playgama',
     PIM_PLAYGAMA_MONTH: String(month),
     PIM_PLAYGAMA_BOMBSHELL: withBombshell ? '1' : '0',
+    PIM_PLAYGAMA_ALBUM: month > 0 && args.album ? '1' : '0',
     PIM_BUILD_VERSION: buildVersion,
     ...(args['bonus-price'] ? { PIM_PLAYGAMA_BONUS_PRICE_USD: String(args['bonus-price']) } : {}),
     ...(args['public-token'] ? { PIM_PLAYGAMA_PUBLIC_TOKEN: String(args['public-token']) } : {}),
@@ -173,7 +174,7 @@ if (badNames.length) {
   process.exit(1);
 }
 
-fs.writeFileSync(path.join(out, 'version.json'), JSON.stringify({ version: buildVersion, month, builtAt: new Date().toISOString() }, null, 2) + '\n');
+fs.writeFileSync(path.join(out, 'version.json'), JSON.stringify({ version: buildVersion, month, album: !!(month && args.album), builtAt: new Date().toISOString() }, null, 2) + '\n');
 
 fs.rmSync(zipPath, { force: true });
 run('zip', ['-qr', '-9', zipPath, '.'], { cwd: out });

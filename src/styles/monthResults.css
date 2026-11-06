@@ -237,3 +237,27 @@
   .mr-next-btn .mr-next-title { display: inline; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .mr-fit .cr-card .mr-progress { display: none; }
 }
+
+/* Chapter Album reward line (--album builds): takes the progress line's place. */
+.mr-album {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--shell-text-2, rgba(255, 255, 255, 0.7));
+  font-size: 12px;
+  line-height: 1.3;
+}
+.mr-album > svg { flex: none; color: var(--shell-gold, #ffb800); }
+.mr-album b { color: var(--shell-gold, #ffb800); }
+.mr-album-text { min-width: 0; }
+.mr-album .btn-3d { flex: none; margin-left: auto; }
+.mr-album-retry { padding: 0; border: 0; background: none; color: #ff8a5c; font: inherit; text-decoration: underline; cursor: pointer; }
+@media (min-aspect-ratio: 1/1) and (max-height: 520px) {
+  /* Album build: Open pack sits beside the Next button, the mode switch under them; the reward line is dropped. */
+  .mr-fit .cr-card .cs-detail-actions:has(.mr-open-pack) { display: grid; grid-template-columns: auto auto; justify-content: start; align-items: center; }
+  .mr-fit .cr-card .cs-detail-actions:has(.mr-open-pack) .mr-mode { grid-row: 2; grid-column: 1 / span 2; justify-self: start; }
+  .mr-fit .cr-card .cs-detail-actions:has(.mr-open-pack) .mr-next-btn { max-width: min(40vw, 320px); }
+  .mr-fit .cr-card .mr-album:not(:has(.btn-3d)) { display: none; }
+  .mr-fit .mr-open-pack { padding-top: 5px; padding-bottom: 5px; }
+}

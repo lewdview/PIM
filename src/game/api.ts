@@ -82,6 +82,11 @@ export function isSongTimeLocked(song: GameSong): boolean {
 let catalogCache: GameSong[] | null = null;
 let loadingPromise: Promise<GameSong[]> | null = null;
 
+/** The catalog if loadCatalog() already ran this page load (gameplay always has it). */
+export function cachedCatalog(): GameSong[] | null {
+  return catalogCache;
+}
+
 export function clearCatalogCache() {
   catalogCache = null;
   loadingPromise = null;

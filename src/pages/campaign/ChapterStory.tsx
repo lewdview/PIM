@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones, BookOpen, Share2, Cpu } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones, BookOpen, Share2, Cpu, Layers } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -40,6 +40,9 @@ import MonthOptions from '@/pages/month/MonthOptions';
 import MonthAbout from '@/pages/month/MonthAbout';
 import MonthSong from '@/pages/month/MonthSong';
 import MonthEndings from '@/pages/month/MonthEndings';
+import MonthAlbum from '@/pages/month/album/MonthAlbum';
+import PackReveal from '@/pages/month/album/PackReveal';
+import { ALBUM_ON, ALBUM_EVENT, unopenedPacks } from '@/platform/playgama/album';
 import MonthStoryPanel from '@/pages/month/MonthStoryPanel';
 import MonthShare from '@/pages/month/MonthShare';
 import { monthSummary, shareFileName } from '@/pages/month/shareSummary';
@@ -136,7 +139,15 @@ export default function ChapterStory() {
     setChosenMode(m);
     setRunModeState(m);
   };
-  const [panel, setPanel] = useState<'options' | 'about' | 'song' | 'endings' | 'story' | 'share' | null>(null);
+  const [panel, setPanel] = useState<'options' | 'about' | 'song' | 'endings' | 'story' | 'share' | 'album' | 'packs' | null>(null);
+  // Chapter Album (--album builds): unopened packs wait behind the header's Album button.
+  const [packCount, setPackCount] = useState(() => (ALBUM_ON ? unopenedPacks().length : 0));
+  useEffect(() => {
+    if (!ALBUM_ON) return;
+    const sync = () => setPackCount(unopenedPacks().length);
+    window.addEventListener(ALBUM_EVENT, sync);
+    return () => window.removeEventListener(ALBUM_EVENT, sync);
+  }, []);
   const [lbRows, setLbRows] = useState<LeaderboardRow[] | null>(null);
   const openLeaderboard = async () => {
     sfx(0.15);
@@ -550,6 +561,11 @@ export default function ChapterStory() {
                 <Headphones size={14} /> Listen
               </button>
             )}
+            {ALBUM_ON && (
+              <button type="button" className="btn-3d" data-size="sm" data-tone={packCount ? 'gold' : 'quiet'} onClick={() => { sfx(); setPanel(packCount ? 'packs' : 'album'); }}>
+                <Layers size={14} /> {packCount ? `Open pack${packCount > 1 ? `s (${packCount})` : ''}` : 'Album'}
+              </button>
+            )}
             {story && (
               <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('story'); }}>
                 <BookOpen size={14} /> Story
@@ -820,6 +836,17 @@ export default function ChapterStory() {
             onPlay={(deluxe) => handlePlay(deluxe)}
             onClose={() => setPanel(null)}
           />
+        )}
+        {panel === 'album' && (
+          <MonthAlbum
+            songs={songs}
+            from="chapter"
+            onClose={() => setPanel(null)}
+            onPlay={(id) => { setPanel(null); const i = songs.findIndex((x) => x.id === id); if (i >= 0) select(i); }}
+          />
+        )}
+        {panel === 'packs' && (
+          <PackReveal songs={songs} regularCount={progress.regular.length} from="chapter" onClose={() => setPanel(null)} onAlbum={() => setPanel('album')} />
         )}
         {panel === 'options' && <MonthOptions onClose={() => setPanel(null)} />}
         {panel === 'share' && (() => {

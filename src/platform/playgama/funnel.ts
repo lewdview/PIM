@@ -10,7 +10,7 @@ import { BUILD_VERSION, PLAYGAMA_MONTH } from './month';
 import { deviceClass, onSaveFailed, sendAnalytics, setAnalyticsGameVersion } from './bridge';
 
 /** Bumped when the flow's settings (modes, intro treatment, timings) change. */
-export const FLOW_CONFIG_VERSION = 'phaseA-1';
+export const FLOW_CONFIG_VERSION = __PIM_MONTH__ > 0 && __PIM_ALBUM__ ? 'phaseB-1' : 'phaseA-1';
 
 const SESSION_KEY = 'pg_funnel_session';
 const VISITS_KEY = `pg_visits_m${PLAYGAMA_MONTH}`;

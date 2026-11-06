@@ -15,6 +15,8 @@ const isPlaygama = process.env.VITE_PLATFORM === "playgama";
 // campaign with its songs bundled. 0 means the full Playgama build.
 const playgamaMonth = isPlaygama ? Math.min(12, Math.max(0, Number(process.env.PIM_PLAYGAMA_MONTH) || 0)) : 0;
 const playgamaBombshell = playgamaMonth > 0 && process.env.PIM_PLAYGAMA_BOMBSHELL === "1";
+// Chapter card album (cards, earned packs). Off unless the build passes --album.
+const playgamaAlbum = playgamaMonth > 0 && process.env.PIM_PLAYGAMA_ALBUM === "1";
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 // Must match the productId in the Playgama dashboard's in-app purchase catalog.
 const bonusProductId = `PIM_${MONTH_NAMES[Math.max(0, playgamaMonth - 1)]}_Bonus`;
@@ -88,6 +90,7 @@ export default defineConfig({
   define: {
     __PIM_MONTH__: JSON.stringify(playgamaMonth),
     __PIM_BOMBSHELL__: JSON.stringify(playgamaBombshell),
+    __PIM_ALBUM__: JSON.stringify(playgamaAlbum),
     __PIM_BONUS_PRODUCT_ID__: JSON.stringify(bonusProductId),
     __PIM_LEADERBOARD_ID__: JSON.stringify(leaderboardId),
     __PIM_BUILD_VERSION__: JSON.stringify(buildVersion),

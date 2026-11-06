@@ -1,5 +1,5 @@
 // PIM : beatstar-vault gameplay engine
-import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo, lazy, Suspense } from "react";
 import { useParams, useLocation } from "wouter";
 import { getSongById, saveHighScore, getModifierForSong, STAGEIFICATION_CONFIG, getCandidateAudioUrls } from "@/game/api";
 import { saveMedal, saveScoreHistory, getMedalForSong, getHighScore } from "@/game/progress";
@@ -26,6 +26,9 @@ import { type StageGeometry, getStageGeometry, approachTime, hwAtProgress, laneA
 import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
 import { perfectPlusWindow, perfectWindow, goodWindow, missWindow, setTimingScale } from './timing';
 import { MODE_TUNING, recordFinish, runModeFor, hasModeFinish, type RunMode } from '@/platform/playgama/runMode';
+import { ALBUM_ON, rewardRun } from '@/platform/playgama/album';
+// Only album builds carry the album screen in their bundle.
+const MonthAlbum = ALBUM_ON ? lazy(() => import('@/pages/month/album/MonthAlbum')) : () => null;
 import { track as trackFunnel, msSincePlayPressed, sinceLaunch } from '@/platform/playgama/funnel';
 import IntroCoach from './IntroCoach';
 import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, selectSongPov, isArchetypeDevModeEnabled } from './archetypes';
@@ -1358,6 +1361,10 @@ export default function Game() {
   const strikeDebtRef = useRef(0);
   /** Assist turned on this run (out of strikes in a protected mode: the song plays on). */
   const assistedRef = useRef(false);
+  /** Chapter Album opened from the pause menu. */
+  const [albumOpen, setAlbumOpen] = useState(false);
+  const albumOpenRef = useRef(false);
+  albumOpenRef.current = albumOpen;
   /** Song times of lane presses this run, for the participation check. */
   const pressTimesRef = useRef<number[]>([]);
   const firstNoteTimeRef = useRef<number>(Infinity);
@@ -3112,6 +3119,30 @@ export default function Game() {
         saveScoreHistory(saveId, gs.score);
       }
 
+      // Chapter Album (build flag --album): packs and stamps for this run, saved before results show them.
+      let albumResult: Record<string, unknown> | undefined;
+      if (ALBUM_ON && songRef.current && !isTutorial) {
+        const reward = rewardRun({
+          runId: `${saveId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          songId: songRef.current.id,
+          failed,
+          participation,
+          mode: runMode,
+          assisted,
+          medal: ranked ? medal : 'NONE',
+          deluxe: !!songRef.current.deluxe,
+        });
+        if (reward) {
+          albumResult = {
+            packs: reward.packs.map((p) => p.id),
+            stamp: reward.stamp,
+            stamps: reward.stamps,
+            withheld: reward.withheld,
+            saved: reward.saved,
+          };
+        }
+      }
+
       // ── Aggregate per-lane accuracy from real telemetry ──
       const laneTelemetry: Record<number, { hits: number; perfectPlus: number; perfects: number; goods: number; misses: number }> = {};
       for (let li = 0; li < 3; li++) {
@@ -3164,6 +3195,7 @@ export default function Game() {
             assisted,
             chapterFirstFinish,
             participation: Math.round(participation * 100),
+            ...(albumResult ? { album: albumResult } : {}),
           } : {}),
         }),
       );
@@ -10286,6 +10318,10 @@ export default function Game() {
     }
   }, [phase]);
 
+  useEffect(() => {
+    if (!paused) setAlbumOpen(false);
+  }, [paused]);
+
   // Handle manual keyboard pause (Escape), POV switcher (V), and Continue (Enter)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -10298,6 +10334,8 @@ export default function Game() {
           return;
         }
         if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+          // The album (opened from pause) closes itself on Escape.
+          if (albumOpenRef.current) return;
           const isModalOpen = useVaultStore.getState().optionsModalOpen;
           if (isModalOpen) {
             useVaultStore.getState().setOptionsModalOpen(false);
@@ -10474,6 +10512,18 @@ export default function Game() {
                 ⚙ SETTINGS & OPTIONS
               </button>
               
+              {ALBUM_ON && !isTutorial && (
+                <button
+                  onClick={() => {
+                    audioManager.playSfx('menu_confirm', 0.15);
+                    setAlbumOpen(true);
+                  }}
+                  className="w-full py-3.5 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/80 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                >
+                  ▤ CHAPTER ALBUM
+                </button>
+              )}
+
               <button
                 onClick={doAbandon}
                 className="w-full py-3.5 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/60 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
@@ -10483,6 +10533,13 @@ export default function Game() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Chapter Album from the pause menu (--album builds), never over live notes ── */}
+      {ALBUM_ON && paused && albumOpen && (
+        <Suspense fallback={null}>
+          <MonthAlbum from="pause" onClose={() => setAlbumOpen(false)} />
+        </Suspense>
       )}
 
       {/* ── Monthly build, first run: in-song control tips ── */}
