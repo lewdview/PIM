@@ -83,6 +83,8 @@ export type GameOpts = {
   fpsTarget: FpsTarget;
   particleDensity: ParticleDensity;
   bloomGlow: boolean;
+  /** Lower effects automatically mid-song when frames run long (never above gfxLevel). */
+  autoQuality: boolean;
   bgAnimation: boolean;
   healingGauge: boolean;
   trackLyrics: boolean;
@@ -162,6 +164,7 @@ export const DEFAULT_OPTS: GameOpts = {
   fpsTarget: 'auto',
   particleDensity: 'full',
   bloomGlow: true,
+  autoQuality: true,
   bgAnimation: true,
   healingGauge: true,
   trackLyrics: true,
@@ -266,6 +269,7 @@ export function loadOpts(): GameOpts {
     fpsTarget: validFps,
     particleDensity: validParticles,
     bloomGlow: dbSettings?.bloomGlow ?? bool("opt_bloomGlow", true),
+    autoQuality: dbSettings?.autoQuality ?? bool("opt_autoQuality", true),
     bgAnimation: dbSettings?.bgAnimation ?? bool("opt_bgAnimation", true),
     healingGauge: bool("opt_healingGauge", true),
     trackLyrics: dbSettings?.trackLyrics ?? bool("opt_trackLyrics", true),

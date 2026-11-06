@@ -36,8 +36,8 @@ export function gateShadows(ctx: CanvasRenderingContext2D, scale: number): void 
 }
 
 /** Glow scale for the current graphics options. */
-export function shadowScaleFor(o: { legacyGraphics?: boolean; bloomGlow?: boolean; gfxLevel?: string }): number {
-  if (o.legacyGraphics || o.bloomGlow === false || o.gfxLevel === 'low') return 0;
-  if (o.gfxLevel === 'medium') return 0.5;
+export function shadowScaleFor(legacyGraphics: boolean | undefined, bloomGlow: boolean | undefined, gfxLevel: string | undefined): number {
+  if (legacyGraphics || bloomGlow === false || gfxLevel === 'low') return 0;
+  if (gfxLevel === 'medium') return 0.5;
   return 1;
 }

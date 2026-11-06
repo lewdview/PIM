@@ -629,7 +629,7 @@ function BacksIcon() {
 }
 
 // ── Menu structure: three groups so players find things by intent (play / look / collect) ──
-type ToggleKey = "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "bgAnimation" | "healingGauge" | "trackLyrics" | "sfxEnabled";
+type ToggleKey = "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "autoQuality" | "bgAnimation" | "healingGauge" | "trackLyrics" | "sfxEnabled";
 
 type OptionsTab = 'gameplay' | 'audio' | 'controls' | 'graphics' | 'themes' | 'backgrounds' | 'fronts' | 'backs';
 
@@ -2010,6 +2010,9 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                 </Panel>
 
                 <Panel title="Effects">
+                  <SettingRow label="Auto quality" desc="Turns effects down mid-song if frames start dropping, and back up when it runs smoothly. Never above your graphics level.">
+                    {renderToggle('autoQuality', 'Auto quality')}
+                  </SettingRow>
                   <SettingRow label="Neon bloom & glow" desc="Glow around notes and lanes.">
                     {renderToggle('bloomGlow', 'Neon bloom & glow')}
                   </SettingRow>
