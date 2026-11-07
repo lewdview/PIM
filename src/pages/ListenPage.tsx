@@ -23,6 +23,58 @@ type NeonTheme = 'cyan_pink' | 'emerald_orange' | 'gold_purple' | 'rainbow';
 type RepeatMode = 'all' | 'one' | 'off';
 type PlaylistMode = 'all_catalog' | 'unlocked_only';
 
+
+// ⚡ Bolt: Extracted PlaybackProgress to prevent ListenPage from re-rendering on every timeupdate
+function PlaybackProgress({ audioRef, duration }: { audioRef: React.RefObject<HTMLAudioElement | null>, duration: number }) {
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    const audio = audioRef.current;
+
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
+
+    // Initial sync
+    setCurrentTime(audio.currentTime);
+
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    return () => {
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+    };
+  }, [audioRef.current]);
+
+  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex justify-between font-mono text-[9px] text-white/40">
+        <span>{formatTime(currentTime)}</span>
+        <span>{formatTime(duration)}</span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={duration || 180}
+        value={currentTime}
+        onChange={handleSeek}
+        disabled={!audioRef.current}
+        className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#39FF14] focus:outline-none"
+        style={{
+          background: `linear-gradient(to right, #39FF14 0%, #39FF14 ${progressPercentage}%, rgba(255,255,255,0.1) ${progressPercentage}%, rgba(255,255,255,0.1) 100%)`
+        }}
+      />
+    </div>
+  );
+}
+
+
 export default function ListenPage() {
   const [, params] = useRoute('/listen/:songId');
   const songId = (params as any)?.songId || '';
@@ -121,7 +173,6 @@ export default function ListenPage() {
     setCurrentTrackIndex(targetIdx);
     setSong(targetSong);
     setDuration(targetSong.duration || 180);
-    setCurrentTime(0);
 
     // Update URL quietly without triggering re-render cascades
     const targetPath = `/listen/${targetSong.id}`;
@@ -144,13 +195,6 @@ export default function ListenPage() {
     audio.crossOrigin = 'anonymous';
     audio.volume = musicVolumeRef.current;
     audioRef.current = audio;
-
-    const onTimeUpdate = () => {
-      if (audioRef.current === audio) {
-        setCurrentTime(audio.currentTime);
-      }
-    };
-    audio.addEventListener('timeupdate', onTimeUpdate);
 
     const onDurationChange = () => {
       if (audioRef.current === audio && audio.duration && !isNaN(audio.duration)) {
@@ -846,13 +890,6 @@ export default function ListenPage() {
     );
   }
 
-  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
   const coverArtSrc = song?.coverArt || '/data/covers/default.jpg';
 
 
@@ -950,24 +987,7 @@ export default function ListenPage() {
         </div>
 
         {/* Interactive Progress Slider */}
-        <div className="flex flex-col gap-1">
-          <div className="flex justify-between font-mono text-[9px] text-white/40">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={duration || 180}
-            value={currentTime}
-            onChange={handleSeek}
-            disabled={!audioRef.current}
-            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#39FF14] focus:outline-none"
-            style={{
-              background: `linear-gradient(to right, #39FF14 0%, #39FF14 ${progressPercentage}%, rgba(255,255,255,0.1) ${progressPercentage}%, rgba(255,255,255,0.1) 100%)`
-            }}
-          />
-        </div>
+        <PlaybackProgress audioRef={audioRef} duration={duration} />
 
         {/* Playlist Controls (Shuffle / Prev / Play / Next / Repeat) */}
         <div className="flex justify-between items-center px-2">
@@ -1123,7 +1143,11 @@ export default function ListenPage() {
                         <span className="truncate uppercase">{track.title}</span>
                       </div>
                       <span className="opacity-50 flex-shrink-0 text-[9px]">
-                        {formatTime(track.duration || 180)}
+                        {(() => {
+                          const mins = Math.floor((track.duration || 180) / 60);
+                          const secs = Math.floor((track.duration || 180) % 60);
+                          return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                        })()}
                       </span>
                     </button>
                   );
