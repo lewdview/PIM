@@ -93,9 +93,14 @@
   z-index: -1;
   background: center / cover no-repeat;
   filter: blur(28px) saturate(1.3) brightness(0.45);
-  animation: mb-backdrop-in 0.6s ease-out both;
+  /* Opacity only: scaling a blurred full-panel layer re-rasterises the blur
+     every frame, which stuttered and flashed on slower GPUs. */
+  will-change: opacity;
+  animation: mb-backdrop-in 0.5s ease-out both;
 }
-@keyframes mb-backdrop-in { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+/* The previous cover, held underneath while the new one fades in on top. */
+.mb-week-backdrop[data-under] { z-index: -2; animation: none; }
+@keyframes mb-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
 .mb-week-nav { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .mb-week-tabs { flex: 1; display: flex; gap: 4px; min-width: 0; }
 .mb-week-tab {
@@ -137,7 +142,18 @@
 
 .mb-week-stage { grid-row: 3; display: grid; min-height: 0; perspective: 1200px; container-type: size; }
 .mb-week-stage > .mb-tracks { grid-area: 1 / 1; }
-.mb-tracks > li { animation: mb-deal-pop 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; animation-delay: calc(var(--i, 0) * 45ms); }
+/* Own compositor layers and hidden back faces: without them the 3D turn
+   flickers (tiles blank out at the edge-on angle, Safari worst). */
+.mb-tracks > li {
+  animation: mb-deal-pop 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: flat;
+}
+.mb-week-stage[data-dir] .mb-tracks > li { will-change: transform, opacity; }
+.mb-tracks[data-leaving] { z-index: 0; }
+.mb-tracks:not([data-leaving]) { z-index: 1; }
 .mb-week-stage[data-dir='1'] .mb-tracks:not([data-leaving]) > li { animation-name: mb-deal-in-right; }
 .mb-week-stage[data-dir='-1'] .mb-tracks:not([data-leaving]) > li { animation-name: mb-deal-in-left; }
 .mb-tracks[data-leaving] { pointer-events: none; }

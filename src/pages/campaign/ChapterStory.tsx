@@ -11,7 +11,7 @@
 // rewarded ad or the month's bundle, and a platinum run shows the song's
 // Bombshell artwork during play.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones, BookOpen, Share2, Cpu, Layers } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
@@ -485,13 +485,38 @@ export default function ChapterStory() {
   const weekIdx = Math.max(0, weeks.findIndex((w) => selectedIdx >= w.start && selectedIdx < w.end));
   const prevWeek = useRef(weekIdx);
   const [weekAnim, setWeekAnim] = useState<{ from: number; dir: 1 | -1 } | null>(null);
-  useEffect(() => {
+  // The direction outlives the animation: clearing it would swap the new
+  // covers' animation-name and restart their deal-in halfway through.
+  const [weekDir, setWeekDir] = useState<1 | -1 | undefined>(undefined);
+  // Layout effect, so the outgoing week is on screen in the same frame the
+  // new one first paints (a plain effect left one frame with neither).
+  useLayoutEffect(() => {
     if (prevWeek.current === weekIdx) return;
-    setWeekAnim({ from: prevWeek.current, dir: weekIdx > prevWeek.current ? 1 : -1 });
+    const dir = weekIdx > prevWeek.current ? 1 : -1;
+    setWeekAnim({ from: prevWeek.current, dir });
+    setWeekDir(dir);
     prevWeek.current = weekIdx;
-    const t = window.setTimeout(() => setWeekAnim(null), 420);
+    // Outgoing covers: 300ms + up to 7 × 20ms stagger.
+    const t = window.setTimeout(() => setWeekAnim(null), 480);
     return () => window.clearTimeout(t);
   }, [weekIdx]);
+  // The blurred backdrop cross-fades: the last cover stays underneath while
+  // the new one fades in, instead of the panel blinking dark in between.
+  const coverNow = songs?.[selectedIdx]?.coverArt;
+  const [backdrops, setBackdrops] = useState<{ cur?: string; prev?: string }>({});
+  useLayoutEffect(() => {
+    setBackdrops((b) => (b.cur === coverNow ? b : { cur: coverNow, prev: b.cur }));
+  }, [coverNow]);
+  // Warm the neighbouring weeks' covers so they don't pop in mid-slide.
+  useEffect(() => {
+    if (!songs) return;
+    for (const w of [weeks[weekIdx - 1], weeks[weekIdx + 1]]) {
+      if (!w) continue;
+      for (const s of songs.slice(w.start, w.end)) {
+        if (s.coverArt) { const img = new Image(); img.decoding = 'async'; img.src = s.coverArt; }
+      }
+    }
+  }, [weeks, weekIdx, songs]);
   const goWeek = useCallback((w: number) => {
     const page = weeks[w];
     if (!page || w === weekIdx || !songs) return;
@@ -588,9 +613,13 @@ export default function ChapterStory() {
 
         <div className="mb-main">
           <section className="mb-week" aria-label="Tracks by week">
-            {selected?.coverArt && (
-              <div key={selected.id} className="mb-week-backdrop" aria-hidden="true"
-                style={{ backgroundImage: `url("${selected.coverArt}")` }} />
+            {backdrops.prev && (
+              <div key={`bg-${backdrops.prev}`} className="mb-week-backdrop" data-under aria-hidden="true"
+                style={{ backgroundImage: `url("${backdrops.prev}")` }} />
+            )}
+            {backdrops.cur && (
+              <div key={`bg-${backdrops.cur}`} className="mb-week-backdrop" aria-hidden="true"
+                style={{ backgroundImage: `url("${backdrops.cur}")` }} />
             )}
             <nav className="mb-week-nav" aria-label="Weeks">
               <button type="button" className="mb-week-arrow" aria-label="Previous week" disabled={weekIdx === 0}
@@ -622,7 +651,7 @@ export default function ChapterStory() {
                 <span className="mb-week-keys cs-muted">Q / E to switch weeks</span>
               </div>
             )}
-            <div className="mb-week-stage" data-dir={weekAnim?.dir}>
+            <div className="mb-week-stage" data-dir={weekDir}>
               {weekAnim && weeks[weekAnim.from] && (
                 <ol className="mb-tracks" data-leaving aria-hidden="true" key={`out-${weekAnim.from}`}
                   data-count={weeks[weekAnim.from].end - weeks[weekAnim.from].start + (weekAnim.from === 0 ? 1 : 0)}>
