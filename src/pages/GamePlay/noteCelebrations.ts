@@ -4,12 +4,14 @@
 //  a BREAK (drop) fires a confetti cannon, an ACCENT (beat) throws
 //  curling pink ribbons. Now and then either one swaps for an oddity
 //  — floating hearts, popping bubbles or spinning stars — so the
-//  drops never feel the same twice. Touching a MINE blows it up, and
-//  a REMIX note glitches away in RGB-split blocks.
+//  drops never feel the same twice. Touching a MINE blows it up,
+//  a REMIX note glitches away in RGB-split blocks, and a LIFT (flick
+//  up) launches: a beam up the lane, climbing chevrons, a ground ring
+//  and sparks that rise instead of fall.
 // ═══════════════════════════════════════════════════════════════
 
-export type CelebrationKind = 'confetti' | 'ribbons' | 'hearts' | 'bubbles' | 'stars' | 'explosion' | 'glitch' | 'vortex';
-export type CelebrationNote = 'break' | 'accent' | 'mine' | 'remix' | 'warp' | 'warp-clear';
+export type CelebrationKind = 'confetti' | 'ribbons' | 'hearts' | 'bubbles' | 'stars' | 'explosion' | 'glitch' | 'vortex' | 'liftoff';
+export type CelebrationNote = 'break' | 'accent' | 'mine' | 'remix' | 'warp' | 'warp-clear' | 'lift';
 
 interface Bit {
   x: number;
@@ -49,6 +51,7 @@ const LIFE_MS: Record<CelebrationKind, number> = {
   explosion: 1300,
   glitch: 750,
   vortex: 1600,
+  liftoff: 750,
 };
 
 const CONFETTI_COLORS = ['#FF3B6B', '#FFD23F', '#3BCEAC', '#00B4FF', '#B967FF', '#FF7B00', '#FFFFFF', '#CCFF00'];
@@ -57,6 +60,9 @@ const HEART_COLORS = ['#FF2E63', '#FF6B9A', '#FF9EC4', '#E0115F'];
 const STAR_COLORS = ['#FFD700', '#FFF6B0', '#FFFFFF', '#FFB300'];
 const EXPLOSION_COLORS = ['#FFF3B0', '#FFC300', '#FF7B00', '#FF3B1F', '#B91C1C', '#3A0A06'];
 const GLITCH_COLORS = ['#00F5D4', '#FF007F', '#FFFFFF', '#7B61FF'];
+const LIFT_COLORS = ['#00FF88', '#7DFFC4', '#FFFFFF', '#00E5FF', '#B6FFDA'];
+/** Liftoff chevrons climb one after another, this far apart (fraction of the effect's life). */
+const LIFT_CHEVRON_STAGGER = 0.12;
 
 function pick<T>(list: T[], rand: () => number): T {
   return list[Math.floor(rand() * list.length) % list.length];
@@ -67,6 +73,7 @@ export function chooseCelebration(note: CelebrationNote, rand: () => number = Ma
   if (note === 'mine') return 'explosion';
   if (note === 'remix') return 'glitch';
   if (note === 'warp' || note === 'warp-clear') return 'vortex';
+  if (note === 'lift') return 'liftoff';
   if (rand() < ODDITY_CHANCE) return pick(ODDITIES, rand);
   return note === 'break' ? 'confetti' : 'ribbons';
 }
@@ -175,6 +182,26 @@ export function spawnCelebration(
         color: `hsl(${Math.floor(rand() * 360)}, 100%, 65%)`,
       }));
     }
+  } else if (kind === 'liftoff') {
+    // Sparks that shoot up the lane edges and keep accelerating (trail = motion
+    // streak). The middle stays clear so the chevrons read.
+    for (let i = 0, c = n(22); i < c; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      bits.push(bit({
+        x: x + side * (16 + rand() * 20),
+        y: y + (rand() - 0.5) * 8,
+        vx: side * rand() * 40,
+        vy: -(420 + rand() * 620),
+        phase: 0,
+        size: 1.5 + rand() * 2,
+        color: pick(LIFT_COLORS, rand),
+        trail: [],
+      }));
+    }
+    // Three chevrons, drawn from time alone (phase = launch order)
+    for (let k = 0; k < 3; k++) {
+      bits.push(bit({ vx: 0, vy: 0, phase: k, size: 22 - k * 4, color: 'chevron' }));
+    }
   } else if (kind === 'glitch') {
     // Blocks the note breaks into: wide, thin slices that tear sideways
     for (let i = 0, c = n(22); i < c; i++) {
@@ -238,6 +265,10 @@ function step(c: Celebration, dt: number) {
       }
     } else if (c.kind === 'glitch') {
       b.vx *= Math.pow(0.15, dt);
+    } else if (c.kind === 'liftoff') {
+      if (b.color === 'chevron') continue;
+      b.vx *= Math.pow(0.2, dt);
+      b.vy -= 900 * dt; // rises faster and faster
     } else if (c.kind === 'vortex') {
       // Spiral in: radius shrinks while the spin speeds up
       b.vx *= Math.pow(0.35, dt);
@@ -258,7 +289,7 @@ function step(c: Celebration, dt: number) {
       const len = Math.hypot(b.vx, b.vy) || 1;
       const wiggle = Math.sin(b.phase) * 9;
       b.trail.push({ x: b.x + (-b.vy / len) * wiggle, y: b.y + (b.vx / len) * wiggle });
-      if (b.trail.length > 22) b.trail.shift();
+      if (b.trail.length > (c.kind === 'liftoff' ? 7 : 22)) b.trail.shift();
     }
   }
 }
@@ -307,6 +338,37 @@ function drawFireball(ctx: CanvasRenderingContext2D, x: number, y: number, t01: 
     ctx.arc(x, y, 30 + p * 260, 0, Math.PI * 2);
     ctx.stroke();
   }
+}
+
+/** Liftoff backdrop: a beam that shoots up the lane, and a flat ring along the hit line. */
+function drawLiftoff(ctx: CanvasRenderingContext2D, x: number, y: number, t01: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  if (t01 < 0.45) {
+    const p = t01 / 0.45;
+    const reach = 60 + (1 - (1 - p) * (1 - p)) * 340; // beam height, eases out
+    const halfW = 16 * (1 - p) + 3;
+    const g = ctx.createLinearGradient(0, y, 0, y - reach);
+    g.addColorStop(0, 'rgba(255,255,255,0.9)');
+    g.addColorStop(0.25, 'rgba(0,255,136,0.65)');
+    g.addColorStop(1, 'rgba(0,229,255,0)');
+    ctx.globalAlpha = 1 - p;
+    ctx.fillStyle = g;
+    ctx.fillRect(x - halfW, y - reach, halfW * 2, reach);
+    // White-hot core
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillRect(x - halfW * 0.25, y - reach * 0.8, halfW * 0.5, reach * 0.8);
+  }
+  if (t01 < 0.4) {
+    const p = t01 / 0.4;
+    ctx.globalAlpha = (1 - p) * 0.85;
+    ctx.strokeStyle = '#00FF88';
+    ctx.lineWidth = 3 * (1 - p) + 1;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 20 + p * 110, 5 + p * 22, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawGlitchTears(ctx: CanvasRenderingContext2D, x: number, y: number, t01: number) {
@@ -364,6 +426,10 @@ export function drawCelebrations(ctx: CanvasRenderingContext2D, list: Celebratio
         ctx.ellipse(c.originX, c.originY, (40 + k * 40) * (1 + p * 2), (24 + k * 24) * (1 + p * 2), 0, 0, Math.PI * 2);
         ctx.stroke();
       }
+    }
+
+    if (c.kind === 'liftoff') {
+      drawLiftoff(ctx, c.originX, c.originY, t01);
     }
 
     if (c.kind === 'confetti' && t01 < 0.25) {
@@ -481,6 +547,41 @@ export function drawCelebrations(ctx: CanvasRenderingContext2D, list: Celebratio
         ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
+      } else if (c.kind === 'liftoff') {
+        ctx.globalCompositeOperation = 'lighter';
+        if (b.color === 'chevron') {
+          // Each chevron climbs and fades over its own window, staggered
+          const p = (t01 - b.phase * LIFT_CHEVRON_STAGGER) / 0.55;
+          if (p > 0 && p < 1) {
+            const cy = c.originY - 18 - (1 - (1 - p) * (1 - p)) * 150;
+            const w = b.size;
+            const a = p < 0.2 ? p / 0.2 : 1 - (p - 0.2) / 0.8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            // Soft green glow pass, then the bright stroke on top
+            for (const [lw, col, alpha] of [[10 - b.phase * 2, '#00FF88', 0.35], [4 - b.phase, b.phase === 0 ? '#FFFFFF' : '#B6FFDA', 1]] as const) {
+              ctx.globalAlpha = a * alpha;
+              ctx.strokeStyle = col;
+              ctx.lineWidth = lw;
+              ctx.beginPath();
+              ctx.moveTo(c.originX - w, cy + w * 0.55);
+              ctx.lineTo(c.originX, cy);
+              ctx.lineTo(c.originX + w, cy + w * 0.55);
+              ctx.stroke();
+            }
+          }
+        } else if (b.trail && b.trail.length > 1) {
+          const tr = b.trail;
+          ctx.strokeStyle = b.color;
+          ctx.lineCap = 'round';
+          ctx.lineWidth = b.size;
+          ctx.globalAlpha = fade * 0.9;
+          ctx.beginPath();
+          ctx.moveTo(tr[0].x, tr[0].y);
+          for (let k = 1; k < tr.length; k++) ctx.lineTo(tr[k].x, tr[k].y);
+          ctx.stroke();
+        }
+        ctx.globalCompositeOperation = 'source-over';
       } else if (c.kind === 'stars') {
         ctx.save();
         ctx.translate(b.x, b.y);
