@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCurrentDay } from '../utils/dayCalc';
 import { 
@@ -7,6 +7,7 @@ import {
   DEFAULT_BOMBSHELL_PACK_COVER 
 } from '../utils/bombshellCards';
 import MainBrandLogo from './MainBrandLogo';
+import FeatureReel from './showcase/FeatureReel';
 import { audioManager } from '../game/audio';
 
 const ROTATING_PROMPTS = [
@@ -16,47 +17,7 @@ const ROTATING_PROMPTS = [
   'TOUCH THE SCREEN TO START',
 ];
 
-const LORE_SLIDES = [
-  {
-    id: '365_days',
-    badge: 'PROTOCOL // 365 TRANSMISSIONS',
-    tabLabel: '365 DAYS',
-    title: '365 DAYS OF LIGHT & DARK',
-    subtitle: 'THE DUAL POLARITY SONIC ODYSSEY',
-    accentColor: '#FFB800',
-    glowColor: 'rgba(255, 184, 0, 0.4)',
-  },
-  {
-    id: 'th3scr1b3',
-    badge: 'CREATOR ARCHIVE // THE SCRIBE',
-    tabLabel: 'TH3SCR1B3',
-    title: 'TH3SCR1B3',
-    subtitle: '"THE SCRIBE" // MULTI-GENRE FREESTYLE SONG SPINNER',
-    accentColor: '#00F0FF',
-    glowColor: 'rgba(0, 240, 255, 0.4)',
-  },
-  {
-    id: 'pim_engine',
-    badge: 'RHYTHM ENGINE // HARDWARE ACCELERATED',
-    tabLabel: 'PIM ENGINE',
-    title: 'PIM : TH3V4ULT',
-    subtitle: 'POETRY IN MOTION // 3-LANE RHYTHM',
-    accentColor: '#39FF14',
-    glowColor: 'rgba(57, 255, 20, 0.4)',
-  },
-  {
-    id: 'mission',
-    badge: 'MISSION // FUEL THE VAULT',
-    tabLabel: 'MISSION',
-    title: 'FUEL THE VAULT',
-    subtitle: 'THE ENGINE THAT FUNDS COMMUNITY WORK',
-    accentColor: '#E879F9',
-    glowColor: 'rgba(232, 121, 249, 0.4)',
-  },
-];
-
 const IDLE_ATTRACT_TIMEOUT_MS = 8000;
-const SLIDE_DURATION_MS = 6500;
 
 interface ArcadeSplashScreenProps {
   onStart: () => void;
@@ -66,7 +27,6 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
   const [textIndex, setTextIndex] = useState(0);
   const [isDismissing, setIsDismissing] = useState(false);
   const [isAttractMode, setIsAttractMode] = useState(false);
-  const [activeSlide, setActiveSlide] = useState(0);
 
   const [dayNumber] = useState(() => {
     try {
@@ -182,17 +142,6 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
     };
   }, [isAttractMode, resetIdleTimer]);
 
-  // Clean, zero-CPU slide cycling in Attract Mode
-  useEffect(() => {
-    if (!isAttractMode) return;
-
-    const interval = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % LORE_SLIDES.length);
-    }, SLIDE_DURATION_MS);
-
-    return () => clearInterval(interval);
-  }, [isAttractMode]);
-
   // Window keydown listener: any key triggers start
   useEffect(() => {
     const onKeyDown = () => {
@@ -240,8 +189,6 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
       cancelAnimationFrame(animId);
     };
   }, [handleEngage]);
-
-  const currentSlideData = LORE_SLIDES[activeSlide] ?? LORE_SLIDES[0];
 
   return (
     <motion.div
@@ -347,7 +294,7 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
             }`}
           />
           <span className="font-bold">
-            {isAttractMode ? 'ATTRACT_MODE // LORE_REEL' : 'ARCADE_STANDBY // TITLE'}
+            {isAttractMode ? 'ATTRACT_MODE // GAMEPLAY_REEL' : 'ARCADE_STANDBY // TITLE'}
           </span>
           <span className="text-white/30 hidden sm:inline">|</span>
           <span className="text-white/40 hidden sm:inline">DAY {String(dayNumber).padStart(3, '0')}</span>
@@ -365,7 +312,7 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
               }}
               className="flex items-center gap-1.5 px-3 py-1 font-mono text-[9px] sm:text-[10px] tracking-widest text-[#00F0FF] hover:text-white bg-[#00F0FF]/10 hover:bg-[#00F0FF]/25 border border-[#00F0FF]/30 hover:border-[#00F0FF] rounded-sm transition-all cursor-pointer backdrop-blur-md active:scale-95 shadow-[0_0_12px_rgba(0,240,255,0.2)]"
             >
-              <span>⚡ LORE REEL</span>
+              <span>▶ HOW IT PLAYS</span>
             </button>
           ) : (
             <button
@@ -440,461 +387,13 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
 
           <div className="mt-5 flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono text-white/40">
             <span className="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-pulse" />
-            <span>IDLE DEMO AUTO-STARTS IN 8S</span>
+            <span>GAMEPLAY DEMO STARTS IN 8S</span>
           </div>
         </motion.div>
       ) : (
-        /* ATTRACT MODE: ANIMATED LORE REEL ON MAIN STAGE */
-        <motion.div
-          key="attract-reel"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.92 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-4xl z-20 my-auto py-2 px-2 sm:px-6 flex flex-col justify-center"
-        >
-          {/* Reel Nav Tabs & Slide Progress Bar */}
-          <div className="w-full flex flex-col gap-2 mb-4 sm:mb-6">
-            <div className="flex items-center justify-between gap-2 border-b border-white/15 pb-2">
-              <div className="flex items-center gap-1.5 sm:gap-3">
-                {LORE_SLIDES.map((slide, idx) => {
-                  const isActive = idx === activeSlide;
-                  return (
-                    <button
-                      key={slide.id}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveSlide(idx);
-                      }}
-                      className={`px-2.5 sm:px-4 py-1.5 font-mono text-[10px] sm:text-xs tracking-wider uppercase rounded transition-all cursor-pointer flex items-center gap-1.5 ${
-                        isActive
-                          ? 'bg-white/15 text-white border border-white/30 font-bold shadow-[0_0_15px_rgba(255,255,255,0.15)]'
-                          : 'text-white/40 hover:text-white/70 hover:bg-white/5 border border-transparent'
-                      }`}
-                    >
-                      <span
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{
-                          backgroundColor: isActive ? slide.accentColor : 'rgba(255,255,255,0.2)',
-                        }}
-                      />
-                      <span>
-                        0{idx + 1} // {slide.tabLabel}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Prev / Next controls */}
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveSlide((prev) => (prev - 1 + LORE_SLIDES.length) % LORE_SLIDES.length);
-                  }}
-                  className="w-7 h-7 flex items-center justify-center font-mono text-xs text-white/50 hover:text-white bg-black/50 hover:bg-black/80 border border-white/15 hover:border-white/40 rounded transition-all"
-                >
-                  ◀
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveSlide((prev) => (prev + 1) % LORE_SLIDES.length);
-                  }}
-                  className="w-7 h-7 flex items-center justify-center font-mono text-xs text-white/50 hover:text-white bg-black/50 hover:bg-black/80 border border-white/15 hover:border-white/40 rounded transition-all"
-                >
-                  ▶
-                </button>
-              </div>
-            </div>
-
-            {/* Hardware-Accelerated Progress Bar */}
-            <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-              <motion.div
-                key={`progress-${activeSlide}`}
-                initial={{ width: '0%' }}
-                animate={{ width: '100%' }}
-                transition={{ duration: SLIDE_DURATION_MS / 1000, ease: 'linear' }}
-                className="h-full"
-                style={{
-                  backgroundColor: currentSlideData?.accentColor || '#39FF14',
-                  boxShadow: `0 0 10px ${currentSlideData?.accentColor || '#39FF14'}`,
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Active Slide Body */}
-          <div className="relative min-h-[340px] sm:min-h-[380px] bg-black/60 border border-white/15 rounded-xl p-4 sm:p-7 backdrop-blur-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-            <AnimatePresence mode="wait">
-              {/* SLIDE 0: 365 DAYS OF LIGHT & DARK */}
-              {activeSlide === 0 && (
-                <motion.div
-                  key="slide-365"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.35 }}
-                  className="flex flex-col gap-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-                    <div>
-                      <div className="font-mono text-[9px] sm:text-[10px] tracking-[0.3em] uppercase text-[#FFB800] font-bold">
-                        {LORE_SLIDES[0].badge}
-                      </div>
-                      <h2 className="text-xl sm:text-2xl md:text-3xl font-black font-mono text-white tracking-wider mt-0.5">
-                        {LORE_SLIDES[0].title}
-                      </h2>
-                      <div className="font-mono text-[10px] sm:text-xs text-white/50 tracking-widest uppercase">
-                        {LORE_SLIDES[0].subtitle}
-                      </div>
-                    </div>
-                    <div className="px-3 py-1.5 rounded bg-[#FFB800]/10 border border-[#FFB800]/30 font-mono text-[10px] sm:text-xs text-[#FFB800] font-bold">
-                      DAY {dayNumber} / 365 UNLOCKED
-                    </div>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans font-light">
-                    A full year of music, one transmission per dawn. Every day unlocks a new song, its level, and its collectible card —
-                    fresh cuts recorded for the 365 alongside archival freestyles from a catalog stretching back to 2005, each finally given its day.
-                    Every drop ships with exclusive bombshell anime cover art and its own competitive leaderboard.
-                  </p>
-
-                  {/* Year Progress Bar Visualizer */}
-                  <div className="bg-black/50 p-3 sm:p-4 rounded-lg border border-white/10 flex flex-col gap-2">
-                    <div className="flex items-center justify-between text-[10px] sm:text-xs font-mono">
-                      <span className="text-white/60">365-DAY CHRONICLE CADENCE</span>
-                      <span className="text-[#FFB800] font-bold">
-                        {Math.round((dayNumber / 365) * 100)}% COMPLETE
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden relative">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#FFB800] via-[#FF5500] to-[#FF2244]"
-                        style={{ width: `${Math.max(4, (dayNumber / 365) * 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-[8px] sm:text-[9px] font-mono text-white/40">
-                      <span>DAY 001: GENESIS TRANSMISSION</span>
-                      <span>{365 - dayNumber} TRANSMISSIONS REMAINING</span>
-                    </div>
-                  </div>
-
-                  {/* Dual Polarity Breakdown */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
-                      <div className="flex items-center gap-2 font-mono text-[10px] sm:text-xs text-amber-400 font-bold uppercase mb-1">
-                        <span>☀️ SOLAR SPECTRUM (LIGHT)</span>
-                      </div>
-                      <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
-                        Bright synths, crisp highs and gold-tier cards. Made for the daytime.
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/20">
-                      <div className="flex items-center gap-2 font-mono text-[10px] sm:text-xs text-indigo-400 font-bold uppercase mb-1">
-                        <span>🌙 LUNAR SPECTRUM (DARK)</span>
-                      </div>
-                      <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
-                        Heavy 808s, glitch breakcore and industrial grit. Made for late nights and hard charts.
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* SLIDE 1: TH3SCR1B3 */}
-              {activeSlide === 1 && (
-                <motion.div
-                  key="slide-th3scr1b3"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.35 }}
-                  className="flex flex-col gap-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-                    <div>
-                      <div className="font-mono text-[9px] sm:text-[10px] tracking-[0.3em] uppercase text-[#00F0FF] font-bold">
-                        {LORE_SLIDES[1].badge}
-                      </div>
-                      <h2 className="text-xl sm:text-2xl md:text-3xl font-black font-mono text-white tracking-wider mt-0.5">
-                        {LORE_SLIDES[1].title}
-                      </h2>
-                      <div className="font-mono text-[10px] sm:text-xs text-white/50 tracking-widest uppercase">
-                        {LORE_SLIDES[1].subtitle}
-                      </div>
-                    </div>
-                    <div className="px-3 py-1.5 rounded bg-[#00F0FF]/10 border border-[#00F0FF]/30 font-mono text-[10px] sm:text-xs text-[#00F0FF] font-bold">
-                      PRODUCER // POET // ARCHITECT
-                    </div>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans font-light">
-                    TH3SCR1B3 — pronounced &ldquo;the scribe.&rdquo; A multi-genre freestyle song spinner out of Tucson, Arizona.
-                    Recording since 2005 and all-in since 2018, with hundreds of songs spanning hip-hop, spoken word, and late-night
-                    experiments — plus collabs with Rittz and Xzibit. Spontaneous freestyles, one-take ad-libs, poetry set to music.
-                  </p>
-
-                  {/* Equalizer Visualizer & Specs */}
-                  <div className="bg-black/50 p-3 sm:p-4 rounded-lg border border-white/10 flex flex-col gap-3">
-                    <div className="flex items-center justify-between font-mono text-[9px] sm:text-[10px] text-white/50">
-                      <span>AUDIO OSCILLOSCOPE // 24-BIT 96kHz LOSSLESS</span>
-                      <span className="text-[#00F0FF]">SPECTRUM ACTIVE</span>
-                    </div>
-
-                    {/* Animated EQ Bars */}
-                    <div className="h-12 flex items-end justify-between gap-1 sm:gap-1.5 px-2">
-                      {[35, 65, 85, 45, 95, 75, 40, 90, 60, 100, 70, 50, 80, 65, 90, 45, 85, 60, 95, 55, 70, 85, 40, 75].map(
-                        (h, idx) => (
-                          <div
-                            key={idx}
-                            className="flex-1 bg-gradient-to-t from-[#00F0FF]/40 to-[#00F0FF] rounded-t-sm"
-                            style={{
-                              height: `${h}%`,
-                              animation: `eqBarPulse ${0.8 + (idx % 7) * 0.15}s ease-in-out infinite alternate`,
-                              animationDelay: `${(idx * 0.05).toFixed(2)}s`,
-                            }}
-                          />
-                        )
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10 text-center font-mono">
-                      <div className="p-1.5 rounded bg-white/5">
-                        <div className="text-[8px] text-white/40">STYLE</div>
-                        <div className="text-[10px] sm:text-xs text-[#00F0FF] font-bold">FREESTYLE SPINNER</div>
-                      </div>
-                      <div className="p-1.5 rounded bg-white/5">
-                        <div className="text-[8px] text-white/40">CATALOG</div>
-                        <div className="text-[10px] sm:text-xs text-white font-bold">SINCE 2005</div>
-                      </div>
-                      <div className="p-1.5 rounded bg-white/5">
-                        <div className="text-[8px] text-white/40">COLLABS</div>
-                        <div className="text-[10px] sm:text-xs text-white font-bold">RITTZ · XZIBIT</div>
-                      </div>
-                      <div className="p-1.5 rounded bg-white/5">
-                        <div className="text-[8px] text-white/40">BASE</div>
-                        <div className="text-[10px] sm:text-xs text-[#39FF14] font-bold">TUCSON, AZ</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Scribe's Motto */}
-                  <div className="p-2.5 sm:p-3 rounded bg-white/5 border border-white/10 font-mono text-[10px] sm:text-xs text-zinc-300 italic text-center">
-                    &ldquo;Process over perfection.&rdquo;
-                  </div>
-                </motion.div>
-              )}
-
-              {/* SLIDE 2: PIM (POETRY IN MOTION) */}
-              {activeSlide === 2 && (
-                <motion.div
-                  key="slide-pim"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.35 }}
-                  className="flex flex-col gap-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-                    <div>
-                      <div className="font-mono text-[9px] sm:text-[10px] tracking-[0.3em] uppercase text-[#39FF14] font-bold">
-                        {LORE_SLIDES[2].badge}
-                      </div>
-                      <h2 className="text-xl sm:text-2xl md:text-3xl font-black font-mono text-white tracking-wider mt-0.5">
-                        {LORE_SLIDES[2].title}
-                      </h2>
-                      <div className="font-mono text-[10px] sm:text-xs text-white/50 tracking-widest uppercase">
-                        {LORE_SLIDES[2].subtitle}
-                      </div>
-                    </div>
-                    <div className="px-3 py-1.5 rounded bg-[#39FF14]/10 border border-[#39FF14]/30 font-mono text-[10px] sm:text-xs text-[#39FF14] font-bold">
-                      3-LANE // DSP CROSSOVER
-                    </div>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans font-light">
-                    A collectible rhythm-game ecosystem built on the 365. Rip a free pack every day, pull song cards across six rarities,
-                    fuse duplicates in The Forge, and climb the prestige leaderboards. V⚡ sparks are earned in-game — offchain by design —
-                    and your vault signs in with a Base wallet.
-                  </p>
-
-                  {/* 3-Lane Kinetic Highway Preview */}
-                  <div className="grid grid-cols-3 gap-2 bg-black/60 p-3 rounded-lg border border-white/10">
-                    <div className="flex flex-col items-center gap-1.5 p-2 rounded bg-cyan-950/20 border border-cyan-500/30 overflow-hidden relative h-24">
-                      <span className="font-mono text-[9px] sm:text-[10px] text-cyan-400 font-bold">LANE 1 // LOW</span>
-                      <span className="text-[8px] font-mono text-white/40">20 - 250 Hz</span>
-                      <div className="w-8 h-2 bg-cyan-400 rounded-full shadow-[0_0_10px_#00F0FF] absolute" style={{ animation: 'laneNoteFlow 1.6s ease-in infinite' }} />
-                      <div className="w-full h-1 bg-cyan-400/30 absolute bottom-2" />
-                    </div>
-
-                    <div className="flex flex-col items-center gap-1.5 p-2 rounded bg-emerald-950/20 border border-emerald-500/30 overflow-hidden relative h-24">
-                      <span className="font-mono text-[9px] sm:text-[10px] text-[#39FF14] font-bold">LANE 2 // MID</span>
-                      <span className="text-[8px] font-mono text-white/40">250 - 4000 Hz</span>
-                      <div className="w-8 h-2 bg-[#39FF14] rounded-full shadow-[0_0_10px_#39FF14] absolute" style={{ animation: 'laneNoteFlow 1.6s ease-in infinite 0.5s' }} />
-                      <div className="w-full h-1 bg-[#39FF14]/30 absolute bottom-2" />
-                    </div>
-
-                    <div className="flex flex-col items-center gap-1.5 p-2 rounded bg-fuchsia-950/20 border border-fuchsia-500/30 overflow-hidden relative h-24">
-                      <span className="font-mono text-[9px] sm:text-[10px] text-fuchsia-400 font-bold">LANE 3 // HIGH</span>
-                      <span className="text-[8px] font-mono text-white/40">4k - 20k Hz</span>
-                      <div className="w-8 h-2 bg-fuchsia-400 rounded-full shadow-[0_0_10px_#f43f5e] absolute" style={{ animation: 'laneNoteFlow 1.6s ease-in infinite 1.0s' }} />
-                      <div className="w-full h-1 bg-fuchsia-400/30 absolute bottom-2" />
-                    </div>
-                  </div>
-
-                  {/* Card Forge Ladder */}
-                  <div className="flex flex-wrap items-center justify-between gap-1.5 p-2.5 rounded bg-white/5 border border-white/10 font-mono text-[8px] sm:text-[9px]">
-                    <span className="text-white/40">FORGE RARITY LADDER:</span>
-                    <span className="px-2 py-0.5 rounded bg-zinc-700/50 text-zinc-300">COMMON</span>
-                    <span className="text-white/20">➔</span>
-                    <span className="px-2 py-0.5 rounded bg-emerald-900/50 text-emerald-400">UNCOMMON</span>
-                    <span className="text-white/20">➔</span>
-                    <span className="px-2 py-0.5 rounded bg-blue-900/50 text-blue-400">RARE</span>
-                    <span className="text-white/20">➔</span>
-                    <span className="px-2 py-0.5 rounded bg-purple-900/50 text-purple-400">EPIC</span>
-                    <span className="text-white/20">➔</span>
-                    <span className="px-2 py-0.5 rounded bg-amber-900/50 text-amber-400">LEGENDARY</span>
-                    <span className="text-white/20">➔</span>
-                    <span className="px-2 py-0.5 rounded bg-rose-900/50 text-rose-400 font-bold">MYTHIC</span>
-                  </div>
-
-                  {/* Hidden Vault Pulls */}
-                  <div className="p-2.5 rounded bg-fuchsia-500/5 border border-fuchsia-500/20 font-mono text-[10px] sm:text-xs text-zinc-300 text-center">
-                    <span className="text-fuchsia-400 font-bold">VAULT FINDS //</span> songs beyond the 365 surface as hidden
-                    chase pulls — no day number, no calendar slot.
-                  </div>
-                </motion.div>
-              )}
-
-              {/* SLIDE 3: FUEL THE VAULT (MISSION) */}
-              {activeSlide === 3 && (
-                <motion.div
-                  key="slide-mission"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.35 }}
-                  className="flex flex-col gap-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-                    <div>
-                      <div className="font-mono text-[9px] sm:text-[10px] tracking-[0.3em] uppercase text-[#E879F9] font-bold">
-                        {LORE_SLIDES[3].badge}
-                      </div>
-                      <h2 className="text-xl sm:text-2xl md:text-3xl font-black font-mono text-white tracking-wider mt-0.5">
-                        {LORE_SLIDES[3].title}
-                      </h2>
-                      <div className="font-mono text-[10px] sm:text-xs text-white/50 tracking-widest uppercase">
-                        {LORE_SLIDES[3].subtitle}
-                      </div>
-                    </div>
-                    <div className="px-3 py-1.5 rounded bg-[#E879F9]/10 border border-[#E879F9]/30 font-mono text-[10px] sm:text-xs text-[#E879F9] font-bold">
-                      MILESTONE 01 // $100 PACK SALES
-                    </div>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans font-light">
-                    PIM is bigger than music. Pack sales fuel the real mission: onboarding less-advantaged folks into
-                    crypto and music tech — free crypto, free tablets, real tools to build with. The first milestone is
-                    $100 in pack sales, proving the engine runs. Every rip feeds the vault.
-                  </p>
-
-                  {/* Mission Pillars */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-3 rounded-lg bg-fuchsia-500/5 border border-fuchsia-500/20">
-                      <div className="font-mono text-[10px] sm:text-xs text-fuchsia-400 font-bold uppercase mb-1">
-                        <span>🎓 ONBOARD</span>
-                      </div>
-                      <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
-                        Bring people into crypto and music technology who would never get the invite otherwise.
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-fuchsia-500/5 border border-fuchsia-500/20">
-                      <div className="font-mono text-[10px] sm:text-xs text-fuchsia-400 font-bold uppercase mb-1">
-                        <span>🎁 EQUIP</span>
-                      </div>
-                      <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
-                        Free crypto and free tablets — the actual hardware and funds to start creating.
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-fuchsia-500/5 border border-fuchsia-500/20">
-                      <div className="font-mono text-[10px] sm:text-xs text-fuchsia-400 font-bold uppercase mb-1">
-                        <span>🔥 PROVE IT</span>
-                      </div>
-                      <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
-                        $100 in pack sales is milestone one. The engine has to run before it can lift anyone.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 sm:p-3 rounded bg-white/5 border border-white/10 font-mono text-[10px] sm:text-xs text-zinc-300 italic text-center">
-                    &ldquo;Find shortcuts, gain knowledge — then uplift and build ideas many can use.&rdquo;
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
+        /* ATTRACT MODE: LIVE GAMEPLAY REEL, ONE DEMO PER FEATURE */
+        <FeatureReel key="attract-reel" startLabel={ROTATING_PROMPTS[textIndex]} />
       )}
-
-      {/* MINIMIZED CORNER KIOSK ("PRESS START") IN ATTRACT MODE */}
-      <AnimatePresence>
-        {isAttractMode && (
-          <motion.div
-            key="corner-kiosk"
-            initial={{ opacity: 0, scale: 0.75, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.7, y: 30 }}
-            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEngage();
-            }}
-            className="fixed bottom-5 right-5 sm:bottom-7 sm:right-7 z-30 flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl bg-[#050402]/95 backdrop-blur-xl border corner-kiosk-border cursor-pointer group shadow-[0_0_35px_rgba(57,255,20,0.3)] hover:scale-105 active:scale-95 transition-transform max-w-[210px] sm:max-w-[260px]"
-          >
-            {/* Corner Badge Header */}
-            <div className="w-full flex items-center justify-between text-[8px] sm:text-[9px] font-mono uppercase text-white/50 border-b border-white/10 pb-1.5">
-              <span className="flex items-center gap-1.5 text-[#39FF14]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-ping" />
-                <span>FREE PLAY</span>
-              </span>
-              <span>CREDIT 99</span>
-            </div>
-
-            {/* Mini Brand Logo */}
-            <div className="pointer-events-none scale-75 sm:scale-85 my-0.5">
-              <MainBrandLogo size="nav" showGlow={false} interactive={false} />
-            </div>
-
-            {/* Blinking Rotating Arcade Prompt */}
-            <div className="w-full text-center">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={textIndex}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="font-mono text-xs sm:text-sm font-black tracking-widest uppercase text-[#39FF14] arcade-slow-blink"
-                >
-                  {ROTATING_PROMPTS[textIndex]}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* Click to start CTA button */}
-            <div className="w-full py-1 px-2 rounded bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] group-hover:bg-[#39FF14] group-hover:text-black font-mono text-[9px] sm:text-[10px] font-bold text-center tracking-wider transition-all flex items-center justify-center gap-1">
-              <span>TAP TO START</span>
-              <span>➔</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Footer HUD: Coin & System Info */}
       <div className="w-full flex items-center justify-between font-mono text-[8px] sm:text-[9px] tracking-[0.3em] uppercase text-white/30 z-20 relative border-t border-white/5 pt-2">

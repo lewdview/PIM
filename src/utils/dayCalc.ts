@@ -16,6 +16,11 @@ const MONTHS = [
   { name: 'december', start: 335, end: 365 },
 ] as const;
 
+/** Days since the epoch, uncapped (keeps counting past day 365). Rolls over at local midnight. */
+export function getDayIndex(): number {
+  return Math.floor((Date.now() - EPOCH.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+}
+
 export function getCurrentDay(): number {
   const now = new Date();
   const diff = now.getTime() - EPOCH.getTime();

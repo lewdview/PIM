@@ -27,8 +27,8 @@ export type PovMode =
 
 export type { ChartVariant };
 
-/** 'stanza' is shown to players as "Poetic GUI". */
-export type HudStyle = 'beta' | 'console' | 'stanza';
+/** 'stanza' is shown to players as "Poetic GUI"; 'neon' as "Neon Reel" (the showcase demo's look). */
+export type HudStyle = 'beta' | 'console' | 'stanza' | 'neon';
 /** How lyrics show during play: none, painted on the track, or Poetic Lines (kinetic lyrics across the sky). */
 export type LyricsMode = 'off' | 'track' | 'poetic';
 export const LYRICS_MODES: readonly LyricsMode[] = ['off', 'track', 'poetic'];
@@ -43,7 +43,7 @@ export function defaultLyricsMode(): LyricsMode {
 export function activeLyricsMode(o: { hudStyle?: HudStyle; lyricsMode: LyricsMode }): LyricsMode {
   return (o.hudStyle ?? 'stanza') === 'stanza' ? 'off' : o.lyricsMode;
 }
-export const HUD_STYLES: readonly HudStyle[] = ['beta', 'console', 'stanza'];
+export const HUD_STYLES: readonly HudStyle[] = ['beta', 'console', 'stanza', 'neon'];
 export function toHudStyle(v: unknown): HudStyle {
   return HUD_STYLES.includes(v as HudStyle) ? (v as HudStyle) : 'stanza';
 }
@@ -67,7 +67,7 @@ export type GameOpts = {
   musicVolume: number;
   gameBackground: string;
   gameTrack: string;
-  /** In-song HUD: the original beta HUD, the console rail, or Stanza + Oracle. */
+  /** In-song HUD: the original beta HUD, the console rail, Stanza + Oracle, or Neon Reel. */
   hudStyle: HudStyle;
   backgroundBlur: number;
   cardBack: string;
