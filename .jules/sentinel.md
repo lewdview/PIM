@@ -12,3 +12,8 @@
 **Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being passed in the payload of a `supabase.functions.invoke` call in `src/utils/adminConfig.ts`.
 **Learning:** Hardcoded credentials should not be present in background sync functions or client bundles.
 **Prevention:** Always pull credentials dynamically from `sessionStorage` where the authenticated session stores it or handle authorization securely without exposing raw secrets in code.
+
+## 2024-05-24 - Hardcoded Secret Removal
+**Vulnerability:** A hardcoded Supabase Anonymous Key (JWT) is exposed in multiple files, including client configurations, scratch scripts, Discord bots, and production environment files.
+**Learning:** Hardcoding secrets like API keys or JWTs directly into the source code exposes them to anyone with access to the codebase, leading to unauthorized access or potential compromise of connected services like Supabase.
+**Prevention:** Always use environment variables (`process.env` or `import.meta.env`) to load sensitive credentials. Provide a default fallback to an empty string (`''`) rather than a hardcoded dummy string or real key, ensuring the application fails securely if the environment is misconfigured. Ensure `.env.production` files containing actual secrets are not tracked in version control, or replace them with safe placeholder values if they must be tracked.
