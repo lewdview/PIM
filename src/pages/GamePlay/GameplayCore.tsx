@@ -2308,8 +2308,8 @@ export default function Game() {
         shards: particleDensity === 'minimal' ? undefined : makeHitShards(kind, particleDensity === 'half' ? 6 : 12),
       });
 
-      // Break (drop), accent (beat) and remix notes get their own celebration on top
-      if ((noteType === 'break' || noteType === 'accent' || noteType === 'remix' || noteType === 'warp' || noteType === 'warp-clear') && kind !== 'SHIELDED' && particleDensity !== 'minimal') {
+      // Break (drop), accent (beat), remix, warp and lift notes get their own celebration on top
+      if ((noteType === 'break' || noteType === 'accent' || noteType === 'remix' || noteType === 'warp' || noteType === 'warp-clear' || noteType === 'lift') && kind !== 'SHIELDED' && particleDensity !== 'minimal') {
         spawnCelebration(celebrationsRef.current, noteType, cx, customY !== undefined ? customY : hitY, Date.now(), particleDensity === 'half' ? 0.5 : 1);
       }
     },
@@ -2861,7 +2861,7 @@ export default function Game() {
         else gs.goods++;
 
         audioManager.playSfx("tap_nav", 0.25);
-        triggerHitFx(liftCandidate.currentLane, j);
+        triggerHitFx(liftCandidate.currentLane, j, undefined, 'up', 'lift');
         addJudgment({ type: j, lane: liftCandidate.currentLane, id: ++jCounter.current, ts: Date.now() });
         syncDisplay();
 
@@ -8466,7 +8466,7 @@ export default function Game() {
         else if (j === "PERFECT") gs.perfects++;
         else gs.goods++;
         audioManager.playSfx("tap_nav", 0.25);
-        triggerHitFx(liftCandidate.currentLane, j);
+        triggerHitFx(liftCandidate.currentLane, j, undefined, 'up', 'lift');
 
         // Track lift note telemetry
         recordedTelemetryRef.current.push({
