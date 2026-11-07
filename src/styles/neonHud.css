@@ -1,0 +1,95 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Neon Reel HUD: the showcase rhythm demo's screen, as an in-song HUD.
+   Note heads: src/pages/GamePlay/neonNotes.ts. Judgments: JudgmentBadge.
+   ════════════════════════════════════════════════════════════════════════ */
+
+.neon-hud {
+  position: absolute; inset: 0; z-index: 35; pointer-events: none;
+  font-family: 'Space Grotesk', system-ui, sans-serif; color: #fff;
+}
+.neon-hud-top {
+  position: absolute; left: 0; right: 0; top: 0;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: max(10px, env(safe-area-inset-top)) clamp(10px, 2.4vw, 22px) 22px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent);
+}
+.neon-hud-left { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.neon-hud-ctrls { display: flex; gap: 6px; pointer-events: auto; }
+.neon-hud-btn {
+  width: 34px; height: 34px; border-radius: 10px; cursor: pointer;
+  display: grid; place-items: center;
+  font-size: 14px; color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  transition: color 0.15s, border-color 0.15s;
+}
+.neon-hud-btn:hover, .neon-hud-btn[data-on='true'] { color: #fff; border-color: #ff1493; box-shadow: 0 0 12px rgba(255, 20, 147, 0.45); }
+.neon-hud-track { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.neon-hud-track img { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 8px; object-fit: cover; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
+.neon-hud-track div { min-width: 0; }
+.neon-hud-track b {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 42vw;
+  font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; font-size: clamp(17px, 2.2vw, 24px); line-height: 1.05;
+}
+.neon-hud-track span {
+  display: block; margin-top: 3px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255, 255, 255, 0.55);
+}
+.neon-hud-score { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-family: 'JetBrains Mono', monospace; }
+.neon-hud-score-value {
+  font-size: clamp(22px, 3.4vw, 34px); font-weight: 700; letter-spacing: 0.06em; line-height: 1;
+  font-variant-numeric: tabular-nums; text-shadow: 0 0 14px rgba(255, 255, 255, 0.35);
+}
+.neon-hud-mult { font-size: 13px; font-weight: 700; color: #fde047; text-shadow: 0 0 10px rgba(253, 224, 71, 0.6); }
+.neon-hud-acc { font-size: 11px; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.6); }
+.neon-hud-acc i { font-style: normal; font-weight: 700; }
+.neon-hud-pips { display: flex; gap: 4px; margin-top: 4px; }
+.neon-hud-pips i { width: 16px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); }
+.neon-hud-pips i[data-on='true'] { background: #00e5ff; box-shadow: 0 0 8px #00e5ff; }
+
+.neon-hud-progress {
+  position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(255, 255, 255, 0.06);
+}
+.neon-hud-progress i {
+  display: block; height: 100%; transform-origin: left;
+  background: linear-gradient(90deg, #a855f7, #00e5ff, #ff1493); box-shadow: 0 0 10px rgba(255, 20, 147, 0.6);
+}
+
+.neon-hud-combo {
+  position: absolute; left: 50%; top: clamp(78px, 15vh, 140px); translate: -50% 0; text-align: center;
+}
+.neon-hud-combo span {
+  display: block; font-family: 'Anton', Impact, sans-serif; font-size: clamp(44px, 8vw, 92px); line-height: 1;
+  color: rgba(255, 255, 255, 0.92); text-shadow: 0 0 24px rgba(0, 0, 0, 0.7);
+}
+.neon-hud-combo[data-hot='true'] span { color: #fff; text-shadow: 0 0 22px rgba(255, 20, 147, 0.75), 0 0 60px rgba(255, 20, 147, 0.35); }
+.neon-hud-combo span.bump { animation: neon-bump 0.16s ease-out; }
+@keyframes neon-bump { from { transform: scale(1.14); } to { transform: scale(1); } }
+.neon-hud-combo small { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.42em; color: rgba(255, 255, 255, 0.5); }
+
+/* Power-up: the demo's big banner word, shown while FEVER / SURGE / SIGNAL LOCK runs. */
+.neon-hud-pu {
+  position: absolute; left: 50%; top: clamp(150px, 27vh, 250px); translate: -50% 0;
+  display: none; align-items: center; gap: 10px;
+  padding: 6px 16px 6px 12px; border-radius: 999px; border: 1px solid currentColor;
+  background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(6px);
+  font-family: 'Anton', Impact, sans-serif; font-size: clamp(22px, 3.6vw, 36px); letter-spacing: 0.06em; line-height: 1;
+  text-shadow: 0 0 16px currentColor;
+  animation: neon-pu-in 0.5s cubic-bezier(.2, 1.4, .4, 1);
+}
+@keyframes neon-pu-in { from { scale: 1.6; opacity: 0; } to { scale: 1; opacity: 1; } }
+.neon-hud-pu-dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 10px currentColor; }
+.neon-hud-pu-ping { position: absolute; left: 12px; width: 9px; height: 9px; border-radius: 50%; animation: neon-ping 1.2s ease-out infinite; }
+@keyframes neon-ping { to { transform: scale(2.6); opacity: 0; } }
+.neon-hud-pu-bar {
+  position: absolute; left: 0; right: 0; top: 3px; height: 3px; display: none; transform-origin: left;
+}
+
+@media (max-width: 640px) {
+  .neon-hud-track span { display: none; }
+  .neon-hud-track img { width: 34px; height: 34px; }
+  .neon-hud-btn { width: 30px; height: 30px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .neon-hud-combo span.bump, .neon-hud-pu, .neon-hud-pu-ping { animation: none; }
+}

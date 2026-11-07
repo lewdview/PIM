@@ -46,6 +46,8 @@ import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPilla
 import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
 import '../../styles/gameplayHud.css';
 import '../../styles/gameplayHudRail.css';
+import '../../styles/neonHud.css';
+import { setNeonNotes, neonNotesOn, drawNeonKey } from './neonNotes';
 import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
 import { noteKey, saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
 
@@ -1656,6 +1658,11 @@ export default function Game() {
   const [opts, setOpts] = useState<GameOpts>(loadOpts);
   const optsRef = useRef(opts);
   useEffect(() => { optsRef.current = opts; }, [opts]);
+  // Neon Reel draws its own note heads (./neonNotes): flip the module flag drawKey reads.
+  useEffect(() => {
+    setNeonNotes(opts.hudStyle === 'neon');
+    return () => setNeonNotes(false);
+  }, [opts.hudStyle]);
 
   // ── 6-Archetype Track Geometry & Stage Color Primer Engine ──
   const activeArchetypeRef = useRef<TrackArchetype>('cyber_tunnel');
@@ -11294,6 +11301,84 @@ export default function Game() {
           );
         })()}
 
+        {/* ── GAMEPLAY HUD · Neon Reel (styles: src/styles/neonHud.css) ──
+            The showcase demo's screen as a HUD: track chip and controls top-left, score and
+            multiplier top-right, a big combo over the highway, shield pips and the power-up pill. */}
+        {opts.hudStyle === 'neon' && (() => {
+          const c = gs.combo;
+          const baseMult = c >= 100 ? 5 : c >= 75 ? 4 : c >= 50 ? 3 : c >= 25 ? 2 : 1;
+          const puMult = puRef.current.active === "SIGNAL_LOCK" ? 4 : puRef.current.active === "SURGE" ? 3 : puRef.current.active ? 2 : 1;
+          const shieldLeft = Math.max(0, 3 - missCount);
+          const cover = (song as any)?.coverArt || (song as any)?.coverUrl;
+          return (
+            <div className="neon-hud" style={{ opacity: activePovMode === 'cyber_tunnel' ? 0.4 : 1 }}>
+              <div className="neon-hud-top">
+                <div className="neon-hud-left">
+                  <div className="neon-hud-ctrls">
+                    <button
+                      data-testid="button-quit"
+                      className="neon-hud-btn"
+                      aria-label="Quit"
+                      onClick={() => {
+                        audioRef.current?.pause();
+                        const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
+                        setLocation(origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign');
+                      }}
+                    >✕</button>
+                    <button
+                      className="neon-hud-btn"
+                      aria-label="Options"
+                      onClick={() => {
+                        audioManager.playSfx('menu_confirm', 0.15);
+                        if (phase === 'playing' && !paused) doPause();
+                        useVaultStore.getState().setOptionsModalOpen(true);
+                      }}
+                    >⚙</button>
+                    <button
+                      className="neon-hud-btn"
+                      onClick={toggleFullscreen}
+                      aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                      data-on={isFullscreen}
+                    >⛶</button>
+                  </div>
+                  <div className="neon-hud-track">
+                    {cover && <img src={cover} alt="" />}
+                    <div>
+                      <b>{song?.title}</b>
+                      <span>{song?.artist} · STAGE {currentStage === 5 ? 'FINAL' : currentStage} · {formatTimeSec(getT())}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="neon-hud-score">
+                  <span className="neon-hud-score-value"><AnimatedScore score={gs.score} /></span>
+                  <span className="neon-hud-mult">×{baseMult * puMult}</span>
+                  <span className="neon-hud-acc">
+                    {curMedal !== "NONE" && <i style={{ color: medalStyle.main }}>{curMedal} · </i>}
+                    <span ref={accuracyTextRef}>{acc.toFixed(1)}%</span>
+                  </span>
+                  {opts.hudMisses && (
+                    <span className="neon-hud-pips" aria-label={`${shieldLeft} of 3 misses left`}>
+                      {[0, 1, 2].map(i => <i key={i} data-on={i < shieldLeft} />)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="neon-hud-progress" aria-hidden="true"><i style={{ transform: `scaleX(${Math.max(0, Math.min(1, gs.progress || 0))})` }} /></div>
+              {opts.comboDisplay && (
+                <div className="neon-hud-combo" data-hot={c >= 20}>
+                  <span key={c} ref={comboTextRef} className={c > 0 ? 'bump' : ''}>{c}</span>
+                  <small>COMBO</small>
+                </div>
+              )}
+              <div ref={puPillRef} className="neon-hud-pu">
+                <span ref={puPillDotRef} className="neon-hud-pu-dot" />
+                <span ref={puPillPingRef} className="neon-hud-pu-ping" />
+                <span ref={puPillTextRef} />
+              </div>
+              <div ref={puTimerBarRef} className="neon-hud-pu-bar" />
+            </div>
+          );
+        })()}
         {/* ── GAMEPLAY HUD · Stanza + Oracle (logic: ./verseHud.ts, styles: src/styles/gameplayHud.css) ──
             The lyric line is inked letter by letter by the notes you hit (direct DOM updates from the draw
             loop); the oracle whisper and lane ticks sit under it. Score, chain and time flank it. */}
@@ -12806,6 +12891,12 @@ function drawKey(
 
   ctx.save();
   ctx.translate(centerX, centerY);
+
+  // Neon Reel HUD: standard notes use the showcase demo's glowing bars.
+  if (neonNotesOn() && drawNeonKey(ctx, noteW, noteH, lc, prog, isHold, swipeDirection, noteType)) {
+    ctx.restore();
+    return;
+  }
 
   // ── 0. SPECIAL CUSTOM GEOMETRY FOR MINE HAZARD NOTES ──
   if (noteType === 'mine') {

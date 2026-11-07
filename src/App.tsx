@@ -72,6 +72,7 @@ function lazyWithRetry<T extends React.ComponentType<any>>(
 const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
 const VaultShopPage = lazyWithRetry(() => import('./pages/vaultShop/VaultShopPage'));
 const BonusClawPage = lazyWithRetry(() => import('./pages/vaultShop/BonusClawPage'));
+const ClawLandingPage = lazyWithRetry(() => import('./pages/vaultShop/ClawLandingPage'));
 const HeroLandingPage = lazyWithRetry(() => import('./pages/HeroLandingPage'));
 const RhythmHome = lazyWithRetry(() => import('./pages/RhythmHome'));
 const SongSelect = lazyWithRetry(() => import('./pages/SongSelect'));
@@ -214,6 +215,8 @@ export default function App() {
   const isTutorialRoute =
     location === '/tutorial' ||
     location === '/pitch-deck' ||
+    // The claw funnel hands /claw visitors straight to the machine; don't detour them to the tutorial.
+    location === '/bonus-claw' ||
     isLaunchRoute ||
     (location.startsWith('/play/') &&
       (typeof window !== 'undefined' &&
@@ -373,6 +376,8 @@ export default function App() {
                 <Route path="/" component={LandingPage} />
                 <Route path="/next-vault" component={VaultShopPage} />
                 <Route path="/bonus-claw" component={BonusClawPage} />
+                <Route path="/claw" component={ClawLandingPage} />
+                <Route path="/claw-bot" component={ClawLandingPage} />
                 <Route path="/launch" component={LaunchPage} />
                 <Route path="/launchpad" component={LaunchPage} />
                 <Route path="/play-pim" component={LaunchPage} />

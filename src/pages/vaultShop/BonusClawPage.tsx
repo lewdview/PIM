@@ -14,6 +14,7 @@ import {
 } from '../../services/vaultService';
 import ClawEvent, { CartoonClaw, type ClawWinResult } from './ClawEvent';
 import { PackToken, MysteryPack, MYSTERY_ACCENTS } from './PackToken';
+import { logAnalyticsEvent } from '../../services/telemetryService';
 import { clawPrizePacks, clawPrizeWeight, rollClawPrize, type PitPack } from './clawPits';
 import '../../styles/vaultShop.css';
 
@@ -45,6 +46,19 @@ export default function BonusClawPage() {
     if (!user) { setCredits(0); return; }
     getClawCredits().then(setCredits);
   }, [user]);
+
+  // Arrived from the /claw landing page: pre-fill a handed-off bonus code and log the step.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get('from');
+    const handedCode = params.get('code');
+    if (!from && !handedCode) return;
+    if (handedCode) setCode(handedCode.trim());
+    logAnalyticsEvent('claw_funnel_machine_view', { from: from || 'link', hasCode: !!handedCode });
+    params.delete('from'); params.delete('code');
+    const rest = params.toString();
+    window.history.replaceState({}, '', `/bonus-claw${rest ? `?${rest}` : ''}`);
+  }, []);
 
   useEffect(() => {
     if (!toast) return;

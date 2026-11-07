@@ -9,6 +9,7 @@ import { logAnalyticsEvent } from '../services/telemetryService';
 import { farcasterService } from '../services/farcasterService';
 import { transmission } from './useTransmissionStore';
 import { isLaunchPath } from '../utils/launchRoutes';
+import { getDayIndex } from '../utils/dayCalc';
 import {
   stashGuestSessionForMigration,
   maybeMigrateGuestData,
@@ -174,6 +175,9 @@ const isEphemeralSession = (): boolean => {
 const shortenAddr = (addr: string) =>
   addr.startsWith('0x') && addr.length === 42 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
 
+/** localStorage: the PIM day index the arcade splash was last dismissed on. */
+const ARCADE_SPLASH_DAY_KEY = 'pim_arcade_splash_day';
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   session: null,
@@ -186,9 +190,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (window.location.pathname.startsWith('/play/')) return false;
     if (window.location.pathname.startsWith('/secret/')) return false;
     if (isLaunchPath(window.location.pathname)) return false;
+    // "Press start" is a once-a-day screen: the first load of each PIM day gets it.
+    try { if (localStorage.getItem(ARCADE_SPLASH_DAY_KEY) === String(getDayIndex())) return false; } catch { /* storage blocked */ }
     return true;
   })(),
-  setShowArcadeSplash: (show: boolean) => set({ showArcadeSplash: show }),
+  setShowArcadeSplash: (show: boolean) => {
+    // Dismissed (pressed start, or skipped by a launch page): don't show it again today.
+    if (!show) {
+      try { localStorage.setItem(ARCADE_SPLASH_DAY_KEY, String(getDayIndex())); } catch { /* storage blocked */ }
+    }
+    set({ showArcadeSplash: show });
+  },
   showAuthModal: false,
   authModalTab: 'web3',
   setAuthModalTab: (tab: AuthModalTab) => {

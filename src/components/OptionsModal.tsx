@@ -1564,10 +1564,11 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'gameplay' && (
               <div className="opt-stack">
                 <Panel title="HUD style" hint="How score, combo and shield are shown in a song">
-                  <div className="opt-seg opt-seg--3">
+                  <div className="opt-seg">
                     {([
                       { id: 'stanza', label: 'Poetic GUI', sub: 'The lyric inks as you play' },
                       { id: 'console', label: 'Console Rail', sub: 'Score and shield panels' },
+                      { id: 'neon', label: 'Neon Reel', sub: 'Glow notes, big combo' },
                       { id: 'beta', label: 'Beta', sub: 'The original dials' },
                     ] as const).map(style => (
                       <SegButton
