@@ -19,9 +19,15 @@ function AudiusMark({ size = 14 }: { size?: number }) {
 
 function YouTubeModal({ videoId, title, onClose }: { videoId: string; title: string; onClose: () => void }) {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // Capture phase runs before TrackDetailModal's own window Escape listener,
+    // so stopping it here closes only the video and keeps the card open.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopImmediatePropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
 
   return createPortal(
