@@ -3,7 +3,7 @@
  *
  *   intro     every run until the player's first valid finish in this chapter:
  *             easiest chart, wider timing, half damage, Assist instead of
- *             failing, gentler stage-3 camera and short in-song tips.
+ *             failing and short in-song tips.
  *   relaxed   the easier chart treatment with the same protection, by choice.
  *   standard  the chart and rules as designed. Only Standard runs set medals,
  *             write the track's best score and count toward the month's
@@ -27,17 +27,15 @@ export interface ModeTuning {
   assist: boolean;
   /** In-song tips for the controls. */
   coach: boolean;
-  /** Stage 3 keeps the classic camera (the stage still announces itself). */
-  softCamera: boolean;
   /** Minimum seconds between notes after the chart is built (0 = chart's own). */
   minGap: number;
 }
 
 /** Starting settings from the spec; tune them against real play. */
 export const MODE_TUNING: Record<RunMode, ModeTuning> = {
-  intro: { timingScale: 1.25, strikeWeight: 0.5, assist: true, coach: true, softCamera: true, minGap: 0.5 },
-  relaxed: { timingScale: 1.25, strikeWeight: 0.5, assist: true, coach: false, softCamera: false, minGap: 0 },
-  standard: { timingScale: 1, strikeWeight: 1, assist: false, coach: false, softCamera: false, minGap: 0 },
+  intro: { timingScale: 1.25, strikeWeight: 0.5, assist: true, coach: true, minGap: 0.5 },
+  relaxed: { timingScale: 1.25, strikeWeight: 0.5, assist: true, coach: false, minGap: 0 },
+  standard: { timingScale: 1, strikeWeight: 1, assist: false, coach: false, minGap: 0 },
 };
 
 export const MODE_LABEL: Record<RunMode, string> = {

@@ -4163,20 +4163,15 @@ export default function Game() {
           });
         }
 
-        // Stage-Integrated Dynamic POV Camera Auto-Switching (Untouched & automatic for all players)
-        // Stage 1 & 2: Classic, Stage 3: Song 3D Archetype POV, Stage 4: Classic Void, Stage 5: Hyper Version of Stage 3
+        // Stage-Integrated Dynamic POV Camera Auto-Switching
+        // Stages 1, 2 and 4 use the player's chosen view (Options > View, classic by default);
+        // stages 3 and 5 switch to the song's archetype camera. Every run mode, first runs included.
         if (!isPovLockedRef.current && optsRef.current.stagePovSwitch !== false && phaseRef.current === "playing" && prevStage > 0 && calculatedStage > prevStage) {
           const archetypePov: PovMode = selectSongPov(songRef.current, activeArchetypeRef.current);
+          const baseView: PovMode = optsRef.current.povMode || 'classic';
 
-          let targetPov: PovMode = 'classic';
-          if (calculatedStage === 1 || calculatedStage === 2) {
-            targetPov = 'classic';
-          } else if (calculatedStage === 3) {
-            // First run: stage 3 keeps the classic camera; its banner and music still mark the change.
-            targetPov = PLAYGAMA_MONTH && MODE_TUNING[runModeRef.current].softCamera ? 'classic' : archetypePov;
-          } else if (calculatedStage === 4) {
-            targetPov = 'classic';
-          } else if (calculatedStage === 5) {
+          let targetPov: PovMode = baseView;
+          if (calculatedStage === 3 || calculatedStage === 5) {
             targetPov = archetypePov;
           }
 
@@ -8925,8 +8920,10 @@ export default function Game() {
         activeArchetypeRef.current = selectedArchetype;
         setActiveArchetype(selectedArchetype);
         if (!isPovLockedRef.current) {
-          setActivePovMode('classic');
-          activePovModeRef.current = 'classic';
+          // Start every song in the player's chosen view (Options > View).
+          const startView: PovMode = optsRef.current.povMode || 'classic';
+          setActivePovMode(startView);
+          activePovModeRef.current = startView;
           if (offscreenCanvasRef.current) {
             offscreenCanvasRef.current.width = 0;
             offscreenCanvasRef.current.height = 0;
@@ -10714,8 +10711,8 @@ export default function Game() {
         </button>
       )}
 
-      {/* ── PAUSE OVERLAY ── */}
-      {paused && (
+      {/* ── PAUSE OVERLAY ── (hidden while the album is open over it; the album sits lower in the stack) */}
+      {paused && !albumOpen && (
         <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="glass-panel p-8 max-w-sm w-full mx-4 text-center border-t-2 border-white/20 shadow-2xl">
             <div className="font-mono font-bold text-xs tracking-[0.5em] text-white/30 mb-6 uppercase">
@@ -10766,9 +10763,11 @@ export default function Game() {
 
       {/* ── Chapter Album from the pause menu (album builds), never over live notes ── */}
       {ALBUM_ON && paused && albumOpen && (
-        <Suspense fallback={null}>
-          <MonthAlbum from="pause" onClose={() => setAlbumOpen(false)} />
-        </Suspense>
+        <div className="absolute inset-0 z-[110]">
+          <Suspense fallback={null}>
+            <MonthAlbum from="pause" onClose={() => setAlbumOpen(false)} />
+          </Suspense>
+        </div>
       )}
 
       {/* ── Monthly build, first run: in-song control tips ── */}
