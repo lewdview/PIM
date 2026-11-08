@@ -12892,8 +12892,8 @@ function drawKey(
   ctx.save();
   ctx.translate(centerX, centerY);
 
-  // Neon Reel HUD: standard notes use the showcase demo's glowing bars.
-  if (neonNotesOn() && drawNeonKey(ctx, noteW, noteH, lc, prog, isHold, swipeDirection, noteType)) {
+  // Neon Reel HUD: every note uses the showcase demo's glowing bars (./neonNotes).
+  if (neonNotesOn() && drawNeonKey(ctx, noteW, noteH, lc, prog, isHold, swipeDirection, noteType, timeOffset)) {
     ctx.restore();
     return;
   }
