@@ -2,8 +2,8 @@
 // for every note type in the real game. Each note is a glowing rounded bar with a white
 // highlight strip; special notes keep their meaning through their own colour, label and
 // motion (REMIX, DROP, BEAT, WARP, LIFT, ZIGZAG, BURST, the AVOID mine, the see-through
-// ghost; ZIGZAG shows its line instead of a label). Swipe directions, on taps, hold heads, slides and hold tails, get a thick
-// animated double chevron in the strip's white.
+// ghost; ZIGZAG shows its line instead of a label). Swipe directions on taps, slide heads
+// and hold tails get a thick animated double chevron in the strip's white; hold heads stay plain.
 
 import type { Note, NoteType } from '../../game/types';
 
@@ -72,9 +72,11 @@ export function drawNeonKey(
     if (noteType === 'zigzag') drawZigzag(ctx, w, h, t);
     if (noteType === 'remix') drawShimmer(ctx, w, h, t);
 
-    // Direction arrows: swipes, hold-swipe and slide heads, and hold tails that end in a flick.
+    // Direction arrows: swipes, slide heads, and hold tails that end in a flick. Hold heads
+    // stay plain: the flick belongs to the tail, so an arrow at the head misleads.
     const lift = noteType === 'lift' && (!swipeDirection || swipeDirection === 'up');
-    if (swipeDirection && !lift) {
+    const holdHead = !isHold && (noteType === 'hold' || noteType === 'hold-swipe');
+    if (swipeDirection && !lift && !holdHead) {
       drawArrow(ctx, w, h, swipeDirection, color, t);
     } else if (lift) {
       drawArrow(ctx, w, h, 'up', color, t);
