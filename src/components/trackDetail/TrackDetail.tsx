@@ -30,6 +30,7 @@ import { useTrackDetail } from './useTrackDetail';
 import { OverviewSection, StatsSection, LyricsSection, MEDAL_COLOR } from './InfoSections';
 import ArtworkSection from './ArtworkSection';
 import CardSection from './CardSection';
+import ListenElsewhere from './ListenElsewhere';
 import '../../styles/stageShell.css';
 import './trackDetail.css';
 
@@ -388,6 +389,9 @@ export default function TrackDetail({
               )}
             </div>
           )}
+
+          {/* Audius / YouTube */}
+          <ListenElsewhere day={day} title={data.title} onBeforeOpen={() => { if (isGlobalPlaying) pauseGlobal(); }} />
 
           {/* Actions */}
           <div className="hidden lg:flex flex-col gap-2">

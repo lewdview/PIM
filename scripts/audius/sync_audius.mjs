@@ -8,7 +8,9 @@
  *
  * Matching is by normalized title, with duration as a sanity check. Anything
  * uncertain is marked "review". Hand decisions live in overrides.json and
- * always win, so re-running the sync never undoes a correction.
+ * always win, so re-running the sync never undoes a correction. An override
+ * with "alt": true is a second upload of a day's song; the card links the
+ * non-alt track.
  *
  * Usage:
  *   node scripts/audius/sync_audius.mjs              # fetch live from Audius
@@ -122,6 +124,7 @@ async function main() {
         day: o.day ?? null,
         dayTitle: song?.title ?? null,
         status: o.day ? 'matched' : 'beyond',
+        ...(o.alt ? { alt: true } : {}),
         note: o.note ?? 'set by hand',
       };
     }
