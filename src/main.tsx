@@ -28,6 +28,18 @@ if (typeof window !== 'undefined') {
     return false;
   };
 
+  // A lazy chunk's stylesheet preload can fail on hosts that rewrite asset paths
+  // (Playgama serves the zip under a /__patch__/ path). The stylesheet is either
+  // already on the page (the entry CSS) or only cosmetic, so load the module
+  // anyway instead of throwing into the error screen.
+  window.addEventListener('vite:preloadError', (event) => {
+    const msg = String((event as Event & { payload?: { message?: string } }).payload?.message ?? '');
+    if (msg.includes('Unable to preload CSS')) {
+      console.warn('[Vite Preload] Ignored stylesheet preload failure:', msg);
+      event.preventDefault();
+    }
+  });
+
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason;
     const msg = typeof reason === 'string' ? reason : (reason?.message || '');

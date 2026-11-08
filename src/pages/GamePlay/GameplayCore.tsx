@@ -1,5 +1,5 @@
 // PIM : beatstar-vault gameplay engine
-import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo, lazy, Suspense } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from "react";
 import { useParams, useLocation } from "wouter";
 import { getSongById, saveHighScore, getModifierForSong, STAGEIFICATION_CONFIG, getCandidateAudioUrls } from "@/game/api";
 import { saveMedal, saveScoreHistory, getMedalForSong, getHighScore } from "@/game/progress";
@@ -29,8 +29,11 @@ import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
 import { perfectPlusWindow, perfectWindow, goodWindow, missWindow, setTimingScale } from './timing';
 import { MODE_TUNING, recordFinish, runModeFor, hasModeFinish, type RunMode } from '@/platform/playgama/runMode';
 import { ALBUM_ON, rewardRun } from '@/platform/playgama/album';
-// Only album builds carry the album screen in their bundle.
-const MonthAlbum = ALBUM_ON ? lazy(() => import('@/pages/month/album/MonthAlbum')) : () => null;
+// Imported statically: as a lazy chunk it re-preloaded the entry stylesheet, which
+// fails on Playgama's patched asset host ("Unable to preload CSS ... index-*.css")
+// and crashed the pause-menu album. The chapter screen already bundles it.
+import MonthAlbumScreen from '@/pages/month/album/MonthAlbum';
+const MonthAlbum = ALBUM_ON ? MonthAlbumScreen : () => null;
 import { track as trackFunnel, msSincePlayPressed, sinceLaunch } from '@/platform/playgama/funnel';
 import IntroCoach from './IntroCoach';
 import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, selectSongPov, isArchetypeDevModeEnabled } from './archetypes';
@@ -10764,9 +10767,7 @@ export default function Game() {
       {/* ── Chapter Album from the pause menu (album builds), never over live notes ── */}
       {ALBUM_ON && paused && albumOpen && (
         <div className="absolute inset-0 z-[110]">
-          <Suspense fallback={null}>
-            <MonthAlbum from="pause" onClose={() => setAlbumOpen(false)} />
-          </Suspense>
+          <MonthAlbum from="pause" onClose={() => setAlbumOpen(false)} />
         </div>
       )}
 
