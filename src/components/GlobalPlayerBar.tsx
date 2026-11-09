@@ -6,8 +6,11 @@ import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { useIsMobile } from '../hooks/use-mobile';
 
-function TimeDisplay({ effectiveDuration }: { effectiveDuration: number }) {
+function TimeDisplay({ limit }: { limit: number }) {
   const currentTime = useGlobalPlayer(s => s.currentTime);
+  const duration = useGlobalPlayer(s => s.duration);
+  const effectiveDuration = limit > 0 ? limit : duration;
+
   return (
     <span style={{
       fontFamily: 'var(--shell-mono, "JetBrains Mono", monospace)',
@@ -67,7 +70,6 @@ export default function GlobalPlayerBar() {
   const collection = useVaultStore(s => s.collection);
   const trackOwned = currentTrack ? ownsCardForDay(collection, currentTrack.day) : true;
   const isPlaying = useGlobalPlayer(s => s.isPlaying);
-  const duration = useGlobalPlayer(s => s.duration);
   const loopMode = useGlobalPlayer(s => s.loopMode);
   const shuffle = useGlobalPlayer(s => s.shuffle);
 
@@ -81,7 +83,6 @@ export default function GlobalPlayerBar() {
   const rc = currentTrack ? (RARITY_CONFIG[currentTrack.rarity as keyof typeof RARITY_CONFIG] || RARITY_CONFIG.common) : RARITY_CONFIG.common;
   const accent = rc?.color || '#ff3800';
   const limit = currentTrack?.maxDuration || 0;
-  const effectiveDuration = limit > 0 ? limit : duration;
   const isPreview = limit > 0;
   const isAudius = currentTrack?.source === 'audius';
 
@@ -208,7 +209,7 @@ export default function GlobalPlayerBar() {
                   />
                   {isAudius ? 'AUDIUS' : `DAY ${currentTrack.day}`}
                 </span>
-                <TimeDisplay effectiveDuration={effectiveDuration} />
+                <TimeDisplay limit={limit} />
                 {isPreview && (
                   <span
                     style={{
