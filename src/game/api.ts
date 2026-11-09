@@ -8,6 +8,7 @@ import { getHighScore as progGetHighScore, saveHighScore as progSaveHighScore } 
 import { resolveMediaUrls } from '../utils/resolveMediaUrls';
 import { resolveChartVariant } from '../lib/chartVariant';
 import { getAudiusGameSong, isAudiusSongId } from '@/lib/audius';
+import { getContestGameSong, isContestSongId } from '@/lib/audiusContest';
 
 export interface LyricsWord {
   word: string;
@@ -282,6 +283,15 @@ export async function getSongById(id: string): Promise<GameSong | null> {
       return await getAudiusGameSong(id);
     } catch (err) {
       console.error(`Failed to load Audius song ${id}:`, err);
+      return null;
+    }
+  }
+  // Weekly contest songs (other artists' Audius tracks), same reason.
+  if (isContestSongId(id)) {
+    try {
+      return await getContestGameSong(id);
+    } catch (err) {
+      console.error(`Failed to load contest song ${id}:`, err);
       return null;
     }
   }

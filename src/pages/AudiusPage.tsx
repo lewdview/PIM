@@ -10,8 +10,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Disc3, ExternalLink, Gamepad2, ListMusic, Pause, Play, Radio, Sparkles, Trophy, X } from 'lucide-react';
-import SongLeaderboard from '../components/SongLeaderboard';
+import { Disc3, ExternalLink, Gamepad2, ListMusic, Pause, Play, Radio, Sparkles, Trophy } from 'lucide-react';
+import RanksDialog from '../components/audius/RanksDialog';
+import WeeklyContest from '../components/audius/WeeklyContest';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import {
   AUDIUS_HANDLE,
@@ -387,41 +388,15 @@ function BeyondCard({ track, playlist, index, cover, onRanks }: {
 }
 
 function RanksModal({ track, onClose }: { track: AudiusTrack; onClose: () => void }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${track.title} leaderboard`}
-    >
-      <div
-        className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl border border-white/15 bg-[#0a0805] p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="min-w-0">
-            <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: ACCENT }}>Beyond 365</div>
-            <div className="font-black uppercase text-white text-lg tracking-tight truncate">{track.title}</div>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-white/60 hover:text-white cursor-pointer">
-            <X size={20} />
-          </button>
-        </div>
-        <SongLeaderboard songId={audiusSongId(track.permalink)} defaultLimit={10} title="ALL-TIME RANKINGS" />
-        <div className="mt-4 flex justify-end">
-          <GameButton track={track} label="Play PIM" />
-        </div>
-      </div>
-    </div>
+    <RanksDialog
+      label="Beyond 365"
+      title={track.title}
+      songId={audiusSongId(track.permalink)}
+      accent={ACCENT}
+      onClose={onClose}
+      action={<GameButton track={track} label="Play PIM" />}
+    />
   );
 }
 
@@ -550,6 +525,7 @@ export default function AudiusPage() {
       </section>
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <WeeklyContest />
         <AlbumsSection />
         <BeyondSection tracks={tracks} failed={failed} />
       </main>
