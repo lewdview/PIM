@@ -205,7 +205,7 @@ export default function WeeklyContest() {
   const myId = useAuthStore((s) => s.user?.id);
   const play = usePlayContestSong();
   const [contest, setContest] = useState<Contest | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const [rows, setRows] = useState<BoardRow[] | null>(null);
   const [ranksFor, setRanksFor] = useState<ContestTrack | null>(null);
   const closeRanks = useCallback(() => setRanksFor(null), []);
@@ -218,13 +218,25 @@ export default function WeeklyContest() {
         setContest(c);
         if (c) fetchBoard(c.week_start, 25).then((b) => live && setRows(b)).catch(() => live && setRows([]));
       })
-      .catch(() => live && setFailed(true));
+      .catch((err) => {
+        console.error('[audius contest]', err);
+        if (live) setFailed(err instanceof Error ? err.message : String(err));
+      });
     return () => {
       live = false;
     };
   }, []);
 
-  if (failed) return null;
+  if (failed) {
+    return (
+      <section className="mb-12" id="weekly-contest">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-200">
+          <div className="font-bold tracking-wide">WEEKLY TOP 5 UNAVAILABLE</div>
+          <div className="mt-1 opacity-80">{failed}</div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mb-12" id="weekly-contest">
