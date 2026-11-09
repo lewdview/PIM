@@ -12,3 +12,7 @@
 ## 2024-11-09 - LaunchPage Progress Re-renders
 **Learning:** `LaunchPage` was subscribing directly to `progress` and `currentTime` from the `useGlobalPlayer` Zustand store. Because this component is huge and these properties update up to 60 times a second, it caused major performance bottlenecks and CPU utilization during audio playback on the marketing launchpad page.
 **Action:** Extracted the progress bar and time readout into a standalone `TransmissionTransportProgress` subcomponent and passed the static `isThisTrack` and `duration` values as props, avoiding the massive parent component from re-rendering on every audio tick.
+
+## 2024-11-20 - GlobalPlayerBar Re-renders
+**Learning:** `GlobalPlayerBar` had extracted `ProgressBar` and `TimeDisplay` to prevent unnecessary re-renders. However, `GlobalPlayerBar` was still using `useGlobalPlayer(s => s.duration)`, which can update and cause re-renders if the duration is loaded asynchronously.
+**Action:** Move `effectiveDuration` calculation and the `duration` subscription into the `TimeDisplay` component, as it's only needed for formatting the time string. `GlobalPlayerBar` itself doesn't need to re-render for `duration` updates.
