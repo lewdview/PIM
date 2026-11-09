@@ -1019,6 +1019,18 @@ function generateProceduralChart(song: any): Note[] {
 // ── Chart Master (v6): audio-driven chart generation at runtime ──
 // Used when a song has no baked chart (or no baked Deluxe chart). Same
 // generator as scripts/bake_master_charts.ts, so runtime and baked charts match.
+// Audio bytes Chart Master already downloaded, keyed by song.audioUrl, so the
+// gameplay loader plays them from a blob instead of fetching the song again.
+// Streams from other hosts (Audius) can be large or redirect across origins,
+// and a second cross-origin load is where they went silent.
+const forgedAudioBlobs = new Map<string, Blob>();
+
+function takeForgedAudioBlob(url: string): Blob | null {
+  const b = forgedAudioBlobs.get(url) ?? null;
+  forgedAudioBlobs.delete(url);
+  return b;
+}
+
 async function generateAudioForgeChart(song: any, opts: { deluxe?: boolean } = {}): Promise<Note[]> {
   const audioUrl = song.audioUrl;
   if (!audioUrl) {
@@ -1042,6 +1054,11 @@ async function generateAudioForgeChart(song: any, opts: { deluxe?: boolean } = {
     throw new Error(`Fetch failed for audio candidates`);
   }
   const arrayBuffer = await response.arrayBuffer();
+  // Keep a copy before decodeAudioData detaches the buffer.
+  forgedAudioBlobs.clear();
+  forgedAudioBlobs.set(audioUrl, new Blob([arrayBuffer.slice(0)], {
+    type: response.headers.get("content-type") || "audio/mpeg",
+  }));
 
   // decodeAudioData resamples to the context rate; downmix to mono ourselves
   const offlineCtx = new (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)(
@@ -9452,11 +9469,20 @@ export default function Game() {
       const audioCandidates = getCandidateAudioUrls(song.audioUrl, song.day);
       let targetAudioUrl = song.audioUrl;
 
+      const forged = takeForgedAudioBlob(song.audioUrl);
+      if (forged && forged.size > 0) {
+        blob = forged;
+        objectUrl = URL.createObjectURL(forged);
+        audioObjectUrlRef.current = objectUrl;
+        fetchSuccess = true;
+        setBufferPct(100);
+      }
+
       // ── Attempt 1: Fetch via stream reader for precise progress ──
       // Skip blob download for large files (>10MB) — e.g. uncompressed WAV assets.
       // For those, fall through to direct audio.src streaming which starts playback
       // as soon as enough data is buffered rather than waiting for the full download.
-      try {
+      if (!fetchSuccess) try {
         let response: Response | null = null;
         let headRes: Response | null = null;
 
