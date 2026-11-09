@@ -55,6 +55,13 @@ export interface OnDemandResultData {
   laneTelemetry?: Record<number, { hits: number; perfectPlus: number; perfects: number; goods: number; misses: number }>;
 }
 
+/** Weekly Audius contest card earned by this run (contest songs only). */
+export interface WeeklyCardState {
+  status: 'claiming' | 'claimed' | 'failed' | 'needs-account';
+  deluxe: boolean;
+  message?: string;
+}
+
 export type ClaimStatus = 'idle' | 'checking' | 'ready' | 'claiming' | 'claimed' | 'failed';
 
 export interface OnDemandResultsProps {
@@ -78,6 +85,8 @@ export interface OnDemandResultsProps {
     unlocked: boolean;
     playPath: string;
   };
+  weeklyCard?: WeeklyCardState;
+  onClaimWeeklyCard?: () => void;
   reward: {
     eligible: boolean;
     /** Why the prize is disabled, when not eligible. */
@@ -391,7 +400,39 @@ export default function OnDemandResults(p: OnDemandResultsProps) {
           </div>
         )}
 
-        {hasPrize && (
+        {hasPrize && p.weeklyCard && (
+          <div className="cr-card" data-tone="prize" data-testid="weekly-card">
+            <div className="cr-card-tab">{p.weeklyCard.deluxe ? 'Deluxe weekly card' : 'Weekly card'}</div>
+            {p.weeklyCard.status === 'claiming' ? (
+              <button type="button" className="btn-3d cr-claim" data-tone="quiet" disabled>
+                <span className="cr-spin" /> Adding the card to your collection…
+              </button>
+            ) : p.weeklyCard.status === 'claimed' ? (
+              <>
+                <p className="cs-hook">{p.weeklyCard.deluxe ? 'Deluxe card earned!' : 'Weekly card earned!'}</p>
+                <div className="cs-detail-actions">
+                  <button type="button" className="btn-3d" onClick={() => go('/collection')}>
+                    View collection
+                  </button>
+                </div>
+                <p className="cs-lock-note">Only earnable this week. It stays in your collection for good.</p>
+              </>
+            ) : p.weeklyCard.status === 'needs-account' ? (
+              <div className="cs-lock-note">
+                <Lock size={14} style={{ verticalAlign: '-2px' }} /> {account.state === 'guest' ? 'Sign in' : 'Claim a username'} to collect this week’s card
+              </div>
+            ) : (
+              <>
+                <div className="cs-lock-note">{p.weeklyCard.message || 'Could not add the card.'}</div>
+                <button type="button" className="btn-3d cr-claim" data-tone="vermilion" onClick={p.onClaimWeeklyCard}>
+                  Tap to retry
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {hasPrize && !p.weeklyCard && (
           <div className="cr-card" data-tone="prize">
             <div className="cr-card-tab">Prize</div>
             {!reward.eligible ? (

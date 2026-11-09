@@ -6,6 +6,9 @@ import { getHighScore, getChapterPlatinums } from "@/game/progress";
 import { getActiveTheme, loadOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useAuthStore } from "@/store/useAuthStore";
+import { claimCardForRun, contestCardForSong } from "@/lib/audiusCards";
+import { weekStart } from "@/lib/audiusContest";
+import type { WeeklyCardState } from "@/pages/results/OnDemandResults";
 import { DELUXE_UNLOCK_ACCURACY, contestBaseSongId, deluxeSongId, hasEarnedDeluxe, hasEarnedSongDeluxe, isDeluxeSongId, isDeluxeUnlocked, markDeluxeEarned, markSongDeluxeEarned } from "@/lib/deluxe";
 import { useVaultStore, ownsCardForDay, isAwardPlayUnlocked, getShardsForDay } from "@/store/useVaultStore";
 import CampaignResults from "./campaign/CampaignResults";
@@ -377,11 +380,31 @@ export default function Results() {
     return runTokenRef.current;
   };
 
+  // Weekly Audius contest card: a clear of a contest song this week earns its card
+  // (a Deluxe clear earns the Deluxe card). Claimed once the run's record is saved.
+  const contestCard = contestCardForSong(songId);
+  const [weeklyCard, setWeeklyCard] = useState<WeeklyCardState | null>(null);
+  const weeklyCardTried = useRef(false);
+  const contestRunEarnsCard = !!contestCard && !!result && !result.failed && result.medal !== 'NONE' &&
+    (!loadOpts().noteGenerationSource || loadOpts().noteGenerationSource === 'auto');
+
+  const claimWeeklyCard = async () => {
+    if (!contestCard) return;
+    setWeeklyCard({ status: 'claiming', deluxe: contestCard.kind === 'bombshell' });
+    const res = await claimCardForRun(weekStart(), contestCard.trackId, contestCard.kind);
+    if (res.ok) {
+      setWeeklyCard({ status: 'claimed', deluxe: contestCard.kind === 'bombshell' });
+      loadVaultData(true).catch(() => undefined);
+    } else {
+      setWeeklyCard({ status: 'failed', deluxe: contestCard.kind === 'bombshell', message: res.message });
+    }
+  };
+
   useEffect(() => {
     if (result && songId && user && !user.is_anonymous && username) {
       (async () => {
         const runToken = await ensureRunToken();
-        syncHighScore(
+        await syncHighScore(
           songId,
           result.score,
           parseFloat(accuracy.toFixed(2)),
@@ -390,6 +413,10 @@ export default function Results() {
           undefined,
           runToken ?? undefined
         );
+        if (contestRunEarnsCard && !weeklyCardTried.current) {
+          weeklyCardTried.current = true;
+          await claimWeeklyCard();
+        }
       })().catch(err => console.warn('Failed to sync high score:', err));
     }
   }, [user, username, result, songId, accuracy, syncHighScore]);
@@ -762,6 +789,12 @@ export default function Results() {
           unlocked: earnsDeluxe || hasEarnedSongDeluxe(contestBase),
           playPath: `/play/${contestBase}_deluxe`,
         } : undefined}
+        weeklyCard={contestRunEarnsCard ? (
+          !user || user.is_anonymous || !username
+            ? { status: 'needs-account', deluxe: contestCard!.kind === 'bombshell' }
+            : weeklyCard ?? { status: 'claiming', deluxe: contestCard!.kind === 'bombshell' }
+        ) : undefined}
+        onClaimWeeklyCard={claimWeeklyCard}
         reward={{
           eligible: isEligibleForReward,
           blockedReason,

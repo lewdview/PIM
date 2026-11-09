@@ -1,4 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
+import WeeklyCardShelf from '@/components/audius/WeeklyCardShelf';
+import { isAudiusCard } from '@/lib/audiusCardRegistry';
 import { motion } from 'framer-motion';
 import { Filter, Grid3X3, List, Flame, Play, Info, MoreVertical, Disc } from 'lucide-react';
 import { useLocation } from 'wouter';
@@ -55,7 +57,8 @@ export default function CollectionPage() {
 
   const filtered = useMemo(() => {
     // Filter out invalid items defensively
-    let cards = collection.filter(c => c && c.card);
+    // Weekly Audius cards aren't 365 days; they get their own shelf above the grid.
+    let cards = collection.filter(c => c && c.card && !isAudiusCard(c));
 
     if (setFilter === 'gen-0') {
       cards = cards.filter(c => !isBombshellCard(c));
@@ -113,7 +116,7 @@ export default function CollectionPage() {
   useMemo(() => { setPage(1); }, [sortBy, filterRarity, setFilter]);
 
   const stats = useMemo(() => {
-    const validCollection = collection.filter(c => c && c.card);
+    const validCollection = collection.filter(c => c && c.card && !isAudiusCard(c));
     const gen0Cards = validCollection.filter(c => !isBombshellCard(c));
     const gen0Unique = new Set(gen0Cards.map(c => c.card.day)).size;
     
@@ -358,6 +361,8 @@ export default function CollectionPage() {
           ))}
         </div>
       </div>
+
+      <WeeklyCardShelf collection={collection} />
 
       {/* Cards Grid */}
       {filtered.length === 0 ? (

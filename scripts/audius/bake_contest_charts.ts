@@ -12,7 +12,8 @@
  *      the same inputs the game uses for a contest song, once for the standard
  *      chart ("aud-<id>") and once for the Deluxe chart ("aud-<id>_deluxe",
  *      unlocked in game by a 97% run of the standard chart),
- *   4. stores both charts in public.audius_contest_charts.
+ *   4. stores both charts in public.audius_contest_charts,
+ *   5. builds the week's contest cards (build_audius_contest_cards).
  *
  * Songs that already have a chart are skipped unless --force. Runs every Monday
  * from .github/workflows/audius-contest-charts.yml; run it by hand too:
@@ -121,8 +122,27 @@ async function save(week: string, songId: string, chart: unknown) {
   if (!res.ok) throw new Error(`saving ${songId} failed (${res.status}): ${await res.text()}`);
 }
 
+/**
+ * Builds the week's contest cards (build_audius_contest_cards, idempotent). Wren's
+ * 00:05 pipeline builds them too; doing it here means clears can be claimed
+ * from the first minute of the week. A failure here doesn't stop the bake.
+ */
+async function buildCards(week: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/build_audius_contest_cards`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ p_week: week }),
+  });
+  if (!res.ok) {
+    console.warn(`! building contest cards failed (${res.status}): ${await res.text()}`);
+    return;
+  }
+  console.log(`Contest cards: ${await res.json()} new`);
+}
+
 const contest = await lockContest();
 console.log(`Week ${contest.week_start}: ${contest.tracks.length} songs`);
+if (!dry) await buildCards(contest.week_start);
 const have = dry ? new Set<string>() : await bakedSongIds(contest.week_start);
 const dir = mkdtempSync(path.join(tmpdir(), 'pim-contest-'));
 const failed: string[] = [];
