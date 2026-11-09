@@ -14,6 +14,7 @@ import { streamUrl } from '@/lib/audius';
 
 const API = 'https://api.audius.co/v1';
 const SONG_PREFIX = 'aud-';
+const DELUXE_SUFFIX = '_deluxe';
 
 /** Claw pulls by final rank. Mirrors public.audius_contest_pulls(). */
 export function contestPulls(rank: number): number {
@@ -131,14 +132,59 @@ async function findContestTrack(trackId: string): Promise<ContestTrack | null> {
   return null;
 }
 
+interface BakedChart {
+  notes: GameSong['notes'];
+  stages: NonNullable<GameSong['stages']>;
+  chartVersion: string;
+  duration: number;
+}
+
+/** The chart baked for a contest song id (standard or _deluxe), if there is one. */
+async function fetchBakedChart(id: string): Promise<BakedChart | null> {
+  const { data } = await supabase
+    .from('audius_contest_charts')
+    .select('chart')
+    .eq('song_id', id)
+    .maybeSingle();
+  const chart = (data as { chart?: BakedChart } | null)?.chart;
+  return chart && Array.isArray(chart.notes) && chart.notes.length > 0 ? chart : null;
+}
+
+/** Card art made for a contest song id (standard or _deluxe), if there is any. */
+async function fetchSongArt(id: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('audius_contest_art')
+    .select('cover_url')
+    .eq('song_id', id)
+    .maybeSingle();
+  return (data as { cover_url?: string } | null)?.cover_url || null;
+}
+
+/** Card art for a week's songs, keyed by song id ("aud-<id>" and "aud-<id>_deluxe"). */
+export async function fetchContestArt(week: string): Promise<Record<string, string>> {
+  const { data } = await supabase
+    .from('audius_contest_art')
+    .select('song_id, cover_url')
+    .eq('week_start', week);
+  const out: Record<string, string> = {};
+  for (const r of (data as { song_id: string; cover_url: string }[] | null) ?? []) out[r.song_id] = r.cover_url;
+  return out;
+}
+
 /**
- * A playable song for a contest id. It has no baked notes, so gameplay forges
- * a Chart Master chart from the Audius stream on load.
+ * A playable song for a contest id ("aud-<id>" or "aud-<id>_deluxe").
+ *
+ * Every player gets the chart baked for the week (scripts/audius/
+ * bake_contest_charts.ts), so everyone plays the same notes. When no chart is
+ * baked yet, notes stay empty and gameplay forges one from the Audius stream.
  */
 export async function getContestGameSong(id: string): Promise<GameSong | null> {
   if (!isContestSongId(id)) return null;
-  const trackId = id.slice(SONG_PREFIX.length);
+  const deluxe = id.endsWith(DELUXE_SUFFIX);
+  const trackId = id.slice(SONG_PREFIX.length, deluxe ? -DELUXE_SUFFIX.length : undefined);
   if (!/^[A-Za-z0-9]{1,32}$/.test(trackId)) return null;
+  const baked = fetchBakedChart(id).catch(() => null);
+  const art = fetchSongArt(id).catch(() => null);
 
   let t = await findContestTrack(trackId).catch(() => null);
   if (!t) {
@@ -159,24 +205,28 @@ export async function getContestGameSong(id: string): Promise<GameSong | null> {
     };
   }
 
+  const [chart, cover] = await Promise.all([baked, art]);
   return {
     id,
     day: 0,
     date: '',
-    title: t.title,
+    title: deluxe ? `${t.title} (Deluxe)` : t.title,
     artist: t.artist,
     bpm: 120,
-    duration: t.duration,
+    duration: chart?.duration || t.duration,
     mood: 'dark',
     valence: 0.5,
     moodTags: t.genre ? [t.genre.toLowerCase()] : [],
     description: `Audius weekly top 5 · ${t.artist}`,
     audioUrl: streamUrl(trackId),
-    coverArt: t.artwork,
-    notes: [],
+    coverArt: cover || t.artwork,
+    notes: chart?.notes ?? [],
+    ...(chart ? { stages: chart.stages, chartVersion: chart.chartVersion } : {}),
     key: '',
     genre: t.genre ? [t.genre] : [],
-    difficultyLevel: 5,
+    // Deluxe: two levels up with elite timing, like the 365 Deluxe charts. With no
+    // baked Deluxe chart, gameplay forges the standard chart then the Deluxe one.
+    ...(deluxe ? { deluxe: true, timingProfile: 'elite' as const, difficultyLevel: 7 } : { difficultyLevel: 5 }),
   };
 }
 

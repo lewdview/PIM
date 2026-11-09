@@ -10,6 +10,11 @@
  *
  * Earned unlocks come from the player's own gameplay_records, cached here and
  * mirrored to localStorage so the unlock shows immediately after a run.
+ *
+ * Audius weekly contest songs ("aud-<id>") have a Deluxe chart too
+ * ("aud-<id>_deluxe"). There is no Deluxe card for them, so only a run of the
+ * standard chart at DELUXE_UNLOCK_ACCURACY opens it. Those unlocks are kept by
+ * song id instead of day.
  */
 
 import { supabase } from '@/services/supabaseClient';
@@ -20,6 +25,8 @@ import { cardMatchesDay } from '@/store/useVaultStore';
 export const DELUXE_UNLOCK_ACCURACY = 97;
 
 const LOCAL_KEY = 'pim_deluxe_unlocked_days';
+const LOCAL_SONGS_KEY = 'pim_deluxe_unlocked_songs';
+const CONTEST_PREFIX = 'aud-';
 
 export function deluxeSongId(day: number): string {
   return `day-${String(day).padStart(3, '0')}_deluxe`;
@@ -63,7 +70,31 @@ function writeLocal(days: Set<number>) {
   }
 }
 
+function readLocalSongs(): Set<string> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LOCAL_SONGS_KEY) || '[]');
+    return new Set(Array.isArray(raw) ? raw.filter((x) => typeof x === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeLocalSongs(ids: Set<string>) {
+  try {
+    localStorage.setItem(LOCAL_SONGS_KEY, JSON.stringify([...ids].sort()));
+  } catch {
+    // storage unavailable — the server records still hold the unlock
+  }
+}
+
+/** Standard song id of a contest song's Deluxe id, or null when it isn't one. */
+export function contestBaseSongId(id: string | null | undefined): string | null {
+  if (!id || !id.startsWith(CONTEST_PREFIX)) return null;
+  return id.replace(/_deluxe$/, '');
+}
+
 let earned = readLocal();
+let earnedSongs = readLocalSongs();
 let loadedFor: string | null = null;
 let loading: Promise<Set<number>> | null = null;
 
@@ -82,10 +113,15 @@ export function loadEarnedDeluxeDays(userId: string | null | undefined): Promise
       if (error) throw error;
       for (const row of data ?? []) {
         if (isDeluxeSongId(row.song_id)) continue;
+        if (row.song_id?.startsWith(CONTEST_PREFIX)) {
+          earnedSongs.add(row.song_id);
+          continue;
+        }
         const day = dayFromSongId(row.song_id);
         if (day) earned.add(day);
       }
       writeLocal(earned);
+      writeLocalSongs(earnedSongs);
       loadedFor = userId;
     } catch (err) {
       console.warn('[Deluxe] Could not load earned unlocks:', err);
@@ -110,4 +146,16 @@ export function hasEarnedDeluxe(day: number): boolean {
 
 export function isDeluxeUnlocked(collection: OwnedCard[] | null | undefined, day: number): boolean {
   return hasEarnedDeluxe(day) || ownsDeluxeCardForDay(collection, day);
+}
+
+/** Record a contest song's Deluxe unlock earned this session. */
+export function markSongDeluxeEarned(baseSongId: string) {
+  if (!baseSongId.startsWith(CONTEST_PREFIX) || isDeluxeSongId(baseSongId)) return;
+  earnedSongs = new Set(earnedSongs).add(baseSongId);
+  writeLocalSongs(earnedSongs);
+}
+
+/** Whether the player has opened a contest song's Deluxe chart (by its standard id). */
+export function hasEarnedSongDeluxe(baseSongId: string): boolean {
+  return earnedSongs.has(baseSongId);
 }

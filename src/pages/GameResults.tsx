@@ -6,7 +6,7 @@ import { getHighScore, getChapterPlatinums } from "@/game/progress";
 import { getActiveTheme, loadOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useAuthStore } from "@/store/useAuthStore";
-import { DELUXE_UNLOCK_ACCURACY, deluxeSongId, hasEarnedDeluxe, isDeluxeSongId, isDeluxeUnlocked, markDeluxeEarned } from "@/lib/deluxe";
+import { DELUXE_UNLOCK_ACCURACY, contestBaseSongId, deluxeSongId, hasEarnedDeluxe, hasEarnedSongDeluxe, isDeluxeSongId, isDeluxeUnlocked, markDeluxeEarned, markSongDeluxeEarned } from "@/lib/deluxe";
 import { useVaultStore, ownsCardForDay, isAwardPlayUnlocked, getShardsForDay } from "@/store/useVaultStore";
 import CampaignResults from "./campaign/CampaignResults";
 import { supabase } from "@/services/supabaseClient";
@@ -301,12 +301,16 @@ export default function Results() {
   const deluxeDay = song?.day && song.day >= 1 && song.day <= 365 ? song.day : null;
   const deluxeHadUnlock = useRef<boolean | null>(null);
   if (deluxeHadUnlock.current === null && deluxeDay) deluxeHadUnlock.current = hasEarnedDeluxe(deluxeDay);
-  const earnsDeluxe = !!result && !result.failed && !!deluxeDay && !isDeluxeSongId(songId) &&
+  // Audius contest songs ("aud-<id>") unlock their Deluxe chart the same way
+  const contestBase = !isDeluxeSongId(songId) ? contestBaseSongId(songId) : null;
+  if (deluxeHadUnlock.current === null && contestBase) deluxeHadUnlock.current = hasEarnedSongDeluxe(contestBase);
+  const earnsDeluxe = !!result && !result.failed && (!!deluxeDay || !!contestBase) && !isDeluxeSongId(songId) &&
     accuracy >= DELUXE_UNLOCK_ACCURACY &&
     (!loadOpts().noteGenerationSource || loadOpts().noteGenerationSource === 'auto');
   useEffect(() => {
     if (earnsDeluxe && deluxeDay) markDeluxeEarned(deluxeDay);
-  }, [earnsDeluxe, deluxeDay]);
+    if (earnsDeluxe && contestBase) markSongDeluxeEarned(contestBase);
+  }, [earnsDeluxe, deluxeDay, contestBase]);
 
   const user = useAuthStore(s => s.user);
   const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
@@ -752,6 +756,11 @@ export default function Results() {
           justUnlocked: earnsDeluxe && !deluxeHadUnlock.current,
           unlocked: earnsDeluxe || isDeluxeUnlocked(collection, deluxeDay),
           playPath: `/play/${deluxeSongId(deluxeDay)}`,
+        } : contestBase ? {
+          unlockAccuracy: DELUXE_UNLOCK_ACCURACY,
+          justUnlocked: earnsDeluxe && !deluxeHadUnlock.current,
+          unlocked: earnsDeluxe || hasEarnedSongDeluxe(contestBase),
+          playPath: `/play/${contestBase}_deluxe`,
         } : undefined}
         reward={{
           eligible: isEligibleForReward,

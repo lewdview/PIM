@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
-import { Crown, ExternalLink, Gamepad2, Gift, Pause, Play, Trophy } from 'lucide-react';
+import { Crown, ExternalLink, Gamepad2, Gift, Lock, Pause, Play, Sparkles, Trophy } from 'lucide-react';
 import { useGlobalPlayer, type GlobalTrack } from '@/store/useGlobalPlayer';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatDuration, streamUrl } from '@/lib/audius';
@@ -16,6 +16,7 @@ import {
   contestSongId,
   fetchBoard,
   fetchContest,
+  fetchContestArt,
   fetchCurrentContest,
   fetchMyClaim,
   trackUrl,
@@ -26,6 +27,7 @@ import {
   type WeeklyContest as Contest,
 } from '@/lib/audiusContest';
 import RanksDialog from './RanksDialog';
+import { DELUXE_UNLOCK_ACCURACY, hasEarnedSongDeluxe, loadEarnedDeluxeDays } from '@/lib/deluxe';
 
 const GOLD = '#E5B800';
 const ACCENT = '#CC0FE0';
@@ -85,8 +87,8 @@ function ListenButton({ track, playlist, index }: { track: ContestTrack; playlis
 
 function usePlayContestSong() {
   const [, setLocation] = useLocation();
-  return (t: ContestTrack) => {
-    const id = contestSongId(t.id);
+  return (t: ContestTrack, deluxe = false) => {
+    const id = contestSongId(t.id) + (deluxe ? '_deluxe' : '');
     try {
       sessionStorage.setItem(`game_origin_${id}`, 'audius');
     } catch {
@@ -209,6 +211,16 @@ export default function WeeklyContest() {
   const [rows, setRows] = useState<BoardRow[] | null>(null);
   const [ranksFor, setRanksFor] = useState<ContestTrack | null>(null);
   const closeRanks = useCallback(() => setRanksFor(null), []);
+  const [art, setArt] = useState<Record<string, string>>({});
+  const [, setDeluxeLoaded] = useState(0);
+
+  useEffect(() => {
+    let live = true;
+    loadEarnedDeluxeDays(myId).then(() => live && setDeluxeLoaded((n) => n + 1));
+    return () => {
+      live = false;
+    };
+  }, [myId]);
 
   useEffect(() => {
     let live = true;
@@ -216,7 +228,9 @@ export default function WeeklyContest() {
       .then((c) => {
         if (!live) return;
         setContest(c);
-        if (c) fetchBoard(c.week_start, 25).then((b) => live && setRows(b)).catch(() => live && setRows([]));
+        if (!c) return;
+        fetchBoard(c.week_start, 25).then((b) => live && setRows(b)).catch(() => live && setRows([]));
+        fetchContestArt(c.week_start).then((a) => live && setArt(a)).catch(() => {});
       })
       .catch((err) => {
         console.error('[audius contest]', err);
@@ -290,11 +304,14 @@ export default function WeeklyContest() {
 
       {contest ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-          {contest.tracks.map((t, i) => (
+          {contest.tracks.map((t, i) => {
+            const cover = art[contestSongId(t.id)] || t.artwork;
+            const deluxeOpen = hasEarnedSongDeluxe(contestSongId(t.id));
+            return (
             <div key={t.id} className="rounded-lg overflow-hidden border border-white/10 bg-black/60">
               <div className="relative aspect-square">
-                {t.artwork ? (
-                  <img src={t.artwork} alt="" loading="lazy" className="w-full h-full object-cover" />
+                {cover ? (
+                  <img src={cover} alt="" loading="lazy" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-yellow-700 to-black" />
                 )}
@@ -325,9 +342,24 @@ export default function WeeklyContest() {
                     <ExternalLink size={13} />
                   </a>
                 </div>
+                {deluxeOpen ? (
+                  <button type="button" onClick={() => play(t, true)} className="btn-3d w-full mt-2" data-tone="gold" data-size="sm" aria-label={`Play ${t.title} Deluxe in PIM`}>
+                    <Sparkles size={13} />
+                    <span>Deluxe</span>
+                  </button>
+                ) : (
+                  <div
+                    className="mt-2 flex items-center justify-center gap-1.5 rounded-md border border-white/10 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/40"
+                    title={`Hit ${DELUXE_UNLOCK_ACCURACY}% on this song to unlock its Deluxe chart`}
+                  >
+                    <Lock size={11} />
+                    <span>Deluxe · {DELUXE_UNLOCK_ACCURACY}%</span>
+                  </div>
+                )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
