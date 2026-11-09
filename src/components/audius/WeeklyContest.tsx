@@ -27,6 +27,7 @@ import {
   type WeeklyContest as Contest,
 } from '@/lib/audiusContest';
 import RanksDialog from './RanksDialog';
+import AudiusClaimReveal from './AudiusClaimReveal';
 import { DELUXE_UNLOCK_ACCURACY, hasEarnedSongDeluxe, loadEarnedDeluxeDays } from '@/lib/deluxe';
 import { claimContestCard, fetchContestCardStatus, type ContestCardKind, type ContestCardStatus } from '@/lib/audiusCards';
 import { useVaultStore } from '@/store/useVaultStore';
@@ -256,6 +257,8 @@ export default function WeeklyContest() {
   const [cards, setCards] = useState<ContestCardStatus[]>([]);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [cardMsg, setCardMsg] = useState<string | null>(null);
+  const [reveal, setReveal] = useState<{ cardId: string; artist?: string } | null>(null);
+  const [, navigate] = useLocation();
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const week = contest?.week_start;
 
@@ -280,6 +283,7 @@ export default function WeeklyContest() {
     if (res.ok) {
       setCards((cs) => cs.map((c) => (c.trackId === trackId && c.kind === kind ? { ...c, claimed: true } : c)));
       setCardMsg(kind === 'bombshell' ? 'Deluxe card added to your collection.' : 'Card added to your collection.');
+      if (!res.alreadyOwned) setReveal({ cardId: res.cardId, artist: contest?.tracks.find((x) => x.id === trackId)?.artist });
       loadVaultData(true).catch(() => undefined);
     } else {
       setCardMsg(res.message);
@@ -463,6 +467,14 @@ export default function WeeklyContest() {
         </div>
         <LastWeek myId={myId} />
       </div>
+      {reveal && (
+        <AudiusClaimReveal
+          cardId={reveal.cardId}
+          artist={reveal.artist}
+          onClose={() => setReveal(null)}
+          onViewCollection={() => navigate('/collection')}
+        />
+      )}
     </section>
   );
 }

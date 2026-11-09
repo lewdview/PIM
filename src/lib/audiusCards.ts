@@ -25,7 +25,7 @@ export interface ContestCardStatus {
 }
 
 export type ClaimResult =
-  | { ok: true; cardId: string }
+  | { ok: true; cardId: string; /** True when the card was already in the collection. */ alreadyOwned?: boolean }
   | { ok: false; error: string; message: string };
 
 const MESSAGES: Record<string, string> = {
@@ -68,10 +68,10 @@ export async function claimContestCard(week: string, trackId: string, kind: Cont
   });
   if (error) return { ok: false, error: 'RPC', message: error.message };
   const res = data as { success?: boolean; error?: string; card_id?: string } | null;
-  if (res?.success) return { ok: true, cardId: res.card_id || '' };
+  if (res?.success) return { ok: true, cardId: res.card_id || (kind === 'bombshell' ? `bombshell-aud-${trackId}` : `aud-${trackId}`) };
   const code = res?.error || 'UNKNOWN';
   if (code === 'ALREADY_CLAIMED') {
-    return { ok: true, cardId: kind === 'bombshell' ? `bombshell-aud-${trackId}` : `aud-${trackId}` };
+    return { ok: true, cardId: kind === 'bombshell' ? `bombshell-aud-${trackId}` : `aud-${trackId}`, alreadyOwned: true };
   }
   return { ok: false, error: code, message: claimErrorMessage(code) };
 }

@@ -13,6 +13,7 @@ import type { GameSong } from '@/game/api';
 import { audioManager, type SfxName } from '@/game/audio';
 import { PACK_CONFIGS } from '@/utils/rarity';
 import SongLeaderboard from '@/components/SongLeaderboard';
+import AudiusClaimReveal from '@/components/audius/AudiusClaimReveal';
 import { hideBroken } from '../campaign/hideBroken';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
@@ -60,6 +61,10 @@ export interface WeeklyCardState {
   status: 'claiming' | 'claimed' | 'failed' | 'needs-account';
   deluxe: boolean;
   message?: string;
+  /** The claimed card ('aud-<id>' / 'bombshell-aud-<id>'), once claimed. */
+  cardId?: string;
+  /** True when this run added the card (not already owned): plays the reveal. */
+  fresh?: boolean;
 }
 
 export type ClaimStatus = 'idle' | 'checking' | 'ready' | 'claiming' | 'claimed' | 'failed';
@@ -237,6 +242,16 @@ export default function OnDemandResults(p: OnDemandResultsProps) {
     return () => clearTimeout(t);
   }, [passed, step, count]);
 
+  const [revealCard, setRevealCard] = useState<string | null>(null);
+  const revealPlayed = useRef(false);
+  useEffect(() => {
+    const wc = p.weeklyCard;
+    if (wc?.status === 'claimed' && wc.fresh && wc.cardId && !revealPlayed.current) {
+      revealPlayed.current = true;
+      setRevealCard(wc.cardId);
+    }
+  }, [p.weeklyCard]);
+
   const go = (path: string) => { audioManager.playSfx('tap_nav', 0.15); p.onNavigate(path); };
   // Replays keep the art this run was played with; "up next" uses the player's saved cover.
   const retry = () => { primeGameCover(song?.day, coverUrl); go(`/play/${songId}`); };
@@ -400,6 +415,14 @@ export default function OnDemandResults(p: OnDemandResultsProps) {
           </div>
         )}
 
+        {revealCard && (
+          <AudiusClaimReveal
+            cardId={revealCard}
+            onClose={() => setRevealCard(null)}
+            onViewCollection={() => go('/collection')}
+          />
+        )}
+
         {hasPrize && p.weeklyCard && (
           <div className="cr-card" data-tone="prize" data-testid="weekly-card">
             <div className="cr-card-tab">{p.weeklyCard.deluxe ? 'Deluxe weekly card' : 'Weekly card'}</div>
@@ -411,6 +434,11 @@ export default function OnDemandResults(p: OnDemandResultsProps) {
               <>
                 <p className="cs-hook">{p.weeklyCard.deluxe ? 'Deluxe card earned!' : 'Weekly card earned!'}</p>
                 <div className="cs-detail-actions">
+                  {p.weeklyCard.cardId && (
+                    <button type="button" className="btn-3d" data-tone={p.weeklyCard.deluxe ? 'gold' : 'cyan'} onClick={() => setRevealCard(p.weeklyCard!.cardId!)}>
+                      See your card
+                    </button>
+                  )}
                   <button type="button" className="btn-3d" onClick={() => go('/collection')}>
                     View collection
                   </button>

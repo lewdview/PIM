@@ -9,6 +9,7 @@ import { Link } from 'wouter';
 import { formatDate } from '../utils/dayCalc';
 import { Gift, Flame, ShieldCheck } from 'lucide-react';
 import OneOfOneOutline from './OneOfOneOutline';
+import { getAudiusCard, parseAudiusCardId } from '../lib/audiusCardRegistry';
 import HoloSheen, { type HoloVariant } from './HoloSheen';
 import { useHoloTilt } from '../hooks/useHoloTilt';
 import MythicCardEffects, { MythicGodRays, MythicPrismFoil, MythicEmberParticles, MythicCrownBadge } from './MythicCardEffects';
@@ -82,8 +83,8 @@ function PimLogo({ color, cardId }: { color?: string; cardId?: string }) {
   );
 }
 
-function DayNumberBadge({ day, color }: { day: number; color: string }) {
-  const formattedDay = `#${String(day).padStart(3, '0')}`;
+function DayNumberBadge({ day, color, label }: { day: number; color: string; label?: string }) {
+  const formattedDay = label ?? `#${String(day).padStart(3, '0')}`;
   return (
     <svg width="74" height="24" viewBox="0 0 112 34" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', flexShrink: 0 }}>
       <path 
@@ -139,6 +140,51 @@ function StatBox({ label, value, color }: { label: string; value: string | numbe
   );
 }
 
+/** Corner seal for weekly Audius cards, in the same hardware style as the other seals. */
+function AudiusMedallion({ deluxe }: { deluxe: boolean }) {
+  const ring = deluxe ? '#ffd23f' : '#d58cff';
+  return (
+    <div
+      title={deluxe ? 'th3scr1b3 x Audius · Deluxe weekly card' : 'th3scr1b3 x Audius · Weekly card'}
+      style={{
+        width: '34px',
+        height: '34px',
+        borderRadius: '50%',
+        background: deluxe
+          ? 'radial-gradient(circle at 35% 28%, #7a1aa8 0%, #3a0a52 62%, #140320 100%)'
+          : 'radial-gradient(circle at 35% 28%, #a43bff 0%, #4b0f8a 62%, #16052c 100%)',
+        border: `1.5px solid ${ring}`,
+        boxShadow: `0 3px 8px rgba(0,0,0,0.85), 0 0 14px ${deluxe ? 'rgba(255,210,63,0.6)' : 'rgba(180,80,255,0.65)'}, inset 0 1px 2px rgba(255,255,255,0.45)`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="14.5" stroke={ring} strokeOpacity="0.6" strokeWidth="0.8" strokeDasharray="2.5 1.5" />
+        {/* Pixel x mark: th3scr1b3 x Audius */}
+        <g fill={deluxe ? '#ffd23f' : '#ffffff'}>
+          <rect x="14" y="7" width="2" height="2" />
+          <rect x="20" y="7" width="2" height="2" />
+          <rect x="16" y="9" width="2" height="2" />
+          <rect x="18" y="9" width="2" height="2" />
+          <rect x="16" y="11" width="2" height="2" />
+          <rect x="18" y="11" width="2" height="2" />
+          <rect x="14" y="13" width="2" height="2" />
+          <rect x="20" y="13" width="2" height="2" />
+        </g>
+        <text x="18" y="21.6" textAnchor="middle" dominantBaseline="middle" fill="#ffffff" fontFamily="'JetBrains Mono', monospace" fontSize="4.6" fontWeight="900" letterSpacing="0.3">
+          AUDIUS
+        </text>
+        <text x="18" y="26.6" textAnchor="middle" dominantBaseline="middle" fill={ring} fontFamily="'JetBrains Mono', monospace" fontSize="4.4" fontWeight="800" letterSpacing="0.4">
+          {deluxe ? 'DELUXE' : 'WEEKLY'}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 /**
  * CardCornerMedallions
  * Non-overlapping circular corner hardware seals for Bombshell, Daily Drop, and Echo Re-Entry.
@@ -150,13 +196,16 @@ export function CardCornerMedallions({
   isDaily = false,
   isEcho = false,
   echoGeneration = 0,
+  audius,
 }: {
   isBombshell?: boolean;
   isDaily?: boolean;
   isEcho?: boolean;
   echoGeneration?: number;
+  /** Weekly Audius card seal: 'standard' or 'deluxe'. */
+  audius?: 'standard' | 'deluxe';
 }) {
-  if (!isBombshell && !isDaily && !isEcho) return null;
+  if (!isBombshell && !isDaily && !isEcho && !audius) return null;
 
   return (
     <div
@@ -172,6 +221,9 @@ export function CardCornerMedallions({
         pointerEvents: 'none',
       }}
     >
+      {/* 0. th3scr1b3 x AUDIUS WEEKLY SEAL */}
+      {audius && <AudiusMedallion deluxe={audius === 'deluxe'} />}
+
       {/* 1. BOMBSHELL CIRCULAR MEDALLION SEAL */}
       {isBombshell && (
         <div
@@ -438,10 +490,11 @@ export default memo(function Card({
     }
     // Per-rarity count only: the supply cap this feeds is per-rarity, so a
     // day-total across all rarities must never be compared against it.
+    if (parseAudiusCardId(card.id)) return; // weekly Audius cards aren't 365 days
     import('../services/vaultService').then(({ getClaimedCountForRarity }) => {
       getClaimedCountForRarity(card.day || 0, card.rarity || 'common').then(setRealClaimed);
     });
-  }, [card.day, card.rarity, card.claimedCount, edition]);
+  }, [card.id, card.day, card.rarity, card.claimedCount, edition]);
 
   useEffect(() => {
     // Only auto-flip to front when isRevealed prop transitions to true
@@ -462,10 +515,16 @@ export default memo(function Card({
     setIsFaceDown(!isFaceDown);
   }, [interactive, isFaceDown, rotateY]);
 
-  const { src: coverUrl, failed: imgFailed, handleError: handleImgError, isSquare } = useSmartCoverArt(
+  const { src: smartCoverUrl, failed: imgFailed, handleError: handleImgError, isSquare: smartIsSquare } = useSmartCoverArt(
     card?.coverUrl || '',
     card?.rarity || 'common'
   );
+  // Weekly Audius cards: their art is used as-is (no rarity folder swaps), and
+  // their 365-day labels read as th3scr1b3 x Audius instead.
+  const audiusId = parseAudiusCardId(card?.id);
+  const audiusInfo = audiusId ? getAudiusCard(card.id) : undefined;
+  const coverUrl = audiusId ? card.coverUrl || '' : smartCoverUrl;
+  const isSquare = audiusId ? true : smartIsSquare;
 
   if (!card || !card.rarity) return null;
 
@@ -491,7 +550,12 @@ export default memo(function Card({
   const isExcessEdition = edition !== undefined && edition > supply;
   const isOnlyOne       = supply === 1 && (edition === 1 || (edition === undefined && claimed <= 1));
   const isLastCopy      = !isExcessEdition && !isOnlyOne && edition !== undefined && edition === supply && supply > 1;
-  const isBombshell     = Boolean(card.cardSet === 'bombshell' || (card.id && card.id.includes('bombshell')) || (coverUrl && (coverUrl.includes('girl-covers') || coverUrl.includes('rare_covers'))));
+  const isBombshell     = !audiusId && Boolean(card.cardSet === 'bombshell' || (card.id && card.id.includes('bombshell')) || (coverUrl && (coverUrl.includes('girl-covers') || coverUrl.includes('rare_covers'))));
+
+  const audiusSeal: 'standard' | 'deluxe' | undefined = audiusId ? (audiusId.deluxe ? 'deluxe' : 'standard') : undefined;
+  const dayLabel = audiusId ? 'AUDIUS' : undefined;
+  const dayText = audiusId ? (audiusId.deluxe ? 'AUDIUS DELUXE' : 'AUDIUS') : `DAY ${day}`;
+  const dateText = audiusId ? (audiusInfo?.weekStart ? `WK ${audiusInfo.weekStart}` : 'WEEKLY') : day > 0 ? formatDate(day) : '';
 
   const mintPct = supply > 0 ? (Math.min(claimed, supply) / supply) * 100 : 0;
 
@@ -555,7 +619,7 @@ export default memo(function Card({
   );
 
   // ── Non-overlapping Corner Circle Medallions (Bombshell / Daily / Echo) ──
-  const cornerMedallionsOverlay = (isBombshell || isDailyClaim || isDailyOrigin || isEcho) && (
+  const cornerMedallionsOverlay = (isBombshell || isDailyClaim || isDailyOrigin || isEcho || audiusSeal) && (
     <motion.div
       style={{
         position: 'absolute', inset: 0, zIndex: 36, pointerEvents: 'none', borderRadius: '12px', overflow: 'hidden',
@@ -568,6 +632,7 @@ export default memo(function Card({
         isDaily={Boolean(isDailyClaim || isDailyOrigin)}
         isEcho={isEcho}
         echoGeneration={echoGeneration}
+        audius={audiusSeal}
       />
     </motion.div>
   );
@@ -1025,12 +1090,12 @@ export default memo(function Card({
                 </span>
                 <div style={{ width: '40px', height: '1px', background: isGold ? 'rgba(255,215,0,0.3)' : isCarbon ? 'rgba(0,255,255,0.3)' : `${rc.color}30` }} />
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,240,216,0.58)' }}>
-                  GEN 0 {isEcho ? `· RE-ENTRY 00${echoGeneration}` : ''} · {card.rarity.toUpperCase()}
+                  {audiusId ? 'AUDIUS WEEKLY' : `GEN 0${isEcho ? ` · RE-ENTRY 00${echoGeneration}` : ''}`} · {card.rarity.toUpperCase()}
                 </span>
               </div>
 
               {/* Day badge replaced by custom SVG */}
-              <DayNumberBadge day={day} color={logoColor} />
+              <DayNumberBadge day={day} color={logoColor} label={dayLabel} />
 
               {/* Mythic CTA */}
               {card.rarity === 'mythic' && interactive && (
@@ -1050,7 +1115,7 @@ export default memo(function Card({
 
             {/* Archive footer — ties the back to the 365 archive */}
             {!(card.rarity === 'mythic' && interactive) && <div style={{ position: 'absolute', left: '22px', right: '22px', bottom: '10px', textAlign: 'center', fontFamily: '"JetBrains Mono", monospace', fontSize: '6.5px', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(255,240,216,0.4)' }}>
-              365 · Light &amp; Dark Archive
+              {audiusId ? 'th3scr1b3 × Audius' : <>365 · Light &amp; Dark Archive</>}
             </div>}
 
             {/* Corner marks */}
@@ -1123,7 +1188,7 @@ export default memo(function Card({
         flexShrink: 0,
       }}>
         <div style={{ transform: 'scale(0.86)', transformOrigin: 'left center' }}>
-          <DayNumberBadge day={day} color={rc.color} />
+          <DayNumberBadge day={day} color={rc.color} label={dayLabel} />
         </div>
         <RarityBadge rarity={card.rarity} size="sm" />
       </div>
@@ -1150,7 +1215,7 @@ export default memo(function Card({
         <div style={{ flexShrink: 0 }}>{mintBar}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7.5px', fontWeight: 700, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', lineHeight: 1 }}>{claimed} PULLED</span>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7.5px', color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', lineHeight: 1 }}>{day > 0 ? formatDate(day) : ''}</span>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7.5px', color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', lineHeight: 1 }}>{dateText}</span>
         </div>
         {showAudio && audioUrl && <div style={{ flexShrink: 0 }}><AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} dense /></div>}
         {claimBtn}
@@ -1177,7 +1242,7 @@ export default memo(function Card({
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 28%, transparent 58%, rgba(0,0,0,0.72) 100%)' }} />
         {/* Top Day + Rarity badges on artwork header so title gets 100% width below */}
         <div style={{ position: 'absolute', top: '8px', left: '8px', transform: 'scale(0.86)', transformOrigin: 'top left', zIndex: 12 }}>
-          <DayNumberBadge day={day} color={rc.color} />
+          <DayNumberBadge day={day} color={rc.color} label={dayLabel} />
         </div>
         <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 12 }}>
           <RarityBadge rarity={card.rarity} size="sm" />
@@ -1222,7 +1287,7 @@ export default memo(function Card({
 
       {/* Top Header: Day left, Rarity right */}
       <div style={{ position: 'absolute', top: '8px', left: '8px', transform: 'scale(0.88)', transformOrigin: 'top left', zIndex: 15 }}>
-        <DayNumberBadge day={day} color={rc.color} />
+        <DayNumberBadge day={day} color={rc.color} label={dayLabel} />
       </div>
       <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 15 }}>
         <RarityBadge rarity={card.rarity} size="sm" />
@@ -1275,7 +1340,7 @@ export default memo(function Card({
       {/* Top badges: DayNumberBadge on Left, Legendary Crown Pill on Right */}
       <div style={{ position: 'absolute', top: '8px', left: '8px', right: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 18 }}>
         <div style={{ transform: 'scale(0.86)', transformOrigin: 'left center' }}>
-          <DayNumberBadge day={day} color={rc.color} />
+          <DayNumberBadge day={day} color={rc.color} label={dayLabel} />
         </div>
         <div style={{
           padding: '4px 11px',
@@ -1294,7 +1359,7 @@ export default memo(function Card({
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px', zIndex: 18 }}>
         <h3 style={{ margin: '0 0 4px', fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.2px', color: '#faf0d8', textShadow: '0 2px 8px rgba(0,0,0,0.95)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h3>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: 'rgba(255,255,255,0.52)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>DAY {day} · {claimed} PULLED</span>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: 'rgba(255,255,255,0.52)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{dayText} · {claimed} PULLED</span>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: '#e9d5ff', background: `${rc.color}28`, border: `1px solid ${rc.color}60`, padding: '1px 7px', borderRadius: '999px', whiteSpace: 'nowrap' }}>{tempo} BPM · {Math.round(energy * 100)} NRG</span>
         </div>
         {mintBar}
@@ -1358,7 +1423,7 @@ export default memo(function Card({
         }}
       >
         <div style={{ transform: 'scale(0.86)', transformOrigin: 'left center' }}>
-          <DayNumberBadge day={day} color={rc.color} />
+          <DayNumberBadge day={day} color={rc.color} label={dayLabel} />
         </div>
         <MythicCrownBadge />
       </div>
@@ -1396,7 +1461,7 @@ export default memo(function Card({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8.5px', fontWeight: 800, color: rc.color, whiteSpace: 'nowrap' }}>
-              DAY {day}
+              {dayText}
             </span>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: 'rgba(255,215,0,0.75)', fontWeight: 700, whiteSpace: 'nowrap' }}>
               • 1 OF 1 GENESIS
