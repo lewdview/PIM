@@ -282,7 +282,7 @@ class FarcasterService {
     fid: number
   ): Promise<boolean> {
     try {
-      const endpoint = 'https://toemkhrfsbkfkutwcjkd.supabase.co/functions/v1/farcaster-webhook';
+      const endpoint = `${import.meta.env.VITE_SUPABASE_URL || ''}/functions/v1/farcaster-webhook`;
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

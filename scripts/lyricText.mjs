@@ -71,9 +71,8 @@ export function isJunk(line) {
 let official = null; // Map<day, [{ start, text }]>
 
 export async function loadOfficialLyrics(root) {
-  const url = (process.env.VITE_SUPABASE_URL || 'https://toemkhrfsbkfkutwcjkd.supabase.co').replace(/\/$/, '');
-  const key = process.env.VITE_SUPABASE_ANON_KEY
-    || (fs.readFileSync(path.join(root, 'src/services/supabaseClient.ts'), 'utf8').match(/'(eyJ[^']+)'/) || [])[1];
+  const url = (process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
+  const key = process.env.VITE_SUPABASE_ANON_KEY || '';
   try {
     const res = await fetch(`${url}/rest/v1/lyric_timings?select=day,segments&order=day`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` },
