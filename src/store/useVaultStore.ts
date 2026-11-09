@@ -912,6 +912,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         const { fetchAllCards, findCardWithFallback } = await import('../services/vaultService');
         const { isBombshellCard } = await import('../utils/bombshellCards');
         const pool = await fetchAllCards();
+        // Weekly Audius cards aren't 365 days; load their titles and art first.
+        const { loadAudiusCardDetails } = await import('../lib/audiusCards');
+        await loadAudiusCardDetails(vault.map(c => c.card_id)).catch(() => undefined);
         mappedCards = vault.map(c => {
            const isBombshell = isBombshellCard(c);
            const coverArtwork = c.cover_artwork || c.coverArtwork || c.fingerprint || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined);

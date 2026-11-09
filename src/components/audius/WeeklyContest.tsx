@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
-import { Crown, ExternalLink, Gamepad2, Gift, Lock, Pause, Play, Sparkles, Trophy } from 'lucide-react';
+import { Check, Crown, ExternalLink, Gamepad2, Gift, Lock, Pause, Play, Sparkles, Trophy } from 'lucide-react';
 import { useGlobalPlayer, type GlobalTrack } from '@/store/useGlobalPlayer';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatDuration, streamUrl } from '@/lib/audius';
@@ -28,6 +28,8 @@ import {
 } from '@/lib/audiusContest';
 import RanksDialog from './RanksDialog';
 import { DELUXE_UNLOCK_ACCURACY, hasEarnedSongDeluxe, loadEarnedDeluxeDays } from '@/lib/deluxe';
+import { claimContestCard, fetchContestCardStatus, type ContestCardKind, type ContestCardStatus } from '@/lib/audiusCards';
+import { useVaultStore } from '@/store/useVaultStore';
 
 const GOLD = '#E5B800';
 const ACCENT = '#CC0FE0';
@@ -97,6 +99,44 @@ function usePlayContestSong() {
     useGlobalPlayer.getState().stop();
     setLocation(`/play/${id}`);
   };
+}
+
+/** One weekly card's state for a track: owned, ready to claim, or still to earn. */
+function CardRow({
+  status,
+  kind,
+  busy,
+  onClaim,
+}: {
+  status: ContestCardStatus | undefined;
+  kind: ContestCardKind;
+  busy: boolean;
+  onClaim: () => void;
+}) {
+  const label = kind === 'bombshell' ? 'Deluxe card' : 'Card';
+  const base = 'mt-1.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider';
+  if (status?.claimed) {
+    return (
+      <div className={base} style={{ color: GOLD }}>
+        <Check size={11} />
+        <span>{label} collected</span>
+      </div>
+    );
+  }
+  if (status?.cleared) {
+    return (
+      <button type="button" onClick={onClaim} disabled={busy} className="btn-3d w-full mt-1.5" data-tone="gold" data-size="sm">
+        <Gift size={13} />
+        <span>{busy ? 'Claiming…' : `Claim ${label.toLowerCase()}`}</span>
+      </button>
+    );
+  }
+  return (
+    <div className={`${base} text-white/40`}>
+      <Lock size={11} />
+      <span>{kind === 'bombshell' ? 'Clear Deluxe to earn its card' : 'Clear to earn its card'}</span>
+    </div>
+  );
 }
 
 function Board({ rows, myId, emptyText }: { rows: BoardRow[]; myId?: string; emptyText: string }) {
@@ -213,6 +253,38 @@ export default function WeeklyContest() {
   const closeRanks = useCallback(() => setRanksFor(null), []);
   const [art, setArt] = useState<Record<string, string>>({});
   const [, setDeluxeLoaded] = useState(0);
+  const [cards, setCards] = useState<ContestCardStatus[]>([]);
+  const [claiming, setClaiming] = useState<string | null>(null);
+  const [cardMsg, setCardMsg] = useState<string | null>(null);
+  const loadVaultData = useVaultStore((s) => s.loadVaultData);
+  const week = contest?.week_start;
+
+  useEffect(() => {
+    let live = true;
+    if (!week || !myId) {
+      setCards([]);
+      return;
+    }
+    fetchContestCardStatus(week).then((c) => live && setCards(c)).catch(() => live && setCards([]));
+    return () => {
+      live = false;
+    };
+  }, [week, myId]);
+
+  const claimCard = async (trackId: string, kind: ContestCardKind) => {
+    if (!week) return;
+    setClaiming(`${trackId}:${kind}`);
+    setCardMsg(null);
+    const res = await claimContestCard(week, trackId, kind);
+    setClaiming(null);
+    if (res.ok) {
+      setCards((cs) => cs.map((c) => (c.trackId === trackId && c.kind === kind ? { ...c, claimed: true } : c)));
+      setCardMsg(kind === 'bombshell' ? 'Deluxe card added to your collection.' : 'Card added to your collection.');
+      loadVaultData(true).catch(() => undefined);
+    } else {
+      setCardMsg(res.message);
+    }
+  };
 
   useEffect(() => {
     let live = true;
@@ -300,7 +372,9 @@ export default function WeeklyContest() {
         <span>2nd · 3</span>
         <span>3rd · 2</span>
         <span>4th–10th · 1</span>
+        <span className="font-black flex items-center gap-1.5 sm:ml-auto"><Sparkles size={13} /> Clear a song this week to earn its card</span>
       </div>
+      {cardMsg && <p className="mb-3 font-mono text-xs text-white/70">{cardMsg}</p>}
 
       {contest ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
@@ -356,6 +430,15 @@ export default function WeeklyContest() {
                     <span>Deluxe · {DELUXE_UNLOCK_ACCURACY}%</span>
                   </div>
                 )}
+                {myId && cards.length > 0 && (['standard', 'bombshell'] as const).map((kind) => (
+                  <CardRow
+                    key={kind}
+                    kind={kind}
+                    status={cards.find((c) => c.trackId === t.id && c.kind === kind)}
+                    busy={claiming === `${t.id}:${kind}`}
+                    onClaim={() => claimCard(t.id, kind)}
+                  />
+                ))}
               </div>
             </div>
             );

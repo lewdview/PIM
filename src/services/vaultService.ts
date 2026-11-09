@@ -17,6 +17,7 @@ import { sanitizeMediaUrl } from '../game/api';
 import { resolveMediaUrls } from '../utils/resolveMediaUrls';
 import { useVaultStore } from '../store/useVaultStore';
 import { farcasterService } from './farcasterService';
+import { getAudiusCard, parseAudiusCardId } from '../lib/audiusCardRegistry';
 
 // ===== TYPES =====
 export interface VaultCard {
@@ -85,6 +86,37 @@ export function getSafeFallbackCard(cardId: string, rarity: Rarity): VaultCard {
   };
 }
 
+/**
+ * A weekly Audius contest card ('aud-<id>' / 'bombshell-aud-<id>'), or null for
+ * any other id. These are not 365 days: day 0 keeps them out of every day lookup,
+ * and their art comes from src/lib/audiusCardRegistry rather than the day pool.
+ */
+function audiusVaultCard(cardId: string, rarity?: Rarity | string): VaultCard | null {
+  const parsed = parseAudiusCardId(cardId);
+  if (!parsed) return null;
+  const info = getAudiusCard(cardId);
+  const r = ((rarity as Rarity) || (parsed.deluxe ? 'legendary' : 'rare')) as Rarity;
+  return {
+    id: cardId,
+    day: 0,
+    title: info ? (parsed.deluxe ? `${info.title} (Deluxe)` : info.title) : parsed.deluxe ? 'Audius Deluxe card' : 'Audius weekly card',
+    storageTitle: cardId,
+    mood: 'dark',
+    rarity: r,
+    energy: 0.5,
+    valence: 0.5,
+    tempo: 120,
+    genre: info?.genre ? [info.genre] : [],
+    tags: ['audius'],
+    coverUrl: info?.coverUrl || '/pim-logo.png',
+    audioUrl: `https://api.audius.co/v1/tracks/${parsed.trackId}/stream?app_name=PIM`,
+    description: info ? `Audius weekly top 5 · ${info.artist}` : 'Audius weekly top 5',
+    claimedCount: 0,
+    maxSupply: 0,
+    cardSet: parsed.deluxe ? 'bombshell' : 'gen-0',
+  };
+}
+
 export function findCardWithFallback(
   pool: VaultCard[], 
   cardId: string, 
@@ -92,6 +124,8 @@ export function findCardWithFallback(
   isBombshell?: boolean,
   coverArtwork?: string
 ): VaultCard {
+  const audius = audiusVaultCard(cardId, rarity);
+  if (audius) return audius;
   if (!pool || pool.length === 0) {
     return getSafeFallbackCard(cardId, (rarity as Rarity) || 'common');
   }
