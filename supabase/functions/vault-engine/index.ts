@@ -19,6 +19,8 @@ const ALLOWED_ORIGINS = [
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
   if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Vercel preview deploys of this repo (pim-git-<branch>-lewdviews-projects.vercel.app)
+  if (/^https:\/\/pim(-obj2)?-git-[a-z0-9-]+-lewdviews-projects\.vercel\.app$/.test(origin)) return true;
   // Local development
   if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
   if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
