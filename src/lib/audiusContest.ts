@@ -97,7 +97,13 @@ export async function fetchCurrentContest(): Promise<WeeklyContest | null> {
     body: { action: 'getAudiusWeeklyContest', payload: {} },
   });
   if (error || !res?.success || !res.contest) {
-    throw new Error(res?.error || error?.message || 'Could not load this week’s contest');
+    // A non-2xx reply hides the function's own message in error.context.
+    let detail: string | undefined = res?.error;
+    const ctx = (error as { context?: Response } | null)?.context;
+    if (!detail && ctx && typeof ctx.json === 'function') {
+      detail = await ctx.json().then((b: any) => b?.error, () => undefined);
+    }
+    throw new Error(detail || error?.message || 'Could not load this week’s contest');
   }
   return res.contest as WeeklyContest;
 }
