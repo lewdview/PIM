@@ -65,11 +65,16 @@
 .neon-hud-combo[data-hot='true'] span { color: #fff; text-shadow: 0 0 22px rgba(255, 20, 147, 0.75), 0 0 60px rgba(255, 20, 147, 0.35); }
 .neon-hud-combo span.bump { animation: neon-bump 0.16s ease-out; }
 @keyframes neon-bump { from { transform: scale(1.14); } to { transform: scale(1); } }
-.neon-hud-combo small { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.42em; color: rgba(255, 255, 255, 0.5); }
+.neon-hud-combo small { display: block; margin-top: 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.42em; color: rgba(255, 255, 255, 0.5); }
+.neon-hud-combo, .neon-hud-pu, .neon-hud-pu-bar { transition: opacity 0.2s ease; }
+/* Stage stinger owns the centre while it's up (class set by GameplayCore). */
+body.pim-stinger .neon-hud-combo,
+body.pim-stinger .neon-hud-pu { opacity: 0; }
 
 /* Power-up: the demo's big banner word, shown while FEVER / SURGE / SIGNAL LOCK runs. */
 .neon-hud-pu {
-  position: absolute; left: 50%; top: clamp(150px, 27vh, 250px); translate: -50% 0;
+  /* Sits under the combo block (combo top + number + label + room for the bump), never on it. */
+  position: absolute; left: 50%; top: calc(clamp(78px, 15vh, 140px) + clamp(44px, 8vw, 92px) + 48px); translate: -50% 0;
   display: none; align-items: center; gap: 10px;
   padding: 6px 16px 6px 12px; border-radius: 999px; border: 1px solid currentColor;
   background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(6px);
@@ -84,6 +89,15 @@
 .neon-hud-pu-bar {
   position: absolute; left: 0; right: 0; top: 3px; height: 3px; display: none; transform-origin: left;
 }
+
+/* Poetic Lines overlay (all HUD styles): dims right down while a stage stinger is up. */
+.pim-lyric-overlay { opacity: 0.85; transition: opacity 0.25s ease; }
+body.pim-stinger .pim-lyric-overlay { opacity: 0.12; }
+
+/* Poetic Lines own the sky band (17% down, ~11% tall, plus the next-line preview), so the
+   combo and power-up word drop below it instead of sitting under the words. */
+.neon-hud[data-lyrics='poetic'] .neon-hud-combo { top: 31%; }
+.neon-hud[data-lyrics='poetic'] .neon-hud-pu { top: calc(31% + clamp(44px, 8vw, 92px) + 48px); }
 
 @media (max-width: 640px) {
   .neon-hud-track span { display: none; }

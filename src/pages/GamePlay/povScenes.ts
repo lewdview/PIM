@@ -258,6 +258,31 @@ function fillBackdrop(ctx: CanvasRenderingContext2D, W: number, H: number, stops
   ctx.restore();
 }
 
+/**
+ * Slow-drifting nebula clouds tinted by the song's lane colours, screened over the backdrop
+ * so space scenes get depth instead of a flat black sky. Four soft blobs; skipped on lite.
+ */
+function nebula(s: PovSceneInput, seed: number, strength = 1, yBias = 0.3) {
+  if (s.lite) return;
+  const { ctx, W, H, t } = s;
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 4; i++) {
+    const col = s.laneColors[(i + seed) % s.laneColors.length] || '#5a3cff';
+    const bx = W * (0.15 + hash(seed + i * 3.1) * 0.7) + Math.sin(t * 0.05 + i) * W * 0.04;
+    const by = H * (yBias * 0.4 + hash(seed + i * 7.3) * yBias) + Math.cos(t * 0.04 + i * 2) * H * 0.03;
+    const r = Math.max(W, H) * (0.22 + hash(seed + i * 1.9) * 0.25);
+    const g = ctx.createRadialGradient(bx, by, 0, bx, by, r);
+    const a = (0.1 + 0.06 * s.energy) * strength;
+    g.addColorStop(0, colorWithAlpha(col, a));
+    g.addColorStop(0.5, colorWithAlpha(col, a * 0.35));
+    g.addColorStop(1, colorWithAlpha(col, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(bx - r, by - r, r * 2, r * 2);
+  }
+  ctx.restore();
+}
+
 function starfield(s: PovSceneInput, seed: number, count: number, color = '255,255,255') {
   const { ctx, W, H, t } = s;
   for (let i = 0; i < count; i++) {
@@ -405,6 +430,7 @@ function drawCockpit(s: PovSceneInput) {
 
   fillBackdrop(ctx, W, H, [[0, 'rgba(2,8,14,0.85)'], [1, 'rgba(4,14,18,0.8)']]);
 
+  nebula(s, 23, 0.9, 0.35);
   starfield(s, 23, s.lite ? 30 : 70, '200,240,255');
   // Distant gas giant off to one side, drifting with the roll
   const gpx = W * 0.82 + Math.sin(t * 0.1) * 8;
@@ -586,6 +612,7 @@ function drawPrism(s: PovSceneInput) {
   const hueBase = (t * 24 + flash * 40) % 360;
 
   fillBackdrop(ctx, W, H, [[0, 'rgba(8,4,20,0.8)'], [1, 'rgba(4,2,12,0.85)']]);
+  nebula(s, 13, 0.8, 0.4);
 
   // Kaleidoscope: mirrored shards around the vanishing point
   const shards = s.lite ? 8 : 12;
@@ -684,6 +711,7 @@ function drawDna(s: PovSceneInput) {
   const colB = '#FF4FD8';
 
   fillBackdrop(ctx, W, H, [[0, 'rgba(2,14,20,0.82)'], [1, 'rgba(8,4,22,0.85)']]);
+  nebula(s, 37, 0.8, 0.4);
 
   // Floating cells (bokeh)
   const cells = s.lite ? 8 : 18;
@@ -828,48 +856,79 @@ function drawVertigo(s: PovSceneInput) {
     ctx.stroke();
   }
 
-  // Building floors rush past: each floor is a rectangle ring growing out of the vanishing point
-  const floors = s.lite ? 10 : 18;
-  const fall = t * (0.35 + s.energy * 0.25) * (s.stage >= 5 ? 1.7 : 1);
+  // Glass facades rush past: the two walls of the shaft are cut into thin vertical slices,
+  // each carrying a column of windows, so the walls read as solid lit towers rather than a
+  // few floating dots. Slices scroll toward the camera; window states are keyed to the
+  // slice's global index so they stay put while it moves.
+  const slices = s.lite ? 22 : 46;
+  const rows = s.lite ? 7 : 12;
+  const fall = t * (0.18 + s.energy * 0.14) * (s.stage >= 5 ? 1.7 : 1);
   const farHalfW = geom.stageW * 0.05;
   const nearHalfW = W * 0.75;
-  for (let i = 0; i < floors; i++) {
-    const z = ((i / floors) + fall) % 1;
+  const sliceAt = (z: number) => {
     const p = Math.pow(z, 2.2);
-    const hw = lerp(farHalfW, nearHalfW, p);
-    const top = lerp(vy, -H * 0.4, p);
-    const bot = lerp(vy, H * 1.6, p);
-    const a = Math.min(1, z * 2.5) * (1 - Math.max(0, z - 0.85) / 0.15);
-    // Facade edges (left/right walls)
-    ctx.strokeStyle = `rgba(120,160,255,${0.10 * a})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(vx - hw, top);
-    ctx.lineTo(vx - hw, bot);
-    ctx.moveTo(vx + hw, top);
-    ctx.lineTo(vx + hw, bot);
-    ctx.stroke();
-    // Lit windows on both facades
-    // Floor slab line across each wall
-    ctx.strokeStyle = `rgba(120,160,255,${0.08 * a})`;
-    ctx.beginPath();
-    ctx.moveTo(vx - hw, top);
-    ctx.lineTo(vx - W, top - (W - hw) * 0.8);
-    ctx.moveTo(vx + hw, top);
-    ctx.lineTo(vx + W, top - (W - hw) * 0.8);
-    ctx.stroke();
-    const winW = Math.max(1.5, hw * 0.05);
-    const rows = s.lite ? 5 : 8;
-    for (let r = 0; r < rows; r++) {
-      const wy = lerp(top, bot, (r + 0.5) / rows);
-      for (const side of [-1, 1]) {
-        const seed = i * 13 + r * 3 + (side > 0 ? 1 : 0) + Math.floor((t + i) / 7) * 101;
-        if (hash(seed) < 0.55) continue;
-        const warm = hash(seed * 1.3) > 0.4;
-        ctx.fillStyle = warm ? `rgba(255,200,120,${0.45 * a})` : `rgba(140,200,255,${0.4 * a})`;
-        ctx.fillRect(vx + side * hw - (side > 0 ? 0 : winW), wy, winW, winW * 1.4);
+    return { hw: lerp(farHalfW, nearHalfW, p), top: lerp(vy, -H * 0.4, p), bot: lerp(vy, H * 1.6, p) };
+  };
+  // Back to front so near slices cover far ones.
+  const order: { z: number; id: number }[] = [];
+  for (let k = 0; k < slices; k++) {
+    const u = k / slices + fall;
+    order.push({ z: u - Math.floor(u), id: k + slices * Math.floor(u) });
+  }
+  order.sort((a, b) => a.z - b.z);
+  for (const { z, id } of order) {
+    if (z < 0.02) continue;
+    const a0 = sliceAt(z);
+    const a1 = sliceAt(Math.min(1, z + 1 / slices));
+    const fog = Math.min(1, z * 2.2) * (1 - Math.max(0, z - 0.9) / 0.1);
+    const floorLine = id % 6 === 0;
+    for (const side of [-1, 1]) {
+      const x0 = vx + side * a0.hw, x1 = vx + side * a1.hw;
+      const left = Math.min(x0, x1), sw = Math.abs(x1 - x0);
+      if (sw < 0.4) continue;
+      // Glass panel for this slice.
+      ctx.fillStyle = `rgba(14,24,52,${0.5 * fog})`;
+      ctx.fillRect(left, a0.top, sw, a0.bot - a0.top);
+      if (floorLine) {
+        ctx.fillStyle = `rgba(150,190,255,${0.16 * fog})`;
+        ctx.fillRect(side > 0 ? left : left + sw - 1, a0.top, 1, a0.bot - a0.top);
+      }
+      // Windows: lit ones glow warm or cool; a few flicker.
+      const rowH = (a0.bot - a0.top) / rows;
+      const ww = sw * 0.62;
+      for (let r = 0; r < rows; r++) {
+        const seed = id * 31 + r * 7 + (side > 0 ? 3 : 0);
+        const lit = hash(seed);
+        if (lit < 0.45) continue;
+        const flick = lit > 0.97 ? 0.5 + 0.5 * Math.sin(t * 9 + seed) : 1;
+        const warm = hash(seed * 1.7) > 0.35;
+        const al = (0.18 + 0.5 * (lit - 0.45)) * fog * flick;
+        ctx.fillStyle = warm ? `rgba(255,196,120,${al})` : `rgba(140,205,255,${al})`;
+        ctx.fillRect(left + (sw - ww) / 2, a0.top + r * rowH + rowH * 0.22, ww, rowH * 0.5);
       }
     }
+  }
+  // Neon sign bands crossing the shaft every so often, in the lane colours.
+  for (let b = 0; b < 3; b++) {
+    const u = b / 3 + fall * 0.5;
+    const z = u - Math.floor(u);
+    if (z < 0.08) continue;
+    const { hw, top } = sliceAt(z);
+    const col = s.laneColors[b % s.laneColors.length] || '#ff3d6e';
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, z * 2) * (1 - Math.max(0, z - 0.85) / 0.15) * 0.55;
+    ctx.strokeStyle = col;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = s.lite ? 0 : 10;
+    ctx.lineWidth = Math.max(1, z * 4);
+    const y = lerp(top, vy, 0.35);
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(vx + side * hw, y);
+      ctx.lineTo(vx + side * hw * 1.6, y - hw * 0.25);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   // Wind streaks
@@ -1190,6 +1249,7 @@ function drawHalo(s: PovSceneInput) {
   const flash = anyHitFlash(s);
 
   fillBackdrop(ctx, W, H, [[0, 'rgba(2,6,22,0.85)'], [1, 'rgba(2,10,24,0.85)']]);
+  nebula(s, 77, 1, 0.3);
   starfield(s, 77, s.lite ? 40 : 110, '200,220,255');
 
   // Planet limb glowing at the bottom of the frame
@@ -1304,6 +1364,7 @@ function drawMobius(s: PovSceneInput) {
   const back = '#FF7BB0';
 
   fillBackdrop(ctx, W, H, [[0, 'rgba(10,4,24,0.85)'], [1, 'rgba(14,4,20,0.85)']]);
+  nebula(s, 59, 1, 0.45);
   starfield(s, 59, s.lite ? 25 : 60, '220,200,255');
 
   // Infinity curve behind everything

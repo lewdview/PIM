@@ -1,5 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useEffect, useState, useRef } from "react";
+import { useChromeHold } from "@/hooks/useChromeHold";
 import { getSongById, loadCatalog, isSongTimeLocked } from "@/game/api";
 import type { GameSong } from "@/game/api";
 import { getHighScore, getChapterPlatinums } from "@/game/progress";
@@ -654,6 +655,10 @@ export default function Results() {
       setClaimStatus('failed');
     }
   };
+
+  // Keep the dock / player bar / 365 pill off while results load; the results screens take
+  // over the hold for their own reveal sequence.
+  useChromeHold(!ready || !result);
 
   if (!ready || !result) {
     return (

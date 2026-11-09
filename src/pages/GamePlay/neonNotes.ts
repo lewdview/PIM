@@ -14,13 +14,13 @@ export function setNeonNotes(on: boolean) { neonOn = on; }
 export function neonNotesOn() { return neonOn; }
 
 /** Arrow direction → rotation, with the chevron drawn pointing up (−y) at 0. */
-const SWIPE_ROT: Record<string, number> = {
+export const SWIPE_ROT: Record<string, number> = {
   up: 0, 'up-right': Math.PI / 4, right: Math.PI / 2, 'down-right': (3 * Math.PI) / 4,
   down: Math.PI, 'down-left': (-3 * Math.PI) / 4, left: -Math.PI / 2, 'up-left': -Math.PI / 4,
 };
 
 /** Special-note palette, matching the colours the default renderer uses for each type. */
-const SPECIAL: Partial<Record<NoteType | 'ghost', { color: string; label?: string }>> = {
+export const SPECIAL: Partial<Record<NoteType | 'ghost', { color: string; label?: string }>> = {
   remix: { color: '#00F5D4', label: 'REMIX' },
   break: { color: '#FF7B00', label: 'DROP' },
   accent: { color: '#CCFF00', label: 'BEAT' },

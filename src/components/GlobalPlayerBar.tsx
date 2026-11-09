@@ -112,6 +112,7 @@ export default function GlobalPlayerBar() {
             paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 0.35rem)',
           }}
           className="bottom-0"
+          data-pim-chrome="player"
         >
           {/* Progress bar — clickable */}
           <ProgressBar accent={accent} />

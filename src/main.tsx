@@ -2,6 +2,9 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { initEcosystemBar } from './lib/ecosystemBar'
+
+initEcosystemBar()
 
 if (typeof window !== 'undefined') {
   // Global auto-recovery for stale dynamic module imports and MIME type mismatches

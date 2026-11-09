@@ -38,7 +38,23 @@ import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHel
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
 import GameplayVisualizer from './GameplayVisualizer';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
-import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine } from './trackLyrics';
+import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine, type LyricAvoidRect } from './trackLyrics';
+
+// Fixed HUD blocks per style that Poetic Lines words fit around (Neon / Console / Beta).
+const LYRIC_AVOID_SELECTOR = '.neon-hud-left, .neon-hud-score, .neon-hud-combo, .pim-rail-strip-row, .pim-rail-panel, .gameplay-hud-left-wing, .gameplay-hud-right-wing, [data-lyric-avoid]';
+
+/** HUD blocks Poetic / on-track lyrics fit around, relative to `box`. Layout reads, so at most twice a second. */
+function measureLyricAvoidInto(store: { at: number; rects: LyricAvoidRect[] }, boxEl: Element, nowMs: number) {
+  if (nowMs - store.at <= 500) return;
+  store.at = nowMs;
+  const box = boxEl.getBoundingClientRect();
+  store.rects = [];
+  document.querySelectorAll(LYRIC_AVOID_SELECTOR).forEach((el) => {
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) return;
+    store.rects.push({ x0: r.left - box.left, y0: r.top - box.top, x1: r.right - box.left, y1: r.bottom - box.top });
+  });
+}
 import { getStageStarts, stageAtTime } from './stageTimeline';
 import { VerseHud, comboInk } from './verseHud';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, CHART_MASTER_DELUXE_VERSION } from '@/game/chartMaster';
@@ -47,7 +63,8 @@ import { spawnCelebration, drawCelebrations, type Celebration } from './noteCele
 import '../../styles/gameplayHud.css';
 import '../../styles/gameplayHudRail.css';
 import '../../styles/neonHud.css';
-import { setNeonNotes, neonNotesOn, drawNeonKey } from './neonNotes';
+import { setNoteSkin, drawSkinnedKey } from './noteSkins';
+import { drawStageGrade } from './stageGrade';
 import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
 import { noteKey, saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
 
@@ -1222,6 +1239,8 @@ export default function Game() {
   const judgmentOverlayRef = useRef<HTMLDivElement | null>(null);
   const judgmentBannerRef = useRef<HTMLDivElement | null>(null);
   const judgmentStreamRef = useRef<HTMLDivElement | null>(null);
+  const lyricAvoidRef = useRef<{ at: number; rects: LyricAvoidRect[] }>({ at: -1e9, rects: [] });
+  const measureLyricAvoid = (boxEl: Element, nowMs: number) => measureLyricAvoidInto(lyricAvoidRef.current, boxEl, nowMs);
   const lastInputModalityRef = useRef<'touch' | 'mouse' | 'key' | 'gamepad'>(
     typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 'touch' : 'key'
   );
@@ -1496,6 +1515,13 @@ export default function Game() {
   const [currentStage, setCurrentStage] = useState(1);
   const [stageStingerNumber, setStageStingerNumber] = useState<number | null>(null);
   const [stageStingerPhase, setStageStingerPhase] = useState<'cleared' | 'start' | 'transmission_complete'>('cleared');
+  // While the stage stinger is up, HUD combo counters / power-up pills step aside so they
+  // never sit on top of it (all HUD styles; selectors in neonHud.css).
+  useEffect(() => {
+    if (!stageStingerNumber) return;
+    document.body.classList.add('pim-stinger');
+    return () => document.body.classList.remove('pim-stinger');
+  }, [stageStingerNumber]);
   const [isStageFadingOut, setIsStageFadingOut] = useState(false);
   const lastDetectedStageRef = useRef(1);
   const stingerTimeout1Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1658,10 +1684,10 @@ export default function Game() {
   const [opts, setOpts] = useState<GameOpts>(loadOpts);
   const optsRef = useRef(opts);
   useEffect(() => { optsRef.current = opts; }, [opts]);
-  // Neon Reel draws its own note heads (./neonNotes): flip the module flag drawKey reads.
+  // Each HUD style draws its own notes (./noteSkins); Beta keeps drawKey's original look.
   useEffect(() => {
-    setNeonNotes(opts.hudStyle === 'neon');
-    return () => setNeonNotes(false);
+    setNoteSkin(opts.hudStyle ?? 'stanza');
+    return () => setNoteSkin(null);
   }, [opts.hudStyle]);
 
   // ── 6-Archetype Track Geometry & Stage Color Primer Engine ──
@@ -4176,6 +4202,8 @@ export default function Game() {
         octx.clearRect(0, 0, pw, ph);
         if (poeticOn) {
           octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          measureLyricAvoid(lyricOverlay, nowMs);
+          const av = lyricAvoidRef.current;
           drawLyricBackdrop(octx, {
             W: oW,
             H: oH,
@@ -4184,6 +4212,7 @@ export default function Game() {
             colors: laneColorsRef.current,
             animate: optsRef.current.bgAnimation,
             layer: 'text',
+            avoid: av.rects,
           });
         }
       }
@@ -5513,6 +5542,23 @@ export default function Game() {
     const hwTop = hwAtProgress(0, W, trackTopRatio, trackBotRatio, H);
     const hwBot = hwAtProgress(1, W, trackTopRatio, trackBotRatio, H);
 
+    // ── 1z. CINEMATIC GRADE (./stageGrade): horizon bloom, vignette, grain over every
+    // stage background and POV scene, under the lanes' own surface and the notes.
+    {
+      const bpmG = songRef.current?.bpm || 120;
+      const beatG = Math.pow(Math.max(0, Math.cos(((t * bpmG) / 60) * Math.PI * 2)), 8);
+      drawStageGrade({
+        ctx,
+        W,
+        H,
+        horizonY: hitY * (is3DEnvironment ? 0.28 : 0.12),
+        beat: beatG,
+        energy: Math.min(1, gsRef.current.combo / 60),
+        colors: laneColorsRef.current,
+        lite: effGfx === 'low' || optsRef.current.legacyGraphics,
+      });
+    }
+
     // ── 2. LANE TRACK SURFACE ───────────────────────────────────
     if (!offscreenCanvasRef.current) {
       // Fallback: draw static rails, tints, grid lines, dividers if offscreen cache is missing
@@ -5925,7 +5971,9 @@ export default function Game() {
 
     // ── 4b. ON-TRACK LYRICS (painted on the track surface; notes render over) ──
     if (activeLyricsMode(optsRef.current) === 'track' && trackLyricsRef.current.lines.length > 0) {
+      measureLyricAvoid(canvas, nowMs);
       drawTrackLyrics(ctx, {
+        avoid: lyricAvoidRef.current.rects,
         W,
         H,
         t,
@@ -10949,8 +10997,7 @@ export default function Game() {
           <canvas
             ref={setLyricOverlayEl}
             aria-hidden="true"
-            className="absolute inset-0 w-full h-full pointer-events-none z-[45]"
-            style={{ opacity: 0.85 }}
+            className="pim-lyric-overlay absolute inset-0 w-full h-full pointer-events-none z-[45]"
           />
         )}
         {/* ── GAMEPLAY HUD · Beta (the original HUD, kept as a selectable style) ── */}
@@ -11311,7 +11358,7 @@ export default function Game() {
           const shieldLeft = Math.max(0, 3 - missCount);
           const cover = (song as any)?.coverArt || (song as any)?.coverUrl;
           return (
-            <div className="neon-hud" style={{ opacity: activePovMode === 'cyber_tunnel' ? 0.4 : 1 }}>
+            <div className="neon-hud" data-lyrics={activeLyricsMode(opts) === 'poetic' ? 'poetic' : undefined} style={{ opacity: activePovMode === 'cyber_tunnel' ? 0.4 : 1 }}>
               <div className="neon-hud-top">
                 <div className="neon-hud-left">
                   <div className="neon-hud-ctrls">
@@ -11771,7 +11818,12 @@ export default function Game() {
                         {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
                       </span>
                       <span
-                        className="relative z-20 font-mono text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-white tracking-tight"
+                        // Step the size down as digits are added so 7-figure scores stay inside the dial.
+                        className={`relative z-20 font-mono font-black text-white tracking-tight ${
+                          gs.score >= 1_000_000_000 ? 'text-xs sm:text-sm md:text-base lg:text-lg xl:text-[22px]'
+                            : gs.score >= 1_000_000 ? 'text-base sm:text-lg md:text-xl lg:text-2xl xl:text-[32px]'
+                            : 'text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl'
+                        }`}
                         style={{
                           WebkitTextStroke: "1.5px #000000",
                           paintOrder: "stroke fill",
@@ -12068,14 +12120,14 @@ export default function Game() {
                   <motion.div
                     key={`top-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
-                      initial: { scale: 0.5, y: -85, opacity: 0 },
+                      initial: { scale: 0.5, y: -100, opacity: 0 },
                       animate: { 
                         scale: 1, 
-                        y: -65, 
+                        y: -82, 
                         opacity: 1, 
                         transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.2 } 
                       },
-                      exit: { scale: 1.2, y: -85, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
+                      exit: { scale: 1.2, y: -100, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
                     className="absolute text-white/90 font-black text-xs md:text-sm tracking-[0.6em] z-10"
                     style={{ 
@@ -12099,7 +12151,11 @@ export default function Game() {
                       },
                       exit: { scale: 1.6, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
-                    className="absolute text-white font-black text-5xl sm:text-7xl md:text-8xl z-10 text-center px-4"
+                    className={`absolute text-white font-black z-10 text-center px-4 whitespace-nowrap ${
+                      stageStingerPhase === 'transmission_complete' || stageStingerNumber === 5 || (stageStingerPhase === 'cleared' && stageStingerNumber === 6)
+                        ? 'text-4xl sm:text-5xl md:text-6xl'
+                        : 'text-5xl sm:text-7xl md:text-8xl'
+                    }`}
                     style={{ 
                       fontFamily: '"Impact", "Arial Black", sans-serif',
                       textShadow: "0 0 25px rgba(255,255,255,0.95), 0 0 50px rgba(0,229,255,0.6)",
@@ -12117,16 +12173,16 @@ export default function Game() {
                   <motion.div
                     key={`bottom-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
-                      initial: { scale: 0.5, y: 85, opacity: 0 },
+                      initial: { scale: 0.5, y: 98, opacity: 0 },
                       animate: { 
                         scale: 1, 
-                        y: 65, 
+                        y: 80, 
                         opacity: 1, 
                         transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.3 } 
                       },
-                      exit: { scale: 1.2, y: 85, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
+                      exit: { scale: 1.2, y: 98, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
-                    className="absolute font-black text-xs md:text-sm tracking-[0.4em] z-10"
+                    className="absolute font-black text-[10px] sm:text-xs md:text-sm tracking-[0.3em] sm:tracking-[0.4em] whitespace-nowrap z-10"
                     style={{ 
                       fontFamily: '"JetBrains Mono", monospace',
                       textShadow: stageStingerPhase === 'transmission_complete'
@@ -12893,7 +12949,7 @@ function drawKey(
   ctx.translate(centerX, centerY);
 
   // Neon Reel HUD: every note uses the showcase demo's glowing bars (./neonNotes).
-  if (neonNotesOn() && drawNeonKey(ctx, noteW, noteH, lc, prog, isHold, swipeDirection, noteType, timeOffset)) {
+  if (drawSkinnedKey(ctx, noteW, noteH, lc, prog, isHold, swipeDirection, noteType, timeOffset)) {
     ctx.restore();
     return;
   }

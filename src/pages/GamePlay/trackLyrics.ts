@@ -218,6 +218,8 @@ export interface TrackLyricDrawOpts {
   stage: number;
   /** Active-word highlight, derived from the track's cover-art lane colors. */
   highlightColor?: string;
+  /** HUD blocks (CSS px). The decal's far edge is pulled down the track to clear them. */
+  avoid?: LyricAvoidRect[];
 }
 
 function clamp01(v: number): number {
@@ -606,8 +608,24 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
   const { h: decalH } = paintDecal(c, line, t, highlight, rows, widths, fontPx, spacing, budget);
 
   // ── Map decal onto the track surface.
-  const depth = Math.min(DECAL_NEAR - DECAL_FAR_MIN, Math.max(0.12, (decalH / DECAL_W) * DECAL_DEPTH));
-  const far = DECAL_NEAR - depth;
+  let depth = Math.min(DECAL_NEAR - DECAL_FAR_MIN, Math.max(0.12, (decalH / DECAL_W) * DECAL_DEPTH));
+  let far = DECAL_NEAR - depth;
+  // Keep the painted block out from under the HUD (portrait phones put the far end of the
+  // road right where the combo / dials sit): start it below the lowest block over the road.
+  if (opts.avoid && opts.avoid.length) {
+    const pf = getArchetypeProjection(1, far, W, H, archetype, stage, t, povMode);
+    const roadL = W * 0.18, roadR = W * 0.82;
+    let floorY = -Infinity;
+    for (const r of opts.avoid) if (r.x1 > roadL && r.x0 < roadR && r.y0 < H * 0.6) floorY = Math.max(floorY, r.y1 + 8);
+    if (Number.isFinite(pf.y) && pf.y < floorY) {
+      while (far < DECAL_NEAR - 0.12) {
+        const q = getArchetypeProjection(1, far, W, H, archetype, stage, t, povMode);
+        if (!Number.isFinite(q.y) || q.y >= floorY) break;
+        far += 0.02;
+      }
+      depth = DECAL_NEAR - far;
+    }
+  }
   const N = DECAL_SLICES;
   const left = new Array<number>(N + 1);
   const right = new Array<number>(N + 1);
@@ -683,6 +701,41 @@ export interface LyricBackdropOpts {
   animate: boolean;
   /** Which part to paint: the wash + motes ("backdrop"), the words ("text"), or both. */
   layer?: "all" | "backdrop" | "text";
+  /** HUD blocks the words must not cover, in the same CSS-px space as W/H. The line is
+   *  narrowed to the free gap around centre, or dropped below a block that sits on centre. */
+  avoid?: LyricAvoidRect[];
+}
+
+export type LyricAvoidRect = { x0: number; y0: number; x1: number; y1: number };
+
+/** Fit the sung line into the space the HUD leaves free. Pure: exported for tests. */
+export function lyricBand(W: number, H: number, avoid: LyricAvoidRect[] | undefined): { baseY: number; maxW: number; fontPx: number } {
+  let fontPx = H * 0.11;
+  let baseY = H * 0.17;
+  const pad = 14;
+  const fullW = W * 0.9;
+  if (!avoid || avoid.length === 0) return { baseY, maxW: fullW, fontPx };
+  const cx = W / 2;
+  const halfFreeAt = (y: number, size: number) => {
+    let half = fullW / 2;
+    for (const r of avoid) {
+      if (r.y1 < y - size * 0.55 || r.y0 > y + size * 0.55) continue;
+      if (r.x0 <= cx && r.x1 >= cx) return 0;
+      half = Math.min(half, r.x0 > cx ? r.x0 - cx - pad : cx - r.x1 - pad);
+    }
+    return Math.max(0, half);
+  };
+  let half = halfFreeAt(baseY, fontPx);
+  if (half * 2 < W * 0.34) {
+    // Something sits on centre (or the gap is a sliver): drop below whatever blocks centre.
+    const blockers = avoid.filter((r) => r.y0 < baseY + fontPx && (r.x0 <= cx + W * 0.17 && r.x1 >= cx - W * 0.17));
+    const below = Math.max(...blockers.map((r) => r.y1), baseY);
+    fontPx = Math.min(fontPx, H * 0.085);
+    baseY = Math.min(H * 0.5, below + pad + fontPx * 0.55);
+    half = halfFreeAt(baseY, fontPx);
+    if (half * 2 < W * 0.3) half = fullW / 2; // nowhere better: keep the full line, readable
+  }
+  return { baseY, maxW: Math.min(fullW, half * 2), fontPx };
 }
 
 // Append a 2-digit hex alpha; non-#rrggbb colors fall back to white.
@@ -819,8 +872,7 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
   const line = lines[li];
   const activeIdx = findActiveWordIdx(line, t);
   const lineAge = t - line.start;
-  const maxW = W * 0.9;
-  const baseY = H * 0.17;
+  const { baseY, maxW, fontPx: lineFont } = lyricBand(W, H, o.avoid);
 
   // ── Giant outlined echo of the active word, filling the screen behind everything.
   if (activeIdx >= 0) {
@@ -854,7 +906,7 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
   if (animate && li > 0 && lineAge < 0.45) {
     const prev = lines[li - 1];
     const k = easeOutCubic(lineAge / 0.45);
-    const L = layoutLineCentered(ctx, prev, maxW, H * 0.11);
+    const L = layoutLineCentered(ctx, prev, maxW, lineFont);
     ctx.font = `400 ${L.size}px ${BACKDROP_FONT}`;
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
@@ -871,7 +923,7 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
 
   // ── Current line: big, set across the sky, revealed as it's sung.
   const intro = animate ? easeOutCubic(clamp01(lineAge / 0.35)) : 1;
-  const L = layoutLineCentered(ctx, line, maxW, H * 0.11);
+  const L = layoutLineCentered(ctx, line, maxW, lineFont);
   ctx.textBaseline = "middle";
   ctx.textAlign = "center";
   let x = W / 2 - L.total / 2;

@@ -222,7 +222,7 @@
   gap: 8px;
 }
 .pim-rail-score-value {
-  font: 400 30px/0.95 var(--hud-display);
+  font: 400 30px/1.06 var(--hud-display);
   letter-spacing: 0.01em;
   color: var(--hud-text);
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
@@ -312,7 +312,8 @@
 }
 .pim-rail-combo-value {
   display: inline-block;
-  font: 400 30px/0.95 var(--hud-display);
+  /* line-height 1.08: at 0.95 the 72px numerals spilled over COMBO / MAX MULTIPLIER */
+  font: 400 30px/1.08 var(--hud-display);
   letter-spacing: 0.01em;
   color: var(--combo-c);
   text-shadow: 0 0 16px color-mix(in srgb, var(--combo-c) 45%, transparent), 0 2px 10px rgba(0, 0, 0, 0.8);
