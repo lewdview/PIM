@@ -130,9 +130,9 @@ export default function BonusClawPage() {
   }, [code, user, credits]);
 
   const onWin = useCallback(async (): Promise<ClawWinResult> => {
-    // vault-engine rolls the prize; this roll is only a fallback for an older vault-engine.
+    // The server owns the prize roll; this local pick is presentation-only.
     const guess = rollClawPrize(packs);
-    const res = await clawPull(guess.category, guess.size);
+    const res = await clawPull();
     if (res.status === 'won') {
       setCredits(res.credits);
       const p = res.prize;
