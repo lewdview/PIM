@@ -16,7 +16,9 @@
     "bot:dev": "npm run dev --prefix discord-bot",
     "bot:build": "npm run build --prefix discord-bot",
     "bot:start": "npm run start --prefix discord-bot",
-    "covers:bombshell": "node scripts/bombshell_covers.mjs"
+    "covers:bombshell": "node scripts/bombshell_covers.mjs",
+    "test:rewards": "node --experimental-strip-types --test supabase/tests/fulfillment.test.ts supabase/tests/engine.test.mjs",
+    "test:rewards:sql": "python supabase/tests/reward_payment_reconciliation.py"
   },
   "dependencies": {
     "@coinbase/wallet-sdk": "^4.3.7",

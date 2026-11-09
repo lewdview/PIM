@@ -549,7 +549,7 @@ export function getLastPurchasePackVerified(): boolean {
  *   through submit_score). The server verifies the run earned the tier, pays each tier once
  *   per song, and skips the daily pack caps for it.
  */
-export async function purchasePack(category: PackCategory, size: PackSize = 'single', sessionId?: string, txHash?: string, isGameplayReward?: boolean, rewardRecordId?: string): Promise<OwnedCard[]> {
+export async function purchasePack(category: PackCategory, size: PackSize = 'single', sessionId?: string, txHash?: string, isGameplayReward?: boolean, rewardRecordId?: string, reward?: { type: 'campaign'; month: number; milestone: number }): Promise<OwnedCard[]> {
   lastPurchasePackError = '';
   lastPurchasePackVerified = false;
   try {
@@ -558,7 +558,7 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
 
     const edgePackType = (category as string) === 'bombshell_token' ? 'bombshell' : category;
     const { data: result, error } = await supabase.functions.invoke('vault-engine', {
-      body: { action: 'purchasePack', payload: { packType: edgePackType, size, sessionId, txHash, isGameplayReward, rewardRecordId } },
+      body: { action: 'purchasePack', payload: { packType: edgePackType, size, sessionId, txHash, isGameplayReward, rewardRecordId, reward } },
     });
 
     if (error || !result?.success) {
@@ -787,13 +787,17 @@ export type ClawPullResult =
 
 /**
  * Spend one pull. vault-engine rolls the prize itself and returns it as `prize`; the
- * category/size sent here is only used by an older vault-engine that predates that roll.
+ * request id is retained across failures; retrying never spends a second pull.
  */
-export async function clawPull(category: PackCategory, size: PackSize): Promise<ClawPullResult> {
+export async function clawPull(): Promise<ClawPullResult> {
   try {
-    const edgePackType = (category as string) === 'bombshell_token' ? 'bombshell' : category;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { status: 'error', error: 'Not authenticated' };
+    const pendingKey = `pim_claw_pending_${user.id}`;
+    const requestId = localStorage.getItem(pendingKey) || crypto.randomUUID();
+    localStorage.setItem(pendingKey, requestId);
     const { data: result, error } = await supabase.functions.invoke('vault-engine', {
-      body: { action: 'clawPull', payload: { packType: edgePackType, size } },
+      body: { action: 'clawPull', payload: { requestId } },
     });
     if (error || !result?.success) {
       if (result?.error === 'NO_CLAW_CREDITS') return { status: 'no_credits' };
@@ -801,9 +805,11 @@ export async function clawPull(category: PackCategory, size: PackSize): Promise<
       if (/NO_CLAW_CREDITS/.test(msg)) return { status: 'no_credits' };
       return { status: 'error', error: msg };
     }
-    if (!result.won) return { status: 'slipped', credits: result.credits ?? 0 };
+    if (!result.won) { localStorage.removeItem(pendingKey); return { status: 'slipped', credits: result.credits ?? 0 }; }
     const prize = result.prize?.packType ? { category: String(result.prize.packType), size: String(result.prize.size || 'single') } : undefined;
-    return { status: 'won', cards: await mapEdgeCards(result.cards || []), credits: result.credits ?? 0, prize };
+    const cards = await mapEdgeCards(result.cards || []);
+    localStorage.removeItem(pendingKey);
+    return { status: 'won', cards, credits: result.credits ?? 0, prize };
   } catch (err: any) {
     return { status: 'error', error: err?.message || 'The claw jammed' };
   }

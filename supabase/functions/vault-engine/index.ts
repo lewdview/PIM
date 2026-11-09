@@ -9,6 +9,7 @@ import {
   MINTABLE_CAPS, NFT_MINT_COSTS, getCardMood,
   type Rarity, type ModifierContext
 } from "./gameLogic.ts";
+import { beginFulfillment, completeFulfillment, releaseFulfillment, checkoutPlan, type Fulfillment } from "./fulfillment.ts";
 import bombshellCoversMap from "./bombshell_covers_map.json" with { type: "json" };
 
 const ALLOWED_ORIGINS = [
@@ -453,29 +454,7 @@ function rollClawPrize(): { packType: string; size: string; count: number } {
   return pool[0];
 }
 
-/** Credit a paid claw checkout once. Returns the player's pull balance. */
-async function fulfilClawCheckout(svc: any, session: any, expectedUserId: string | null): Promise<number> {
-  if (session.payment_status !== 'paid') {
-    throw new Error(`Payment not completed. Status: ${session.payment_status}`);
-  }
-  const ownerId = session.client_reference_id || session.metadata?.userId;
-  if (!ownerId) throw new Error('No user ID associated with this claw checkout');
-  if (expectedUserId && expectedUserId !== ownerId) throw new Error('This checkout belongs to another account');
-  const pulls = Math.max(1, Number(session.metadata?.pulls) || 1);
-  const { data: granted, error } = await svc.rpc('grant_claw_purchase', {
-    p_uid: ownerId, p_session: session.id, p_pulls: pulls,
-  });
-  if (error) throw new Error(`Could not credit claw pull: ${error.message}`);
-  if (granted === null || granted === undefined) {
-    // Already credited (webhook or an earlier return): report the current balance.
-    const { data: row } = await svc.from('claw_credits').select('credits').eq('owner_id', ownerId).maybeSingle();
-    return row?.credits ?? 0;
-  }
-  await logTelemetry(svc, 'claw_pull_purchase', ownerId, { sessionId: session.id, pulls, amountCents: session.amount_total });
-  return granted;
-}
-
-async function generateCards(svc: any, userId: string, packType: string, count: number, today: number, ctx: ModifierContext) {
+async function generateCards(svc: any, userId: string, packType: string, count: number, today: number, ctx: ModifierContext, settlement?: Fulfillment & { result?: any }) {
   let missedDays: number[] = [];
   if (packType === 'miss_out') {
     let claims: any[] = [];
@@ -510,7 +489,8 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
   } catch { /* use default */ }
 
   const days = drawCardDays(packType, count, today, missedDays);
-  const cards = [];
+  const cards: any[] = [];
+  const selectedEchoes = new Set<string>();
 
   // Pre-fetch all supply data for the candidate day range in one query
   // (avoids N+1 queries during the generation loop)
@@ -532,26 +512,29 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
     // Echo pool draw
     if (packType !== 'free' && echoChance > 0 && Math.random() * 100 < echoChance) {
       const { data: echoPool } = await svc.from('echo_pool').select('*').limit(50);
-      if (echoPool && echoPool.length > 0) {
-        const echo = echoPool[Math.floor(Math.random() * echoPool.length)];
-        await svc.from('echo_pool').delete().eq('id', echo.id);
+      const availableEchoes = (echoPool || []).filter((e: any) => !selectedEchoes.has(String(e.id)));
+      if (availableEchoes.length > 0) {
+        const echo = availableEchoes[Math.floor(Math.random() * availableEchoes.length)];
+        selectedEchoes.add(String(echo.id));
+        if (!settlement) await svc.from('echo_pool').delete().eq('id', echo.id);
         const echoRarity = echo.echo_rarity || echo.rarity || 'common';
         const echoGen = echo.echo_generation || echo.generation || 1;
         const echoSourceDay = echo.source_day || (parseInt(String(echo.card_id || '').replace(/^card-/, ''), 10) || 1);
         const card_id_rarity = `${echoSourceDay}-${echoRarity}`;
         const echoMaxSupply = getSupplyCap(echoRarity, echoSourceDay, today);
-        const { data: supplyData } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: echoMaxSupply });
+        const { data: supplyData } = settlement ? { data: 1 } : await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: echoMaxSupply });
         cards.push({
+          ...(settlement ? { _echo_id: String(echo.id) } : {}),
           owner_id: userId, card_id: `card-${echoSourceDay}`, rarity: echoRarity,
           source: `pack_${packType}`, is_echo: true, echo_generation: echoGen,
           echo_source_day: echoSourceDay, edition: resolveEdition(supplyData, echoMaxSupply),
           max_supply: echoMaxSupply, proof: null, claimed_at: new Date().toISOString()
         });
         // Track echo pull
-        await svc.from('profiles').update({
+        if (!settlement) await svc.from('profiles').update({
           echo_pulls_received: svc.rpc ? undefined : 0 // increment handled below
         }).eq('id', userId);
-        await svc.rpc('increment_tokens', { user_uuid: userId, amount: 0 }); // no-op to ensure profile exists
+        if (!settlement) await svc.rpc('increment_tokens', { user_uuid: userId, amount: 0 }); // no-op to ensure profile exists
         continue;
       }
     }
@@ -581,7 +564,7 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
           const card_id_rarity = `${targetDay}-${rarity}`;
 
           // Atomic increment supply with cap enforcement
-          const { data } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+          const { data } = settlement ? { data: 1 } : await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
           if (data !== -1 && data !== null) {
             edition = data || 1;
             day = targetDay;
@@ -602,7 +585,7 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
       if (!isSoldOut) {
         let ultra_reward = null;
         if (Math.random() < ultraRewardChance) {
-          ultra_reward = { type: 'custom_song', label: 'Custom Theme', description: 'You unlocked an ultra-rare secret theme!' };
+          ultra_reward = { type: 'custom_song', label: 'Custom Song', description: 'You unlocked an ultra-rare custom song!' };
         }
         rolledCard = {
           owner_id: userId, card_id: (packType === 'bombshell' || packType === 'bombshell_token') ? `bombshell-${day}` : `card-${day}`, rarity, source: `pack_${packType}`,
@@ -644,7 +627,7 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
       const rarity: Rarity = 'common';
       const max_supply = getSupplyCap(rarity, day, today);
       const card_id_rarity = `${day}-${rarity}`;
-      const { data } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+      const { data } = settlement ? { data: 1 } : await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
       const edition = resolveEdition(data, max_supply);
       rolledCard = {
         owner_id: userId, card_id: (packType === 'bombshell' || packType === 'bombshell_token') ? `bombshell-${day}` : `card-${day}`, rarity, source: `pack_${packType}`,
@@ -661,6 +644,15 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
     cards.push(rolledCard);
   }
 
+  if (settlement) {
+    for (const card of cards) {
+      const dayId = Number(String(card.card_id).replace(/^(card|bombshell)-/, ''));
+      card._supply_key = `${dayId}-${card.rarity}`;
+    }
+    settlement.result = await completeFulfillment(svc, settlement, cards);
+    return settlement.result.cards;
+  }
+
   const { data: insertedCards, error } = await svc.from('vault_collections')
     .insert(cards)
     .select('*');
@@ -675,79 +667,58 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
 // That row can only be written through the submit_score RPC (single-use run
 // token, score caps, medal/accuracy plausibility), so it is proof of the run.
 // ═══════════════════════════════════════════════════════════
-const REWARD_LADDER = ['free', 'taste', 'special_picks', 'alpha', 'prophecy'];
-const REWARD_DB_TIER: Record<string, string> = {
-  free: 'common', taste: 'enhanced', special_picks: 'rare', alpha: 'epic', prophecy: 'legendary',
-};
-/** How long after the run its reward can be claimed. Matches the run-token lifetime. */
-const REWARD_CLAIM_WINDOW_MS = 30 * 60 * 1000;
-
-/** Accuracy -> reward tier. Mirrors getTierForAccuracy in src/pages/GameResults.tsx. */
-function rewardTierForAccuracy(acc: number): string {
-  if (acc >= 97) return 'prophecy';
-  if (acc >= 93) return 'alpha';
-  if (acc >= 80) return 'special_picks';
-  if (acc >= 60) return 'taste';
-  return 'free';
-}
-
-/**
- * Check that the run behind `recordId` earned `packType` and reserve the payout.
- * PLATINUM clears earn every tier up to their accuracy tier (the Platinum bundle);
- * other clears earn exactly their accuracy tier. Throws if not earned, too old,
- * or already paid for this song.
- */
-async function reserveVerifiedGameplayReward(
-  svc: any, userId: string, recordId: string, packType: string,
-): Promise<{ songId: string; recordId: string }> {
-  const rank = REWARD_LADDER.indexOf(packType);
-  if (rank < 0) throw new Error(`"${packType}" is not a run reward tier`);
-
-  const { data: rec, error } = await svc.from('gameplay_records')
-    .select('id, user_id, song_id, accuracy, medal, timestamp')
-    .eq('id', recordId)
-    .maybeSingle();
-  if (error || !rec || rec.user_id !== userId) throw new Error('Run record not found');
-
-  const ranAt = new Date(rec.timestamp).getTime();
-  if (!Number.isFinite(ranAt) || Date.now() - ranAt > REWARD_CLAIM_WINDOW_MS) {
-    throw new Error('This run is too old to claim rewards from');
-  }
-
-  const medal = String(rec.medal || 'NONE').toUpperCase();
-  if (medal === 'NONE') throw new Error('This run did not clear the song');
-  const earned = REWARD_LADDER.indexOf(rewardTierForAccuracy(Number(rec.accuracy) || 0));
-  const allowed = medal === 'PLATINUM' ? rank <= earned : rank === earned;
-  if (!allowed) throw new Error(`This run did not earn a ${packType} reward`);
-
-  const { error: insErr } = await svc.from('gameplay_reward_payouts').insert({
-    user_id: userId, song_id: rec.song_id, tier: packType, record_id: String(rec.id),
-  });
-  if (insErr) {
-    if (insErr.code === '23505') throw new Error(`The ${packType} reward for this song was already claimed`);
-    throw new Error('Could not reserve reward: ' + insErr.message);
-  }
-  return { songId: rec.song_id, recordId: String(rec.id) };
-}
-
-/** Undo a reservation when minting fails, so the tier can be claimed again. */
-async function releaseVerifiedGameplayReward(svc: any, userId: string, songId: string, packType: string) {
-  await svc.from('gameplay_reward_payouts').delete()
-    .eq('user_id', userId).eq('song_id', songId).eq('tier', packType);
-}
-
-/** Flag the run record as rewarded, keeping the highest tier paid from it. */
-async function markGameplayRecordRewarded(svc: any, recordId: string, packType: string) {
+async function mintReceipt(svc: any, spec: any, today: number): Promise<any> {
+  const reserved = await beginFulfillment(svc, spec);
+  if (reserved.status === 'completed') return reserved.result;
+  const op: Fulfillment & { result?: any } = { key: reserved.key, lease: reserved.lease };
   try {
-    const { data: rec } = await svc.from('gameplay_records')
-      .select('reward_tier').eq('id', recordId).maybeSingle();
-    const DB_RANK = ['none', ...REWARD_LADDER.map((t) => REWARD_DB_TIER[t])];
-    const next = REWARD_DB_TIER[packType];
-    const keep = DB_RANK.indexOf(rec?.reward_tier || 'none') >= DB_RANK.indexOf(next) ? rec?.reward_tier : next;
-    await svc.from('gameplay_records').update({ pack_rewarded: true, reward_tier: keep }).eq('id', recordId);
-  } catch (e) {
-    console.warn('[purchasePack] could not mark run record rewarded:', e);
+    const category = reserved.category;
+    const size = reserved.size;
+    const noCards = (spec.kind === 'stripe' && ['token_bundle', 'claw_pull'].includes(category))
+      || (spec.kind === 'claw' && !reserved.details.won);
+    if (noCards) return await completeFulfillment(svc, op, []);
+    const count = PACK_TIER_COUNTS[category]?.[size];
+    if (!count) throw new Error('Invalid fulfillment pack');
+    const { data: profile, error } = await svc.from('profiles').select('*').eq('id', spec.owner).single();
+    if (error || !profile) throw new Error('Profile not found');
+    const { count: collSize } = await svc.from('vault_collections').select('*', { count: 'exact', head: true }).eq('owner_id', spec.owner);
+    const now = new Date();
+    const ctx: ModifierContext = {
+      streak: profile.streak_count || 0, collectionSize: collSize || 0, totalPulls: profile.total_pulls || 0,
+      pullsSinceRarePlus: profile.pulls_since_rare_plus || 0, isFirstPack: !profile.total_pulls,
+      currentHour: now.getUTCHours(), currentMinute: now.getUTCMinutes(), currentDayOfWeek: now.getUTCDay(), currentVaultDay: today,
+    };
+    await generateCards(svc, spec.owner, category, count, today, ctx, op);
+    return op.result;
+  } catch (err) {
+    await releaseFulfillment(svc, op);
+    throw err;
   }
+}
+
+function canonicalSongId(raw: string): string {
+  const match = /^(card|day)-(\d{1,3})$/i.exec(raw.trim());
+  return match && Number(match[2]) >= 1 && Number(match[2]) <= 365
+    ? `day-${match[2].padStart(3, '0')}` : raw.trim();
+}
+
+async function settleStripe(svc: any, session: any, caller: string | null, today: number) {
+  const plan = checkoutPlan(session, caller, STRIPE_PACK_CONFIG);
+  // Honor completed orders written by the previous function, but never expose another owner's cards.
+  const { data: prior, error } = await svc.from('stripe_orders').select('*').eq('stripe_session_id', session.id).maybeSingle();
+  if (error) throw new Error('Could not read checkout receipt');
+  if (prior && prior.user_id !== plan.owner) throw new Error('Checkout receipt owner mismatch');
+  if (prior?.status === 'completed') {
+    if (plan.category === 'claw_pull') {
+      const { data, error: balanceError } = await svc.from('claw_credits').select('credits').eq('owner_id', plan.owner).maybeSingle();
+      if (balanceError) throw new Error(balanceError.message);
+      return { success: true, isClawPull: true, credits: data?.credits || 0, cards: [], alreadyCredited: true };
+    }
+    return { success: true, cards: prior.cards_minted || [], alreadyMinted: true,
+      ...(plan.category === 'token_bundle' ? { isTokenBundle: true, tokenAmount: plan.tokens, alreadyCredited: true } : {}) };
+  }
+  return mintReceipt(svc, { key: `stripe:${session.id}`, owner: plan.owner, kind: 'stripe',
+    category: plan.category, size: plan.size, details: plan.details }, today);
 }
 
 serve(async (req) => {
@@ -852,6 +823,17 @@ serve(async (req) => {
     } catch {}
 
     switch (action) {
+
+      // Operator-approved historical losses only. Replaying the approval cannot pay twice.
+      case 'restoreApprovedReward': {
+        if (!isServiceRole) assertAdmin(user, payload);
+        const { data: approval, error } = await svc.from('reward_restitution_approvals')
+          .select('id,user_id,tier').eq('id', payload?.approvalId).single();
+        if (error || !approval) throw new Error('Restitution approval not found');
+        const result = await mintReceipt(svc, { key: `restore:${approval.id}`, owner: approval.user_id,
+          kind: 'restitution_reward', category: approval.tier, details: { approvalId: approval.id } }, today);
+        return new Response(JSON.stringify(result), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
 
       // ═══════════════════════════════════════════════════════════
       // BURN CARD (V2: echo decay, anti-grind, bonus yield, telemetry)
@@ -1071,8 +1053,24 @@ serve(async (req) => {
       // PURCHASE PACK (V2: updated costs, limits, free pack = 1 card)
       // ═══════════════════════════════════════════════════════════
       case 'purchasePack': {
-        const { packType, size, isGameplayReward, rewardRecordId } = payload;
-
+        const { packType, size, isGameplayReward, rewardRecordId, reward } = payload;
+        if (isGameplayReward) {
+          if ((size || 'single') !== 'single') throw new Error('Reward packs must be single');
+          let key: string;
+          let kind: string;
+          let details: any;
+          if (rewardRecordId) {
+            const { data: rec, error } = await svc.from('gameplay_records').select('song_id,user_id').eq('id', rewardRecordId).maybeSingle();
+            if (error || rec?.user_id !== user.id) throw new Error('Run record not found');
+            key = `run:${user.id}:${canonicalSongId(rec.song_id)}:${packType}`;
+            kind = 'run_reward'; details = { recordId: String(rewardRecordId) };
+          } else if (reward?.type === 'campaign') {
+            key = `campaign:${user.id}:${reward.month}:${reward.milestone}`;
+            kind = 'campaign_reward'; details = { month: reward.month, milestone: reward.milestone };
+          } else throw new Error('A verified run or campaign milestone is required; reload and retry');
+          const result = await mintReceipt(svc, { key, owner: user.id, kind, category: packType, details }, today);
+          return new Response(JSON.stringify(result), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        }
         const tierMap = PACK_TIER_COUNTS[packType] || { single: 1 };
         let count = tierMap[size || 'single'] || tierMap['single'] || 1;
         let cost = 0;
@@ -1095,23 +1093,14 @@ serve(async (req) => {
         // Every pack must be paid for, earned, or free-by-design. Previously only spark
         // packs were priced server-side, so any cash pack could be requested for free
         // and any sessionId/txHash string was accepted without verification.
-        const GAMEPLAY_REWARD_PACKS = ['free', 'taste', 'light', 'dark', 'special_picks', 'alpha', 'prophecy'];
         const requestedSize = size || 'single';
         let cryptoPaymentKey: string | null = null;
 
         // Verified gameplay reward: backed by a run saved through the token-checked
         // submit_score RPC. Paid once per (player, song, tier) via the payouts ledger,
         // and exempt from the daily pack caps below.
-        let verifiedReward: { songId: string; recordId: string } | null = null;
 
-        if (isGameplayReward) {
-          if (!GAMEPLAY_REWARD_PACKS.includes(packType) || requestedSize !== 'single') {
-            throw new Error(`"${packType}" (${requestedSize}) cannot be claimed as a gameplay reward`);
-          }
-          if (rewardRecordId) {
-            verifiedReward = await reserveVerifiedGameplayReward(svc, user.id, String(rewardRecordId), packType);
-          }
-        } else if (packType === 'free' || isTokenPack || cost > 0) {
+        if (packType === 'free' || isTokenPack || cost > 0) {
           // free: once-per-day limit enforced below · spark packs: charged atomically below
         } else if (payload.sessionId) {
           // Stripe purchase: fulfilment happens in verifyStripeSession / the webhook, which
@@ -1193,7 +1182,7 @@ serve(async (req) => {
         const stdLimit = adminConfig?.dailyStandardLimit || RC1_DAILY_STANDARD_LIMIT;
         const preLimit = adminConfig?.dailyPremiumLimit  || RC1_DAILY_PREMIUM_LIMIT;
 
-        if (!cryptoPaymentKey && !verifiedReward) {
+        if (!cryptoPaymentKey) {
           if (isPremium) {
             if (dailyPremium >= preLimit) {
               // Refund tokens if already charged
@@ -1233,7 +1222,6 @@ serve(async (req) => {
         } catch (genErr) {
           // Don't let a mint failure swallow the player's payment.
           if (cryptoPaymentKey) await releaseCryptoPayment(svc, cryptoPaymentKey);
-          if (verifiedReward) await releaseVerifiedGameplayReward(svc, user.id, verifiedReward.songId, packType);
           if (cost > 0 && !isTokenPack) {
             await svc.rpc('increment_tokens', { user_uuid: user.id, amount: cost });
           }
@@ -1280,20 +1268,17 @@ serve(async (req) => {
           }).eq('stripe_session_id', cryptoPaymentKey);
         }
 
-        if (verifiedReward) {
-          await markGameplayRecordRewarded(svc, verifiedReward.recordId, packType);
-        }
 
         await logTelemetry(svc, 'pack_purchase', user.id, {
           packType, size, count, cost, rarities: generatedCards.map((c: any) => c.rarity),
-          verifiedReward: !!verifiedReward,
+          verifiedReward: false,
         });
 
         const { data: refreshedProfile } = await svc.from('profiles').select('tokens').eq('id', user.id).single();
 
         return new Response(JSON.stringify({
           success: true,
-          verifiedReward: !!verifiedReward,
+          verifiedReward: false,
           cards: generatedCards,
           tokenCost: cost,
           remainingTokens: refreshedProfile?.tokens ?? ((profile?.tokens || 0) - cost)
@@ -2300,81 +2285,23 @@ serve(async (req) => {
       }
 
       case 'verifyClawPullCheckout': {
-        const { sessionId } = payload || {};
-        if (!sessionId) throw new Error('Missing sessionId');
-        const stripe = getStripeClient();
-        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        const session = await getStripeClient().checkout.sessions.retrieve(payload.sessionId);
         if (session.metadata?.kind !== 'claw_pull') throw new Error('Not a claw checkout');
-        const credits = await fulfilClawCheckout(svc, session, user.id);
-        return new Response(JSON.stringify({ success: true, credits }),
-          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        const result = await settleStripe(svc, session, user.id, today);
+        return new Response(JSON.stringify(result), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
       }
 
       case 'clawPull': {
-        // The prize is rolled here; any pack the client names is ignored.
-        const { packType, size, count } = rollClawPrize();
-        const prize = { packType, size, cardCount: count };
-
-        const { data: left, error: spendErr } = await svc.rpc('spend_claw_credit', { p_uid: user.id });
-        if (spendErr) throw new Error(`Claw error: ${spendErr.message}`);
-        if (left === null || left < 0) {
-          return new Response(JSON.stringify({ success: false, error: 'NO_CLAW_CREDITS' }),
-            { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
-        }
-
-        // Optional per-pack odds that the grip holds (claw_prize_odds, default 1 = always).
-        const { data: oddsRow } = await svc.from('claw_prize_odds')
+        const requestId = String(payload?.requestId || '');
+        if (!/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error('Missing claw request ID; reload and retry');
+        const { packType, size } = rollClawPrize();
+        const { data: oddsRow, error } = await svc.from('claw_prize_odds')
           .select('hold_chance').eq('category', packType).eq('size', size).maybeSingle();
-        const holdChance = oddsRow ? Number(oddsRow.hold_chance) : 1;
-        const won = Math.random() < holdChance;
-
-        if (!won) {
-          await svc.from('claw_pulls').insert({ owner_id: user.id, category: packType, size, won: false, card_count: 0 });
-          await logTelemetry(svc, 'claw_pull', user.id, { packType, size, won: false });
-          return new Response(JSON.stringify({ success: true, won: false, credits: left, prize }),
-            { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
-        }
-
-        const { data: profile } = await svc.from('profiles').select('*').eq('id', user.id).maybeSingle();
-        const { count: collSize } = await svc.from('vault_collections')
-          .select('*', { count: 'exact', head: true }).eq('owner_id', user.id);
-        const now = new Date();
-        const ctx: ModifierContext = {
-          streak: profile?.streak_count || 0, collectionSize: collSize || 0,
-          totalPulls: profile?.total_pulls || 0,
-          pullsSinceRarePlus: profile?.pulls_since_rare_plus || 0,
-          isFirstPack: (profile?.total_pulls || 0) === 0,
-          currentHour: now.getUTCHours(), currentMinute: now.getUTCMinutes(),
-          currentDayOfWeek: now.getUTCDay(), currentVaultDay: today,
-        };
-
-        let generatedCards: any[];
-        try {
-          generatedCards = await generateCards(svc, user.id, packType, count, today, ctx);
-        } catch (genErr) {
-          await svc.rpc('refund_claw_credit', { p_uid: user.id });
-          throw genErr;
-        }
-
-        let newPullsSinceRarePlus = profile?.pulls_since_rare_plus || 0;
-        let newPityCounter = profile?.pity_counter || 0;
-        for (const card of generatedCards) {
-          if (['rare', 'legendary', 'mythic'].includes(card.rarity)) { newPullsSinceRarePlus = 0; newPityCounter = 0; }
-          else { newPullsSinceRarePlus++; newPityCounter++; }
-        }
-        await svc.from('profiles').update({
-          total_pulls: (profile?.total_pulls || 0) + count,
-          pulls_since_rare_plus: newPullsSinceRarePlus,
-          pity_counter: newPityCounter,
-        }).eq('id', user.id);
-
-        await svc.from('claw_pulls').insert({ owner_id: user.id, category: packType, size, won: true, card_count: generatedCards.length });
-        await logTelemetry(svc, 'claw_pull', user.id, {
-          packType, size, won: true, count, rarities: generatedCards.map((c: any) => c.rarity),
-        });
-
-        return new Response(JSON.stringify({ success: true, won: true, cards: generatedCards, credits: left, prize }),
-          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        if (error) throw new Error('Could not read claw odds');
+        const won = Math.random() < (oddsRow ? Number(oddsRow.hold_chance) : 1);
+        const result = await mintReceipt(svc, { key: `claw:${user.id}:${requestId}`, owner: user.id,
+          kind: 'claw', category: packType, size, details: { won } }, today);
+        return new Response(JSON.stringify(result), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
       }
 
       case 'createStripeCheckoutSession': {
@@ -2447,182 +2374,12 @@ serve(async (req) => {
       // VERIFY STRIPE SESSION & MINT CARDS (Instant Return Fallback)
       // ═══════════════════════════════════════════════════════════
       case 'verifyStripeSession': {
-        const { sessionId } = payload;
+        const { sessionId } = payload || {};
         if (!sessionId) throw new Error('Missing sessionId');
-
-        // Check if already fulfilled by webhook or previous call
-        const { data: existingOrder } = await svc
-          .from('stripe_orders')
-          .select('*')
-          .eq('stripe_session_id', sessionId)
-          .single();
-
-        if (existingOrder && existingOrder.status === 'completed') {
-          if (existingOrder.pack_category === 'token_bundle') {
-            return new Response(JSON.stringify({
-              success: true,
-              isTokenBundle: true,
-              tokenAmount: (existingOrder as any).amount_cents,
-              alreadyCredited: true,
-            }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
-          }
-          if (Array.isArray(existingOrder.cards_minted) && existingOrder.cards_minted.length > 0) {
-            return new Response(JSON.stringify({
-              success: true,
-              cards: existingOrder.cards_minted,
-              alreadyMinted: true,
-            }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
-          }
-        }
-
-        // Verify with Stripe API
-        const stripe = getStripeClient();
-        const session = await stripe.checkout.sessions.retrieve(sessionId);
-
-        // A claw checkout buys a pull, never a pack: don't fall through to minting.
-        if (session.metadata?.kind === 'claw_pull') {
-          const credits = await fulfilClawCheckout(svc, session, user?.id || null);
-          return new Response(JSON.stringify({ success: true, isClawPull: true, credits, cards: [] }),
-            { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
-        }
-
-        if (session.payment_status !== 'paid') {
-          throw new Error(`Payment not completed. Status: ${session.payment_status}`);
-        }
-
-        const targetUserId = user?.id || session.client_reference_id || session.metadata?.userId || payload.userId;
-        if (!targetUserId) {
-          throw new Error('No user ID associated with this Stripe checkout session');
-        }
-
-        const packCategory = session.metadata?.packCategory || payload.category || 'taste';
-        const packSize = session.metadata?.packSize || payload.size || 'single';
-        const pack = STRIPE_PACK_CONFIG[packCategory];
-        const tier = pack?.tiers[packSize] || { cardCount: 1 };
-
-        // ── HANDLE TOKEN BUNDLE FULFILLMENT ─────────────────────
-        if (packCategory === 'token_bundle') {
-          const tokenAmount = Number(session.metadata?.tokenAmount) || (tier as any).tokenAmount || 200;
-          const { data: profile } = await svc
-            .from('profiles')
-            .select('tokens, tokens_earned_total')
-            .eq('id', targetUserId)
-            .maybeSingle();
-
-          const currentTokens = profile?.tokens || 0;
-          const currentTotal = profile?.tokens_earned_total || 0;
-          const newTokens = currentTokens + tokenAmount;
-
-          await svc.from('profiles').upsert({
-            id: targetUserId,
-            tokens: newTokens,
-            tokens_earned_total: currentTotal + tokenAmount,
-            last_purchase_day: today,
-          }).eq('id', targetUserId);
-
-          await svc.from('stripe_orders').upsert({
-            user_id: targetUserId,
-            stripe_session_id: session.id,
-            pack_category: packCategory,
-            pack_size: packSize,
-            amount_cents: session.amount_total || 0,
-            currency: session.currency || 'usd',
-            status: 'completed',
-            cards_minted: [],
-            completed_at: new Date().toISOString(),
-          }, { onConflict: 'stripe_session_id' });
-
-          await logTelemetry(svc, 'stripe_token_bundle_purchase', targetUserId, {
-            sessionId,
-            tokenAmount,
-            packSize,
-            amountCents: session.amount_total,
-          });
-
-          return new Response(JSON.stringify({
-            success: true,
-            isTokenBundle: true,
-            tokenAmount,
-            newBalance: newTokens,
-          }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
-        }
-
-        const cardCount = tier.cardCount;
-
-        const { count: collSize } = await svc
-          .from('vault_collections')
-          .select('*', { count: 'exact', head: true })
-          .eq('owner_id', targetUserId);
-
-        const { data: profile } = await svc
-          .from('profiles')
-          .select('*')
-          .eq('id', targetUserId)
-          .maybeSingle();
-
-        const now = new Date();
-        const ctx: ModifierContext = {
-          streak: profile?.streak_count || 0,
-          collectionSize: collSize || 0,
-          totalPulls: profile?.total_pulls || 0,
-          pullsSinceRarePlus: profile?.pulls_since_rare_plus || 0,
-          isFirstPack: (profile?.total_pulls || 0) === 0,
-          currentHour: now.getUTCHours(),
-          currentMinute: now.getUTCMinutes(),
-          currentDayOfWeek: now.getUTCDay(),
-          currentVaultDay: today,
-        };
-
-        const generatedCards = await generateCards(svc, targetUserId, packCategory, cardCount, today, ctx);
-
-        let newTotalPulls = (profile?.total_pulls || 0) + cardCount;
-        let newPullsSinceRarePlus = profile?.pulls_since_rare_plus || 0;
-        let newPityCounter = profile?.pity_counter || 0;
-
-        for (const card of generatedCards) {
-          if (['rare', 'legendary', 'mythic'].includes(card.rarity)) {
-            newPullsSinceRarePlus = 0;
-            newPityCounter = 0;
-          } else {
-            newPullsSinceRarePlus++;
-            newPityCounter++;
-          }
-        }
-
-        await svc.from('profiles').upsert({
-          id: targetUserId,
-          total_pulls: newTotalPulls,
-          pulls_since_rare_plus: newPullsSinceRarePlus,
-          pity_counter: newPityCounter,
-          last_purchase_day: today,
-        }).eq('id', targetUserId);
-
-        // Record completed order in stripe_orders
-        await svc.from('stripe_orders').upsert({
-          user_id: targetUserId,
-          stripe_session_id: session.id,
-          pack_category: packCategory,
-          pack_size: packSize,
-          amount_cents: session.amount_total || 0,
-          currency: session.currency || 'usd',
-          status: 'completed',
-          cards_minted: generatedCards,
-          completed_at: new Date().toISOString(),
-        }, { onConflict: 'stripe_session_id' });
-
-        await logTelemetry(svc, 'stripe_pack_purchase', targetUserId, {
-          sessionId,
-          packCategory,
-          packSize,
-          count: cardCount,
-          amountCents: session.amount_total,
-          rarities: generatedCards.map((c: any) => c.rarity),
-        });
-
-        return new Response(JSON.stringify({
-          success: true,
-          cards: generatedCards,
-        }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        if (!isServiceRole && !user) throw new Error('Not authenticated');
+        const session = await getStripeClient().checkout.sessions.retrieve(sessionId);
+        const result = await settleStripe(svc, session, user?.id || null, today);
+        return new Response(JSON.stringify(result), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
       }
 
       default:
