@@ -9,6 +9,7 @@
 import audiusMap from '@/data/audius_map.json';
 import beyondCovers from '@/data/beyond365_covers.json';
 import type { GlobalTrack } from '@/store/useGlobalPlayer';
+import type { GameSong } from '@/game/api';
 
 const API = 'https://api.audius.co/v1';
 const APP = 'PIM';
@@ -197,4 +198,56 @@ export function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// ── Playing Beyond 365 tracks in PIM ────────────────────────────────────
+// A Beyond 365 track's game id is "audius-<slug>", from its permalink
+// (/th3Scr1b3/success -> audius-success). Scores and leaderboards key on it,
+// and supabase song_max_scores lists each one so runs can be submitted.
+
+const SONG_PREFIX = 'audius-';
+
+export function isAudiusSongId(id: string | null | undefined): boolean {
+  return Boolean(id && id.startsWith(SONG_PREFIX));
+}
+
+export function audiusSongId(permalink: string): string {
+  return SONG_PREFIX + (permalink.split('/').pop() ?? '').toLowerCase();
+}
+
+/** The Beyond 365 track a game id names, if it names one. */
+export function beyondEntryForSongId(id: string): MapEntry | null {
+  if (!isAudiusSongId(id)) return null;
+  return BEYOND_365.find((b) => audiusSongId(b.permalink) === id.toLowerCase()) ?? null;
+}
+
+/**
+ * A playable song for a Beyond 365 game id. It has no baked notes, so
+ * gameplay forges a Chart Master chart from the Audius stream on load.
+ */
+export async function getAudiusGameSong(id: string): Promise<GameSong | null> {
+  const entry = beyondEntryForSongId(id);
+  if (!entry) return null;
+  const tracks = await fetchAudiusTracks();
+  const live = tracks.find((t) => t.permalink.toLowerCase() === entry.permalink.toLowerCase());
+  if (!live) return null;
+  return {
+    id: audiusSongId(entry.permalink),
+    day: 0,
+    date: '',
+    title: live.title,
+    artist: AUDIUS_HANDLE,
+    bpm: 120,
+    duration: live.duration || entry.duration,
+    mood: 'dark',
+    valence: 0.5,
+    moodTags: [],
+    description: 'Beyond 365, streamed from Audius',
+    audioUrl: streamUrl(live.id),
+    coverArt: getBeyondCover(live.permalink) ?? live.artwork,
+    notes: [],
+    key: '',
+    genre: [],
+    difficultyLevel: 5,
+  };
 }

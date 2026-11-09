@@ -9,11 +9,13 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'wouter';
-import { Disc3, ExternalLink, ListMusic, Pause, Play, Radio, Sparkles } from 'lucide-react';
+import { Link, useLocation } from 'wouter';
+import { Disc3, ExternalLink, Gamepad2, ListMusic, Pause, Play, Radio, Sparkles, Trophy, X } from 'lucide-react';
+import SongLeaderboard from '../components/SongLeaderboard';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import {
   AUDIUS_HANDLE,
+  audiusSongId,
   BEYOND_365,
   fetchAlbumTracks,
   fetchAudiusAlbums,
@@ -28,6 +30,43 @@ import {
 
 const PROFILE_URL = `https://audius.co/${AUDIUS_HANDLE}`;
 const ACCENT = '#CC0FE0';
+
+/** The PIM game id for an Audius track: its 365 day, or its Beyond 365 id. */
+function gameIdFor(t: AudiusTrack): string {
+  return t.day != null ? `card-${t.day}` : audiusSongId(t.permalink);
+}
+
+function useStartGame() {
+  const [, setLocation] = useLocation();
+  return (t: AudiusTrack) => {
+    const id = gameIdFor(t);
+    try {
+      sessionStorage.setItem(`game_origin_${id}`, 'audius');
+    } catch {
+      /* private mode: the game falls back to its default exit */
+    }
+    useGlobalPlayer.getState().stop();
+    setLocation(`/play/${id}`);
+  };
+}
+
+function GameButton({ track, label }: { track: AudiusTrack; label?: string }) {
+  const start = useStartGame();
+  return (
+    <button
+      type="button"
+      onClick={() => start(track)}
+      aria-label={`Play ${track.title} in PIM`}
+      title="Play in PIM"
+      className={label ? 'btn-3d' : 'text-white/50 hover:text-white cursor-pointer'}
+      data-tone={label ? 'cyan' : undefined}
+      data-size={label ? 'sm' : undefined}
+    >
+      <Gamepad2 size={label ? 13 : 16} />
+      {label && <span>{label}</span>}
+    </button>
+  );
+}
 
 function usePlayerFor(trackId: string | undefined) {
   const currentId = useGlobalPlayer((s) => s.currentTrack?.id);
@@ -183,6 +222,7 @@ function AlbumTrackList({ album }: { album: AudiusAlbum }) {
                 </div>
               </div>
               <span className="font-mono text-[11px] text-white/40">{formatDuration(t.duration)}</span>
+              <GameButton track={t} />
               <a
                 href={t.url}
                 target="_blank"
@@ -299,11 +339,12 @@ function Placeholder({ title }: { title: string }) {
   );
 }
 
-function BeyondCard({ track, playlist, index, cover }: {
+function BeyondCard({ track, playlist, index, cover, onRanks }: {
   track: AudiusTrack;
   playlist: AudiusTrack[];
   index: number;
   cover: (t: AudiusTrack) => string | null;
+  onRanks: (t: AudiusTrack) => void;
 }) {
   const { isCurrent } = usePlayerFor(track.id);
   const img = cover(track);
@@ -326,6 +367,59 @@ function BeyondCard({ track, playlist, index, cover }: {
             <ExternalLink size={12} />
           </a>
         </div>
+        <div className="flex items-center gap-2 mt-2">
+          <GameButton track={track} label="Play PIM" />
+          <button
+            type="button"
+            onClick={() => onRanks(track)}
+            aria-label={`${track.title} leaderboard`}
+            title="Leaderboard"
+            className="btn-3d"
+            data-tone="quiet"
+            data-size="sm"
+          >
+            <Trophy size={13} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RanksModal({ track, onClose }: { track: AudiusTrack; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${track.title} leaderboard`}
+    >
+      <div
+        className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl border border-white/15 bg-[#0a0805] p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="min-w-0">
+            <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: ACCENT }}>Beyond 365</div>
+            <div className="font-black uppercase text-white text-lg tracking-tight truncate">{track.title}</div>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-white/60 hover:text-white cursor-pointer">
+            <X size={20} />
+          </button>
+        </div>
+        <SongLeaderboard songId={audiusSongId(track.permalink)} defaultLimit={10} title="ALL-TIME RANKINGS" />
+        <div className="mt-4 flex justify-end">
+          <GameButton track={track} label="Play PIM" />
+        </div>
       </div>
     </div>
   );
@@ -333,6 +427,7 @@ function BeyondCard({ track, playlist, index, cover }: {
 
 function BeyondSection({ tracks, failed }: { tracks: AudiusTrack[] | null; failed: boolean }) {
   const setPlaylist = useGlobalPlayer((s) => s.setPlaylist);
+  const [ranksFor, setRanksFor] = useState<AudiusTrack | null>(null);
 
   // Order follows the generated map; live data adds ids, plays and artwork.
   const beyond = useMemo(() => {
@@ -348,6 +443,7 @@ function BeyondSection({ tracks, failed }: { tracks: AudiusTrack[] | null; faile
 
   return (
     <section className="mb-12">
+      {ranksFor && <RanksModal track={ranksFor} onClose={() => setRanksFor(null)} />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <SectionTitle icon={Radio} title="Beyond 365" sub="Songs on Audius that live outside the 365 days" />
         {beyond && beyond.length > 0 && (
@@ -367,7 +463,7 @@ function BeyondSection({ tracks, failed }: { tracks: AudiusTrack[] | null; faile
       {beyond ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {beyond.map((t, i) => (
-            <BeyondCard key={t.id} track={t} playlist={beyond} index={i} cover={cover} />
+            <BeyondCard key={t.id} track={t} playlist={beyond} index={i} cover={cover} onRanks={setRanksFor} />
           ))}
         </div>
       ) : failed ? (

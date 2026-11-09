@@ -7,6 +7,7 @@ import staticSongCatalog from '../data/song_catalog.json';
 import { getHighScore as progGetHighScore, saveHighScore as progSaveHighScore } from './progress';
 import { resolveMediaUrls } from '../utils/resolveMediaUrls';
 import { resolveChartVariant } from '../lib/chartVariant';
+import { getAudiusGameSong, isAudiusSongId } from '@/lib/audius';
 
 export interface LyricsWord {
   word: string;
@@ -274,6 +275,16 @@ export async function loadCatalog(): Promise<GameSong[]> {
 }
 
 export async function getSongById(id: string): Promise<GameSong | null> {
+  // Beyond 365 tracks live on Audius, not in the catalog. Check first: their
+  // ids can hold digits that the day lookup below would mistake for a day.
+  if (isAudiusSongId(id)) {
+    try {
+      return await getAudiusGameSong(id);
+    } catch (err) {
+      console.error(`Failed to load Audius song ${id}:`, err);
+      return null;
+    }
+  }
   const catalog = await loadCatalog();
   let basicSong = catalog.find((s) => s.id === id || (s as any).uuid === id);
 
