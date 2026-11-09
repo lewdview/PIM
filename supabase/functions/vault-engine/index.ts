@@ -19,6 +19,8 @@ const ALLOWED_ORIGINS = [
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
   if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Vercel preview deploys of this repo (pim-git-<branch>-lewdviews-projects.vercel.app)
+  if (/^https:\/\/pim(-obj2)?-git-[a-z0-9-]+-lewdviews-projects\.vercel\.app$/.test(origin)) return true;
   // Local development
   if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
   if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
@@ -750,6 +752,64 @@ async function markGameplayRecordRewarded(svc: any, recordId: string, packType: 
   }
 }
 
+// ── Audius weekly contest ─────────────────────────────────────────────────────────
+const AUDIUS_API = 'https://api.audius.co/v1';
+const AUDIUS_OWN_HANDLE = 'th3scr1b3';
+/** Songs per week, and the length range a song must fit to be chartable (skips DJ mixes). */
+const AUDIUS_CONTEST_SIZE = 5;
+const AUDIUS_CONTEST_MIN_SEC = 60;
+const AUDIUS_CONTEST_MAX_SEC = 420;
+
+/** Monday 00:00 UTC of the current week, as YYYY-MM-DD. Matches public.audius_week_start(). */
+function audiusWeekStart(now = new Date()): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const back = (d.getUTCDay() + 6) % 7; // Monday = 0
+  d.setUTCDate(d.getUTCDate() - back);
+  return d.toISOString().slice(0, 10);
+}
+
+async function ensureAudiusWeeklyContest(svc: any) {
+  const week = audiusWeekStart();
+  const { data: existing } = await svc.from('audius_weekly_contests')
+    .select('week_start, tracks').eq('week_start', week).maybeSingle();
+  if (existing) return existing;
+
+  const res = await fetch(`${AUDIUS_API}/tracks/trending?app_name=PIM&time=week&limit=50`);
+  if (!res.ok) throw new Error(`Audius trending ${res.status}`);
+  const { data } = await res.json();
+  const picks: any[] = [];
+  const artists = new Set<string>();
+  for (const t of Array.isArray(data) ? data : []) {
+    const handle = String(t?.user?.handle || '');
+    const duration = Number(t?.duration) || 0;
+    if (!/^[A-Za-z0-9]{1,32}$/.test(String(t?.id || ''))) continue;
+    if (t?.is_streamable === false || t?.is_delete || t?.is_unlisted) continue;
+    if (handle.toLowerCase() === AUDIUS_OWN_HANDLE) continue;
+    if (duration < AUDIUS_CONTEST_MIN_SEC || duration > AUDIUS_CONTEST_MAX_SEC) continue;
+    // One song per artist, so five different artists get the spotlight.
+    if (artists.has(handle.toLowerCase())) continue;
+    artists.add(handle.toLowerCase());
+    picks.push({
+      id: String(t.id),
+      title: String(t.title || '').slice(0, 200),
+      artist: String(t?.user?.name || handle).slice(0, 100),
+      handle,
+      permalink: String(t.permalink || ''),
+      duration,
+      artwork: t?.artwork?.['480x480'] || t?.artwork?.['150x150'] || null,
+      genre: t?.genre || null,
+    });
+    if (picks.length === AUDIUS_CONTEST_SIZE) break;
+  }
+  if (picks.length === 0) throw new Error('No chartable trending tracks on Audius this week');
+
+  const { data: locked, error } = await svc.rpc('create_audius_weekly_contest', {
+    p_week: week, p_tracks: picks,
+  });
+  if (error) throw new Error('Could not lock this week\'s contest: ' + error.message);
+  return locked;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) });
 
@@ -808,6 +868,15 @@ serve(async (req) => {
         }
       }
       return new Response(JSON.stringify({ success: true, count: events?.length || 0 }),
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+    }
+
+    // Audius weekly contest: return this week's 5 songs, locking them on the first
+    // call of the week. The pick is fetched here, server-side, so no client can
+    // choose the songs. No sign-in needed: guests see the contest too.
+    if (action === 'getAudiusWeeklyContest') {
+      const contest = await ensureAudiusWeeklyContest(svc);
+      return new Response(JSON.stringify({ success: true, contest }),
         { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
     }
 

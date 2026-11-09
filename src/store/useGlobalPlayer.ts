@@ -18,6 +18,10 @@ export interface GlobalTrack {
   isDailyClaim?: boolean;
   /** Duration limit in seconds (0 = full song) */
   maxDuration?: number;
+  /** 'audius' tracks stream straight from Audius; day is a unique negative key. */
+  source?: 'audius';
+  /** Where the track lives on its source, e.g. its audius.co page. */
+  externalUrl?: string;
 }
 
 export type PlayerLoopMode = 'all' | 'one' | 'off';
@@ -206,7 +210,9 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
       }
 
       // Setup candidates for resilient playback
-      _candidateUrls = getCandidateAudioUrls(sanitizedTrack.audioUrl, sanitizedTrack.day);
+      _candidateUrls = sanitizedTrack.source === 'audius'
+        ? [sanitizedTrack.audioUrl]
+        : getCandidateAudioUrls(sanitizedTrack.audioUrl, sanitizedTrack.day);
       _candidateIdx = 0;
       const initialSrc = _candidateUrls[0] || sanitizedTrack.audioUrl;
 

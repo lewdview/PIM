@@ -38,6 +38,8 @@ const MEDAL_COLORS: Record<string, string> = {
 };
 
 export function getSongAliases(songId: string): string[] {
+  // Audius track ids are not days, even when their names hold digits.
+  if (songId?.startsWith('audius-') || songId?.startsWith('aud-')) return [songId];
   const aliases = new Set<string>();
   if (songId) aliases.add(songId);
 

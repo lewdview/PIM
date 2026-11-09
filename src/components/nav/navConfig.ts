@@ -8,7 +8,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Gamepad2, Play, Waypoints, Compass, CalendarDays, Trophy, GraduationCap,
   Home, Layers, Package, Gem, Bomb, BookOpen, Flame, Sparkles, Image,
-  BarChart3, ShoppingBag, Gift,
+  BarChart3, ShoppingBag, Gift, Disc3, Crown,
   User, SlidersHorizontal, Monitor, Bell, LifeBuoy, FileText, PenTool,
 } from 'lucide-react';
 
@@ -55,6 +55,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'chain', label: 'Word chain', to: '/chain', icon: Waypoints, desc: 'Hop between songs by the words they share', keywords: ['words', 'lyrics', 'poem', 'chain', 'radio', 'explore'] },
       { id: 'campaign', label: 'Campaign', to: '/campaign', icon: Compass, desc: 'Monthly chapters across the 365 roadmap', keywords: ['story', 'chapters', 'roadmap', 'progress'] },
       { id: 'timeline', label: '365 timeline', to: '/365', icon: CalendarDays, desc: 'Every daily release, day by day', keywords: ['archive', 'calendar', 'timeline', 'days'] },
+      { id: 'audius', label: 'Audius', to: '/audius', icon: Disc3, desc: 'Albums and Beyond 365, streamed from Audius', keywords: ['audius', 'albums', 'beyond 365', 'afterlife', 'that one girl', 'against a wall', 'stream', 'listen'] },
       { id: 'awards', label: 'Award play', to: '/songs', icon: Trophy, desc: 'Hand-picked songs and medal tiers', keywords: ['awards', 'curated', 'select', 'songs'] },
       { id: 'academy', label: 'Flight academy', to: '/tutorial', icon: GraduationCap, desc: 'Learn taps, holds and swipes', keywords: ['tutorial', 'learn', 'training', 'controls', 'mechanics'] },
     ],
@@ -88,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
     home: '/vault/leaderboard',
     items: [
       { id: 'leaderboard', label: 'Leaderboard', to: '/vault/leaderboard', icon: BarChart3, desc: 'Global accuracy and prestige ranks', keywords: ['rank', 'scores', 'top', 'high score', 'prestige'] },
+      { id: 'weekly-top5', label: 'Weekly top 5', to: '/audius', icon: Crown, desc: 'Chart 5 trending Audius songs, win claw pulls', keywords: ['contest', 'weekly', 'audius', 'trending', 'top 5', 'claw', 'prize'] },
       { id: 'shop', label: 'Shop', to: '/vault/earn', icon: ShoppingBag, desc: 'Token bundles, power-ups and cosmetics', keywords: ['earn', 'tokens', 'buy', 'store', 'bundles', 'market'] },
       { id: 'rewards', label: 'Daily rewards', to: '/vault/claim', icon: Gift, desc: 'Streak crates and token bonuses', keywords: ['claim', 'streak', 'redeem', 'crate', 'free'] },
     ],
@@ -132,7 +134,7 @@ export function sectionForPath(path: string): NavSectionId | null {
     prefixes.some((p) => path === p || path.startsWith(p + '/') || path.startsWith(p + '-'));
   if (starts(['/vault/leaderboard', '/leaderboard', '/vault/earn', '/earn', '/shop', '/store', '/vault/claim', '/claim'])) return 'compete';
   if (starts(['/profile', '/user', '/hub', '/options', '/vault/legal', '/legal', '/admin', '/pitch-deck'])) return 'you';
-  if (starts(['/arcade', '/pim', '/play', '/campaign', '/chapter', '/songs', '/song', '/listen', '/tutorial', '/365', '/day', '/daily', '/drop', '/today', '/results', '/chain'])) return 'play';
+  if (starts(['/arcade', '/pim', '/play', '/campaign', '/chapter', '/songs', '/song', '/listen', '/tutorial', '/365', '/audius', '/beyond-365', '/day', '/daily', '/drop', '/today', '/results', '/chain'])) return 'play';
   if (starts(['/vault', '/collection', '/reveal', '/vaultfinds', '/bombshells', '/forge', '/codex', '/next-vault', '/bonus-claw', '/hero'])) return 'collect';
   return null;
 }

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, X, Volume2, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Sparkles, Lock } from 'lucide-react';
+import { Play, Pause, X, Volume2, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Sparkles, Lock, ExternalLink } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
@@ -83,6 +83,7 @@ export default function GlobalPlayerBar() {
   const limit = currentTrack?.maxDuration || 0;
   const effectiveDuration = limit > 0 ? limit : duration;
   const isPreview = limit > 0;
+  const isAudius = currentTrack?.source === 'audius';
 
   const cycleLoopMode = () => {
     if (loopMode === 'all') setLoopMode('one');
@@ -205,7 +206,7 @@ export default function GlobalPlayerBar() {
                       boxShadow: isPlaying ? '0 0 8px #39ff14' : 'none',
                     }}
                   />
-                  DAY {currentTrack.day}
+                  {isAudius ? 'AUDIUS' : `DAY ${currentTrack.day}`}
                 </span>
                 <TimeDisplay effectiveDuration={effectiveDuration} />
                 {isPreview && (
@@ -340,8 +341,23 @@ export default function GlobalPlayerBar() {
               )}
             </div>
 
+            {/* Audius tracks: send listeners to the track's Audius page */}
+            {isAudius && currentTrack.externalUrl && (
+              <a
+                href={currentTrack.externalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-3d"
+                data-tone="quiet"
+                data-size="sm"
+              >
+                <ExternalLink size={13} style={{ color: '#cc0fe0' }} />
+                {!isMobile && <span>Audius</span>}
+              </a>
+            )}
+
             {/* Visualizer Deep Link */}
-            {!isMobile && (
+            {!isMobile && !isAudius && (
               <button
                 type="button"
                 onClick={() => {
@@ -357,7 +373,7 @@ export default function GlobalPlayerBar() {
             )}
 
             {/* Play PIM */}
-            {!isPreview && !isMobile && (
+            {!isPreview && !isMobile && !isAudius && (
               <button
                 type="button"
                 onClick={() => {

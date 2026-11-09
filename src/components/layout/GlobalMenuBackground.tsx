@@ -111,7 +111,7 @@ export function GlobalMenuBackground() {
       : null;
   const activeCoverUrl =
     currentTrack?.coverUrl || sessionCover || dailyCover || '/data/covers/default.jpg';
-  const songDay = currentTrack?.day || getLocalCurrentDay();
+  const songDay = currentTrack && currentTrack.day > 0 ? currentTrack.day : getLocalCurrentDay();
   const monthNum = getMonthNumFromDay(songDay);
   const activeChapter = CHAPTERS.find((c) => c.month === monthNum);
   const activeGlowColor = activeChapter?.dc || '#ff3800';
