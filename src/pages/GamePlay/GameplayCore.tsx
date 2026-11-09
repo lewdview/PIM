@@ -20,7 +20,7 @@ import { logAnalyticsEvent } from "../../services/telemetryService";
 import { gameSenseService } from "@/services/gameSenseService";
 import { supabase } from "@/services/supabaseClient";
 import { useAuthStore } from "@/store/useAuthStore";
-import { DELUXE_UNLOCK_ACCURACY, isDeluxeSongId, isDeluxeUnlocked, loadEarnedDeluxeDays } from "@/lib/deluxe";
+import { DELUXE_UNLOCK_ACCURACY, contestBaseSongId, hasEarnedSongDeluxe, isDeluxeSongId, isDeluxeUnlocked, loadEarnedDeluxeDays } from "@/lib/deluxe";
 import { purchasePack, requestRunToken, type OwnedCard } from "@/services/vaultService";
 import { TransmissionIcon } from "../../components/icons/CustomVectorIcons";
 import VideoExportModal from "@/components/ui/VideoExportModal";
@@ -8951,6 +8951,20 @@ export default function Game() {
             }
           }
         }
+      // Audius contest Deluxe: opens after a top-tier run of the song's standard chart
+      const contestBase = isDeluxeSongId(songId) ? contestBaseSongId(songId) : null;
+      if (!isTutorial && contestBase) {
+        await loadEarnedDeluxeDays(useAuthStore.getState().user?.id);
+        if (cancelled) return;
+        if (!hasEarnedSongDeluxe(contestBase)) {
+          setLockedSong(song);
+          setLockedReason("deluxe");
+          setLockedOrigin(originRoute);
+          phaseRef.current = "locked";
+          setPhase("locked");
+          return;
+        }
+      }
       songRef.current = song;
       stageStartsRef.current = getStageStarts(song);
 
@@ -9504,7 +9518,11 @@ export default function Game() {
         const headBytes = headLen ? parseInt(headLen, 10) : 0;
         const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024; // 10 MB
 
-        if (headBytes > LARGE_FILE_THRESHOLD) {
+        // Only uncompressed audio streams direct. Compressed streams from other
+        // hosts (Audius MP3s, often over 10 MB) go through the blob path, since
+        // playing them cross-origin through Web Audio left the game silent.
+        const isWav = /wav/i.test(response?.headers.get("content-type") || "") || /\.wav(\?|$)/i.test(targetAudioUrl);
+        if (headBytes > LARGE_FILE_THRESHOLD && isWav) {
           // Large file — skip blob approach; stream directly via audio.src instead
           console.log(`[GamePlay Init] Large file detected (${Math.round(headBytes / 1024 / 1024)}MB) — using direct audio streaming`);
           setBufferPct(100);
@@ -12541,7 +12559,9 @@ export default function Game() {
                 </h2>
                 <p className="font-mono text-[10px] text-white/50 mb-8 leading-relaxed uppercase tracking-widest">
                   {lockedReason === "deluxe"
-                    ? `Day ${lockedSong.day} · hit ${DELUXE_UNLOCK_ACCURACY}% on the standard chart or open a Deluxe pack`
+                    ? (lockedSong.day > 0
+                      ? `Day ${lockedSong.day} · hit ${DELUXE_UNLOCK_ACCURACY}% on the standard chart or open a Deluxe pack`
+                      : `Hit ${DELUXE_UNLOCK_ACCURACY}% on the standard chart to unlock Deluxe`)
                     : `Day ${lockedSong.day} · own the card to play this transmission`}
                 </p>
 
