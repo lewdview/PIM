@@ -101,6 +101,7 @@ const EarnPage = lazyWithRetry(() => import('./pages/EarnPage'));
 const UniverseHome = lazyWithRetry(() => import('./pages/UniverseHome'));
 const Archive365Page = lazyWithRetry(() => import('./pages/Archive365Page'));
 const AudiusPage = lazyWithRetry(() => import('./pages/AudiusPage'));
+const AudiusRevealPreview = lazyWithRetry(() => import('./pages/AudiusRevealPreview'));
 const WarpZonePage = lazyWithRetry(() => import('./pages/WarpZonePage'));
 const SecretLevel = lazyWithRetry(() => import('./pages/SecretLevel'));
 const AboutPage = lazyWithRetry(() => import('./pages/AboutPage'));
@@ -438,6 +439,7 @@ export default function App() {
                 <Route path="/slideshow" component={SlideshowPage} />
                 <Route path="/universe" component={UniverseHome} />
                 <Route path="/365" component={Archive365Page} />
+                <Route path="/audius/reveal" component={AudiusRevealPreview} />
                 <Route path="/audius" component={AudiusPage} />
                 <Route path="/beyond-365" component={AudiusPage} />
                 <Route path="/day/:day" component={TrackDetailPage} />

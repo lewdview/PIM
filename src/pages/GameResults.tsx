@@ -393,7 +393,7 @@ export default function Results() {
     setWeeklyCard({ status: 'claiming', deluxe: contestCard.kind === 'bombshell' });
     const res = await claimCardForRun(weekStart(), contestCard.trackId, contestCard.kind);
     if (res.ok) {
-      setWeeklyCard({ status: 'claimed', deluxe: contestCard.kind === 'bombshell' });
+      setWeeklyCard({ status: 'claimed', deluxe: contestCard.kind === 'bombshell', cardId: res.cardId, fresh: !res.alreadyOwned });
       loadVaultData(true).catch(() => undefined);
     } else {
       setWeeklyCard({ status: 'failed', deluxe: contestCard.kind === 'bombshell', message: res.message });
