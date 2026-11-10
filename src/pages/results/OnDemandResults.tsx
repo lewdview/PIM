@@ -7,6 +7,7 @@
 // One step timeline drives every reveal and every sound, so nothing plays that
 // the player can't see. Tap or press any key to skip to the end.
 
+import { useChromeHold } from '@/hooks/useChromeHold';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowLeft, Film, Home, Lock, Play, RotateCcw, Share2 } from 'lucide-react';
 import type { GameSong } from '@/game/api';
@@ -134,6 +135,8 @@ export default function OnDemandResults(p: OnDemandResultsProps) {
   // ── Timeline ────────────────────────────────────────────────────────────
   const [step, setStep] = useState(0);
   const [skipped, setSkipped] = useState(false);
+  // Dock, player bar and 365 pill stay out of the way until the results sequence lands.
+  useChromeHold(step < FINAL);
   const skippedRef = useRef(false);
   const timers = useRef<number[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);

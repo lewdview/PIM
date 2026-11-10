@@ -126,7 +126,8 @@
 
 /* score: unearned leading digits stay hollow */
 .pim-hud-score {
-  font: 400 26px/0.9 var(--hud-display);
+  /* line-height ≥ 1: at 0.9 the display face's glyphs spilled onto the time and chain lines */
+  font: 400 26px/1.06 var(--hud-display);
   letter-spacing: 0.02em;
   color: var(--hud-text);
   white-space: nowrap;

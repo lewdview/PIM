@@ -12,6 +12,7 @@
 // sound on this screen is fired from that timeline, so nothing plays that the
 // player can't see. Tap or press any key to skip to the end.
 
+import { useChromeHold } from '@/hooks/useChromeHold';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useLocation } from 'wouter';
 import { ArrowLeft, Lock, Play, RotateCcw, Share2 } from 'lucide-react';
@@ -137,6 +138,8 @@ export default function CampaignResults({ songId, song, result, accuracy, coverU
   // ── Timeline ────────────────────────────────────────────────────────────
   const [step, setStep] = useState(0);
   const [skipped, setSkipped] = useState(false);
+  // Dock, player bar and 365 pill stay out of the way until the results sequence lands.
+  useChromeHold(step < FINAL);
   const skippedRef = useRef(false);
   const timers = useRef<number[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);

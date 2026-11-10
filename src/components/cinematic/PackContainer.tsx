@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useChromeHold } from '../../hooks/useChromeHold';
 import { useVaultStore, type RevealPackMeta } from '../../store/useVaultStore';
 import type { OwnedCard } from '../../services/vaultService';
 import { audioManager } from '../../game/audio';
@@ -651,6 +652,10 @@ export default function PackContainer({ meta, cards: rawCards, accumulatedCards 
   const [hasDecryptedFragments, setHasDecryptedFragments] = useState(false);
   const [shardsGranted, setShardsGranted] = useState(false);
   const [decrypterPhase, setDecrypterPhase] = useState<'idle' | 'shaking' | 'bursting' | 'revealed'>('idle');
+  // Dock, player bar and 365 pill stay hidden from the tear until every card is flipped and
+  // the shard tally is closed, so they never cover Continue / Decrypt / Inspect.
+  const revealSettled = (phase === 'layout' || phase === 'inspect') && flippedCards.size >= cards.length;
+  useChromeHold(cards.length > 0 && (!revealSettled || showFragmentDecrypter));
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const particlesRef = useRef<ShardParticle[]>([]);
   const animationFrameRef = useRef<number | null>(null);
