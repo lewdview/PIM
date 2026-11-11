@@ -145,7 +145,7 @@ function AudiusMedallion({ deluxe }: { deluxe: boolean }) {
   const ring = deluxe ? '#ffd23f' : '#d58cff';
   return (
     <div
-      title={deluxe ? 'th3scr1b3 x Audius · Deluxe weekly card' : 'th3scr1b3 x Audius · Weekly card'}
+      title={deluxe ? 'th3scr1b3 × Audius · Deluxe card' : 'th3scr1b3 × Audius · Weekly card'}
       style={{
         width: '34px',
         height: '34px',

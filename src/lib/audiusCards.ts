@@ -29,7 +29,7 @@ export type ClaimResult =
   | { ok: false; error: string; message: string };
 
 const MESSAGES: Record<string, string> = {
-  NOT_SIGNED_IN: 'Sign in to collect weekly cards.',
+  NOT_SIGNED_IN: 'Sign in to collect th3scr1b3 × Audius cards.',
   NO_CARD: 'This week’s cards aren’t out yet. Check back soon.',
   ALREADY_CLAIMED: 'Already in your collection.',
   NO_CLEAR: 'Clear this song this week to earn its card.',

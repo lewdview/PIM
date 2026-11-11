@@ -282,7 +282,7 @@ export default function WeeklyContest() {
     setClaiming(null);
     if (res.ok) {
       setCards((cs) => cs.map((c) => (c.trackId === trackId && c.kind === kind ? { ...c, claimed: true } : c)));
-      setCardMsg(kind === 'bombshell' ? 'Deluxe card added to your collection.' : 'Card added to your collection.');
+      setCardMsg(kind === 'bombshell' ? 'Deluxe card earned in th3scr1b3 × Audius.' : 'Card earned in th3scr1b3 × Audius.');
       if (!res.alreadyOwned) setReveal({ cardId: res.cardId, artist: contest?.tracks.find((x) => x.id === trackId)?.artist });
       loadVaultData(true).catch(() => undefined);
     } else {
@@ -355,11 +355,11 @@ export default function WeeklyContest() {
               className="text-xl sm:text-2xl font-black uppercase text-white tracking-tight"
               style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}
             >
-              Weekly Top 5
+              th3scr1b3 × Audius · Weekly Top 5
             </h2>
           </div>
           <p className="font-mono text-[11px] text-white/50 uppercase tracking-widest mt-1">
-            This week's trending artists on Audius. Your best run on each song adds up.
+            Five trending Audius artists, new every Monday. Your best run on each song adds up.
           </p>
         </div>
         {contest && (
@@ -376,7 +376,7 @@ export default function WeeklyContest() {
         <span>2nd · 3</span>
         <span>3rd · 2</span>
         <span>4th–10th · 1</span>
-        <span className="font-black flex items-center gap-1.5 sm:ml-auto"><Sparkles size={13} /> Clear a song this week to earn its card</span>
+        <span className="font-black flex items-center gap-1.5 sm:ml-auto"><Sparkles size={13} /> Clear a song this week to earn its th3scr1b3 × Audius card</span>
       </div>
       {cardMsg && <p className="mb-3 font-mono text-xs text-white/70">{cardMsg}</p>}
 

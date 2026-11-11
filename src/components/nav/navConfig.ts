@@ -89,7 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
     home: '/vault/leaderboard',
     items: [
       { id: 'leaderboard', label: 'Leaderboard', to: '/vault/leaderboard', icon: BarChart3, desc: 'Global accuracy and prestige ranks', keywords: ['rank', 'scores', 'top', 'high score', 'prestige'] },
-      { id: 'weekly-top5', label: 'Weekly top 5', to: '/audius', icon: Crown, desc: 'Chart 5 trending Audius songs, win claw pulls', keywords: ['contest', 'weekly', 'audius', 'trending', 'top 5', 'claw', 'prize'] },
+      { id: 'weekly-top5', label: 'Weekly top 5', to: '/audius', icon: Crown, desc: 'th3scr1b3 × Audius: play 5 trending songs, earn cards, win claw pulls', keywords: ['contest', 'weekly', 'audius', 'trending', 'top 5', 'claw', 'prize'] },
       { id: 'shop', label: 'Shop', to: '/vault/earn', icon: ShoppingBag, desc: 'Token bundles, power-ups and cosmetics', keywords: ['earn', 'tokens', 'buy', 'store', 'bundles', 'market'] },
       { id: 'rewards', label: 'Daily rewards', to: '/vault/claim', icon: Gift, desc: 'Streak crates and token bonuses', keywords: ['claim', 'streak', 'redeem', 'crate', 'free'] },
     ],

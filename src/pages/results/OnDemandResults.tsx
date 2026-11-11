@@ -428,14 +428,14 @@ export default function OnDemandResults(p: OnDemandResultsProps) {
 
         {hasPrize && p.weeklyCard && (
           <div className="cr-card" data-tone="prize" data-testid="weekly-card">
-            <div className="cr-card-tab">{p.weeklyCard.deluxe ? 'Deluxe weekly card' : 'Weekly card'}</div>
+            <div className="cr-card-tab">{p.weeklyCard.deluxe ? 'th3scr1b3 × Audius · Deluxe card' : 'th3scr1b3 × Audius card'}</div>
             {p.weeklyCard.status === 'claiming' ? (
               <button type="button" className="btn-3d cr-claim" data-tone="quiet" disabled>
                 <span className="cr-spin" /> Adding the card to your collection…
               </button>
             ) : p.weeklyCard.status === 'claimed' ? (
               <>
-                <p className="cs-hook">{p.weeklyCard.deluxe ? 'Deluxe card earned!' : 'Weekly card earned!'}</p>
+                <p className="cs-hook">{p.weeklyCard.deluxe ? 'Deluxe card earned in th3scr1b3 × Audius!' : 'Card earned in th3scr1b3 × Audius!'}</p>
                 <div className="cs-detail-actions">
                   {p.weeklyCard.cardId && (
                     <button type="button" className="btn-3d" data-tone={p.weeklyCard.deluxe ? 'gold' : 'cyan'} onClick={() => setRevealCard(p.weeklyCard!.cardId!)}>
