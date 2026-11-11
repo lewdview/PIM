@@ -22,6 +22,7 @@ import Card from '@/components/Card';
 import { findCardWithFallback, type VaultCard } from '@/services/vaultService';
 import { getAudiusCard, parseAudiusCardId } from '@/lib/audiusCardRegistry';
 import { loadAudiusCardDetails } from '@/lib/audiusCards';
+import { AUDIUS_COLLAB } from '@/lib/audiusBrand';
 import { claimSfx } from './claimSfx';
 import '@/styles/audiusClaim.css';
 
@@ -48,6 +49,14 @@ function prefersReducedMotion(): boolean {
   } catch {
     return false;
   }
+}
+
+/** 'NOV 9' for a 'YYYY-MM-DD' week start. */
+function weekOf(week: string | undefined): string {
+  const m = (week || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return '';
+  const mon = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][+m[2] - 1];
+  return mon ? `${mon} ${+m[3]}` : '';
 }
 
 /** Tile order: row by row for the standard grid, an inward spiral for Deluxe. */
@@ -295,6 +304,8 @@ export default function AudiusClaimReveal({ cardId, card: givenCard, artist, onC
   }, [deluxe, reduced]);
 
   const headline = deluxe ? 'DELUXE CARD EARNED!' : 'CARD EARNED!';
+  const songTitle = (card?.title || '').replace(/ \(Deluxe\)$/, '');
+  const weekText = weekOf(info?.weekStart);
 
   return createPortal(
     <div
@@ -303,12 +314,20 @@ export default function AudiusClaimReveal({ cardId, card: givenCard, artist, onC
       data-phase={phase}
       role="dialog"
       aria-modal="true"
-      aria-label={`${headline} Earned in th3scr1b3 x Audius`}
+      aria-label={`${headline} Earned in ${AUDIUS_COLLAB}`}
       onClick={phase === 'reveal' ? undefined : skip}
       data-testid="audius-claim-reveal"
     >
       <div className="axr-bg" aria-hidden />
       <div className="axr-stars" aria-hidden />
+      {phase !== 'intro' && (
+        <div className="axr-brand" aria-hidden>
+          <span>th3scr1b3</span>
+          <PixelX className="axr-px-sm" />
+          <span>Audius</span>
+          <em>Weekly Top 5</em>
+        </div>
+      )}
       <div className="axr-stage" ref={stageRef}>
         {phase === 'intro' && (
           <div className="axr-intro" aria-hidden>
@@ -329,6 +348,7 @@ export default function AudiusClaimReveal({ cardId, card: givenCard, artist, onC
               <PixelX />
             </div>
             {deluxe && <div className="axr-stamp">DELUXE</div>}
+            <div className="axr-intro-cap">WEEKLY TOP 5{weekText ? ` · WEEK OF ${weekText}` : ''}</div>
           </div>
         )}
 
@@ -349,13 +369,13 @@ export default function AudiusClaimReveal({ cardId, card: givenCard, artist, onC
                     data-center={i === center ? 'on' : undefined}
                     style={{ ['--d' as any]: `${rank * (deluxe ? 22 : 45)}ms` }}
                   >
-                    <ArtTile img={img} n={n} index={i} px={deluxe ? 8 : 12} />
+                    <ArtTile img={img} n={n} index={i} px={deluxe ? 16 : 24} />
                   </div>
                 );
               })}
             </div>
             <div className="axr-select-foot">
-              {(card?.title || '').replace(/ \(Deluxe\)$/, '').toUpperCase() || '···'}
+              {songTitle ? `${songTitle}${artistName ? ` · ${artistName}` : ''}`.toUpperCase() : '···'}
             </div>
           </div>
         )}
@@ -368,6 +388,7 @@ export default function AudiusClaimReveal({ cardId, card: givenCard, artist, onC
 
             <div className="axr-card-wrap">
               <div className="axr-burst" aria-hidden />
+              <div className="axr-shock" aria-hidden />
               {deluxe && <div className="axr-ring" aria-hidden />}
               <div className="axr-sparks" aria-hidden>
                 {sparks.map((s, i) => (
@@ -390,12 +411,20 @@ export default function AudiusClaimReveal({ cardId, card: givenCard, artist, onC
                 animate={{ scale: 1, rotateY: 0, y: 0, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: deluxe ? 120 : 150, damping: deluxe ? 13 : 15, mass: 0.9 }}
               >
-                {card ? <Card card={card} /> : <div className="axr-card-ph" />}
+                <div className="axr-card-float">
+                  {card ? <Card card={card} /> : <div className="axr-card-ph" />}
+                  <div className="axr-shine" aria-hidden />
+                </div>
               </motion.div>
             </div>
 
             <div className="axr-meta">
-              {artistName && <div className="axr-meta-artist">by {artistName}</div>}
+              {songTitle && (
+                <div className="axr-meta-artist">
+                  {songTitle}
+                  {artistName ? ` · ${artistName}` : ''}
+                </div>
+              )}
             </div>
 
             <div className="axr-lockup">
@@ -404,6 +433,10 @@ export default function AudiusClaimReveal({ cardId, card: givenCard, artist, onC
                 <span>th3scr1b3</span>
                 <PixelX className="axr-px-sm" />
                 <span>Audius</span>
+              </span>
+              <span className="axr-lockup-week">
+                {deluxe ? 'DELUXE CLEAR' : 'WEEKLY TOP 5'}
+                {weekText ? ` · WEEK OF ${weekText}` : ''}
               </span>
             </div>
 
@@ -417,7 +450,7 @@ export default function AudiusClaimReveal({ cardId, card: givenCard, artist, onC
                 Continue
               </button>
             </div>
-            <p className="axr-note">Only earnable this week. Yours for good.</p>
+            <p className="axr-note">Only earnable in its week. Yours for good.</p>
           </div>
         )}
       </div>

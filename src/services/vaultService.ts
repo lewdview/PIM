@@ -99,7 +99,7 @@ function audiusVaultCard(cardId: string, rarity?: Rarity | string): VaultCard | 
   return {
     id: cardId,
     day: 0,
-    title: info ? (parsed.deluxe ? `${info.title} (Deluxe)` : info.title) : parsed.deluxe ? 'Audius Deluxe card' : 'Audius weekly card',
+    title: info ? (parsed.deluxe ? `${info.title} (Deluxe)` : info.title) : parsed.deluxe ? 'th3scr1b3 × Audius Deluxe card' : 'th3scr1b3 × Audius card',
     storageTitle: cardId,
     mood: 'dark',
     rarity: r,
@@ -110,7 +110,7 @@ function audiusVaultCard(cardId: string, rarity?: Rarity | string): VaultCard | 
     tags: ['audius'],
     coverUrl: info?.coverUrl || '/pim-logo.png',
     audioUrl: `https://api.audius.co/v1/tracks/${parsed.trackId}/stream?app_name=PIM`,
-    description: info ? `Audius weekly top 5 · ${info.artist}` : 'Audius weekly top 5',
+    description: info ? `th3scr1b3 × Audius · Weekly Top 5 · ${info.artist}` : 'th3scr1b3 × Audius · Weekly Top 5',
     claimedCount: 0,
     maxSupply: 0,
     cardSet: parsed.deluxe ? 'bombshell' : 'gen-0',

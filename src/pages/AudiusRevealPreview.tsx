@@ -59,7 +59,7 @@ export default function AudiusRevealPreview() {
 
   return (
     <div className="min-h-screen px-4 py-10 max-w-3xl mx-auto text-white">
-      <h1 className="font-black uppercase tracking-tight text-2xl mb-1">Weekly Audius card reveals</h1>
+      <h1 className="font-black uppercase tracking-tight text-2xl mb-1">th3scr1b3 × Audius card reveals</h1>
       <p className="font-mono text-xs uppercase tracking-wider text-white/50 mb-8">
         Preview only, nothing is claimed. <Link href="/audius" className="underline">Back to Audius</Link>
       </p>

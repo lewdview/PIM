@@ -27,6 +27,7 @@ import MainBrandLogo from '../components/MainBrandLogo';
 import TitleSpacer from '../components/TitleSpacer';
 import TokenBundleShelf from '../components/TokenBundleShelf';
 import ShopConsole from '../components/ShopConsole';
+import AudiusHomeCta from '../components/audius/AudiusHomeCta';
 
 // ===== BRUTALIST TICKER =====
 const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF RETENTION — COLLECT. SELL. EARN. — DAILY LEVEL UNLOCKS — V⚡ TOKENS — MYTHIC ROLLS — LIVE PLAY — ';
@@ -687,6 +688,9 @@ export default function LandingPage() {
           AN EXPERIMENTAL PLAYABLE MUSIC PLATFORM BY <span className="text-[#ffb800] font-black">TH3SCR1B3</span> · MUSIC UNLOCKS GAMEPLAY · GAMEPLAY UNLOCKS CARDS
         </motion.p>
       </section>
+
+      {/* ===== th3scr1b3 × AUDIUS: WEEKLY TOP 5 ===== */}
+      <AudiusHomeCta />
 
       {/* ===== HERO ONBOARDING DASHBOARD ===== */}
       <section className="relative z-10 px-4 md:px-8 py-4 max-w-6xl mx-auto mb-12">

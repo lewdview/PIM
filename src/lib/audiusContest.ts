@@ -217,7 +217,7 @@ export async function getContestGameSong(id: string): Promise<GameSong | null> {
     mood: 'dark',
     valence: 0.5,
     moodTags: t.genre ? [t.genre.toLowerCase()] : [],
-    description: `Audius weekly top 5 · ${t.artist}`,
+    description: `th3scr1b3 × Audius · Weekly Top 5 · ${t.artist}`,
     audioUrl: streamUrl(trackId),
     coverArt: cover || t.artwork,
     notes: chart?.notes ?? [],

@@ -1,0 +1,116 @@
+/* Homepage call to action: th3scr1b3 × Audius Weekly Top 5.
+   Same pixel language as the claim reveal (audiusClaim.css). */
+
+.ahc {
+  position: relative;
+  z-index: 10;
+  max-width: 72rem;
+  margin: 0 auto 2.5rem;
+  padding: 0 1rem;
+}
+.ahc-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 85% 50%, rgba(184, 77, 255, 0.35), transparent 60%),
+    linear-gradient(135deg, #0b0320 0%, #1c0740 60%, #07020f 100%);
+  border: 3px solid #fff6e0;
+  box-shadow: 0 0 0 3px #000, 7px 7px 0 3px #b84dff;
+}
+.ahc-inner::before {
+  /* pixel floor grid */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(25, 240, 255, 0.1) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(0deg, rgba(25, 240, 255, 0.1) 0 1px, transparent 1px 28px);
+  pointer-events: none;
+}
+.ahc-copy { position: relative; min-width: 0; flex: 1 1 320px; }
+.ahc-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px;
+  font-family: 'Press Start 2P', 'JetBrains Mono', monospace;
+  font-size: clamp(8px, 2.3vw, 11px);
+  color: #fff;
+  background: #000;
+  border: 2px solid #19f0ff;
+}
+.ahc-x { display: inline-grid; grid-template: repeat(5, 1fr) / repeat(5, 1fr); width: 13px; aspect-ratio: 1; }
+.ahc-x i { background: #19f0ff; }
+.ahc-title {
+  margin: 12px 0 6px;
+  font-family: 'Press Start 2P', 'JetBrains Mono', monospace;
+  font-size: clamp(18px, 4.6vw, 34px);
+  line-height: 1.25;
+  color: #fff;
+  text-shadow: 4px 4px 0 #000, 0 0 18px rgba(184, 77, 255, 0.9);
+}
+.ahc-text {
+  margin: 0 0 14px;
+  max-width: 34rem;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 246, 224, 0.82);
+}
+.ahc-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.ahc-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ffd23f;
+}
+
+.ahc-art {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: #000;
+  border: 3px solid #fff6e0;
+  cursor: pointer;
+}
+.ahc-tile {
+  position: relative;
+  width: clamp(44px, 6.2vw, 76px);
+  aspect-ratio: 1;
+  background: #1a0a2e;
+  outline: 2px solid rgba(255, 255, 255, 0.2);
+  animation: ahc-cursor 2.5s steps(1) infinite;
+  animation-delay: calc(var(--i) * 0.5s);
+}
+.ahc-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ahc-tile b {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 3px 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #000;
+  background: #ffd23f;
+}
+/* A select cursor steps across the five songs. */
+@keyframes ahc-cursor {
+  0% { outline: 3px solid #19f0ff; box-shadow: 0 0 14px #19f0ff; }
+  20%, 100% { outline: 2px solid rgba(255, 255, 255, 0.2); box-shadow: none; }
+}
+
+@media (max-width: 720px) {
+  .ahc-inner { flex-direction: column; align-items: stretch; padding: 16px; }
+  .ahc-art { justify-content: space-between; }
+  .ahc-tile { width: auto; flex: 1 1 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ahc-tile { animation: none; }
+}

@@ -27,14 +27,14 @@ export default function WeeklyCardShelf({ collection }: { collection: OwnedCard[
     <section className="px-2 pt-4" data-testid="weekly-card-shelf">
       <div className="flex items-center justify-between gap-2 mb-1">
         <h2 className="flex items-center gap-2 font-black uppercase text-white tracking-tight">
-          <Sparkles size={16} style={{ color: GOLD }} /> Weekly Audius cards
+          <Sparkles size={16} style={{ color: GOLD }} /> th3scr1b3 × Audius cards
           <span className="font-mono text-[11px] text-white/50">{cards.length}</span>
         </h2>
         <Link href="/audius" className="font-mono text-[11px] uppercase tracking-wider no-underline" style={{ color: GOLD }}>
           This week's top 5
         </Link>
       </div>
-      <p className="font-mono text-[10px] uppercase tracking-wider text-white/40 mb-3">Earned in th3scr1b3 × Audius</p>
+      <p className="font-mono text-[10px] uppercase tracking-wider text-white/40 mb-3">Earned on the Weekly Top 5. Each card was only earnable in its week.</p>
       <div className="collection-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 py-2">
         {cards.map((c, i) => {
           const info = getAudiusCard(c.cardId);
