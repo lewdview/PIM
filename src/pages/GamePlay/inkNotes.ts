@@ -1,12 +1,14 @@
-// Ink notes: the Poetic GUI's own note skin. Each note is a paper slip with a tapered black
-// brush stroke and a small seal in the lane colour, so the highway reads like a page being
-// inked. Special notes keep their meaning as red-seal stamps (REMIX, DROP, BEAT, WARP,
+// Ink notes: the Poetic GUI's own note skin. Each note is a slip of deckled paper with one
+// brush stroke laid dead across its middle and a small seal in the lane colour, so the
+// highway reads like a page being inked. The stroke is the strike line (see ./noteStrike): a
+// hairline of bare paper runs through it and two sights sit off the slip's ends. Special notes keep their meaning as red-seal stamps (REMIX, DROP, BEAT, WARP,
 // BURST), the mine is an ink blot marked AVOID, the ghost a faint pencil outline. Swipe
 // directions on taps, slide heads and hold tails get a brush chevron that sweeps toward the
 // swipe; hold heads stay plain, and hold ends get a breathing ensō circle.
 
 import type { Note, NoteType } from '../../game/types';
 import { SWIPE_ROT, SPECIAL } from './neonNotes';
+import { drawSights, drawStrike } from './noteStrike';
 
 const PAPER = '#f3ede1';
 const PAPER_EDGE = '#d9cfbd';
@@ -26,7 +28,7 @@ export function drawInkKey(
 ): boolean {
   const t = (performance.now() + timeOffset) / 1000;
   const p = Math.max(0, Math.min(1, prog));
-  const w = noteW * 0.9;
+  const w = noteW * 0.86; // leaves room for the strike sights inside the lane
   const h = Math.max(6, noteH * (isHold ? 0.55 : 0.66));
 
   ctx.save();
@@ -45,8 +47,11 @@ export function drawInkKey(
     if (isWarp) drawWash(ctx, w, h, t);
 
     drawSlip(ctx, w, h, accent, p, isHold);
-    if (noteType === 'zigzag') drawInkZigzag(ctx, w, h, t);
-    else drawStroke(ctx, w, h, noteType === 'accent' ? 1.25 : 1);
+    if (noteType === 'zigzag') {
+      drawInkZigzag(ctx, w, h, t);
+      drawStrike(ctx, w * 0.9, h, accent, p, { core: SEAL, glow: false, sights: false, weight: Math.max(1, h * 0.04) });
+    } else drawStroke(ctx, w, h, noteType === 'accent' ? 1.25 : 1);
+    drawSights(ctx, w, h, accent, p, INK);
     if (noteType === 'remix') drawWetSheen(ctx, w, h, t);
 
     const lift = noteType === 'lift' && (!swipeDirection || swipeDirection === 'up');
@@ -63,70 +68,125 @@ export function drawInkKey(
   return true;
 }
 
-/** Paper slip: warm off-white card, deckled bottom edge, lane colour bleeding up from below. */
+/** Outline of the slip: straight sides, with a top and bottom edge torn slightly uneven. */
+function slipPath(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const x = -w / 2, y = -h / 2;
+  const n = Math.max(10, Math.round(w / 6));
+  const d = Math.min(0.7, h * 0.025); // how far the torn edge wanders
+  ctx.beginPath();
+  ctx.moveTo(x, y + d);
+  for (let i = 0; i <= n; i++) ctx.lineTo(x + (i / n) * w, y + d * Math.sin(i * 2.3 + 0.7));
+  ctx.lineTo(x + w, y + h - d);
+  for (let i = n; i >= 0; i--) ctx.lineTo(x + (i / n) * w, y + h - d * Math.sin(i * 1.7 + 2.1) - d * 0.4);
+  ctx.closePath();
+}
+
+/**
+ * Paper slip: warm deckled card lit from above, a few fibres in the sheet, lane colour
+ * soaking up from the bottom edge and a small seal in the top-right corner.
+ */
 function drawSlip(ctx: CanvasRenderingContext2D, w: number, h: number, accent: string, p: number, isHold: boolean) {
   const x = -w / 2, y = -h / 2;
+  const a = isHold ? 0.82 : 1;
   ctx.save();
-  ctx.globalAlpha = isHold ? 0.82 : 1;
+  ctx.globalAlpha = a;
   ctx.shadowColor = 'rgba(0,0,0,0.55)';
   ctx.shadowBlur = 6 + 6 * p;
   ctx.shadowOffsetY = 2;
-  ctx.fillStyle = PAPER;
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, 3);
+  const sheet = ctx.createLinearGradient(0, y, 0, y + h);
+  sheet.addColorStop(0, '#fbf7ee');
+  sheet.addColorStop(1, PAPER);
+  ctx.fillStyle = sheet;
+  slipPath(ctx, w, h);
   ctx.fill();
   ctx.shadowColor = 'transparent';
+
+  ctx.save();
+  ctx.clip();
   // Lane colour soaks up from the bottom edge like ink into paper.
   const soak = ctx.createLinearGradient(0, y + h, 0, y);
   soak.addColorStop(0, accent);
-  soak.addColorStop(0.45, 'rgba(255,255,255,0)');
-  ctx.globalAlpha = (isHold ? 0.82 : 1) * 0.55;
+  soak.addColorStop(0.42, 'rgba(255,255,255,0)');
+  ctx.globalAlpha = a * 0.6;
   ctx.fillStyle = soak;
-  ctx.fill();
-  ctx.globalAlpha = isHold ? 0.82 : 1;
+  ctx.fillRect(x, y, w, h);
+  // Paper fibres: short pale-brown flecks, placed by index so they hold still frame to frame.
+  ctx.globalAlpha = a * 0.16;
+  ctx.strokeStyle = '#7a6a52';
+  ctx.lineWidth = 0.7;
+  for (let i = 0; i < 9; i++) {
+    const fx = x + ((i * 0.618 + 0.11) % 1) * w;
+    const fy = y + ((i * 0.381 + 0.27) % 1) * h;
+    const ang = i * 1.3;
+    ctx.beginPath();
+    ctx.moveTo(fx, fy);
+    ctx.lineTo(fx + Math.cos(ang) * 3.5, fy + Math.sin(ang) * 1.6);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.globalAlpha = a;
   ctx.strokeStyle = PAPER_EDGE;
   ctx.lineWidth = 1;
+  slipPath(ctx, w, h);
   ctx.stroke();
-  // Seal: a small square chop in the lane colour, right end.
-  const s = Math.min(h * 0.42, w * 0.1);
-  if (s >= 4) {
+
+  // Seal: a small square chop in the lane colour, tucked into the top-right corner so the
+  // middle of the slip stays clear for the stroke.
+  const s = Math.min(h * 0.34, w * 0.085);
+  if (s >= 3.5) {
     ctx.save();
-    ctx.translate(x + w - s * 0.95, y + h * 0.5);
+    ctx.translate(x + w - s * 0.95, y + s * 0.95);
     ctx.rotate(-0.08);
     ctx.fillStyle = accent;
     ctx.fillRect(-s / 2, -s / 2, s, s);
-    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-    ctx.lineWidth = Math.max(1, s * 0.12);
-    ctx.strokeRect(-s * 0.3, -s * 0.3, s * 0.6, s * 0.6);
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+    ctx.lineWidth = Math.max(0.8, s * 0.12);
+    ctx.strokeRect(-s * 0.28, -s * 0.28, s * 0.56, s * 0.56);
     ctx.restore();
   }
   ctx.restore();
 }
 
-/** Tapered brush stroke across the slip: thin entry, full belly, dry-brush exit. */
+/**
+ * The brush stroke, laid along the slip's centre line: a fine entry, a full belly and a
+ * dry-brush exit. A hairline of bare paper runs through its middle (the brush's "flying
+ * white"), which is the exact line to match against the track's hit line.
+ */
 function drawStroke(ctx: CanvasRenderingContext2D, w: number, h: number, weight: number) {
-  const L = -w * 0.38, R = w * 0.28;
-  const th = Math.max(2, h * 0.3 * weight);
+  const L = -w * 0.44, R = w * 0.36;
+  const th = Math.max(2, h * 0.2 * weight); // half-thickness at the belly
+  const mid = L + (R - L) * 0.42;
   ctx.save();
   ctx.fillStyle = INK;
   ctx.beginPath();
-  ctx.moveTo(L, h * 0.04);
-  ctx.quadraticCurveTo(L + (R - L) * 0.3, -th * 0.75, R, -th * 0.2);
-  ctx.quadraticCurveTo(R + th * 0.5, 0, R - th * 0.2, th * 0.35);
-  ctx.quadraticCurveTo(L + (R - L) * 0.45, th * 0.8, L, h * 0.08);
+  ctx.moveTo(L, 0);
+  ctx.quadraticCurveTo(L + (mid - L) * 0.5, -th * 1.05, mid, -th);
+  ctx.quadraticCurveTo(mid + (R - mid) * 0.6, -th * 0.9, R, -th * 0.35);
+  ctx.quadraticCurveTo(R + th * 0.7, 0, R, th * 0.35);
+  ctx.quadraticCurveTo(mid + (R - mid) * 0.6, th * 0.9, mid, th);
+  ctx.quadraticCurveTo(L + (mid - L) * 0.5, th * 1.05, L, 0);
   ctx.closePath();
   ctx.fill();
-  // Dry-brush streaks off the tail.
+  // Dry-brush streaks off the tail, fanned evenly about the centre line.
   ctx.strokeStyle = INK;
   ctx.lineCap = 'round';
   ctx.globalAlpha = 0.55;
-  ctx.lineWidth = Math.max(0.8, th * 0.12);
-  for (let i = -1; i <= 1; i++) {
+  ctx.lineWidth = Math.max(0.8, th * 0.16);
+  for (let i = -2; i <= 2; i++) {
     ctx.beginPath();
-    ctx.moveTo(R - th * 0.4, i * th * 0.22);
-    ctx.lineTo(R + th * (0.7 + 0.25 * (1 - Math.abs(i))), i * th * 0.28);
+    ctx.moveTo(R - th * 0.3, i * th * 0.3);
+    ctx.lineTo(R + th * (1.5 - 0.35 * Math.abs(i)), i * th * 0.36);
     ctx.stroke();
   }
+  // Flying white: the bare-paper hairline through the stroke's middle.
+  ctx.globalAlpha = 0.9;
+  ctx.strokeStyle = PAPER;
+  ctx.lineWidth = Math.max(1, th * 0.2);
+  ctx.beginPath();
+  ctx.moveTo(L + th * 1.4, 0);
+  ctx.lineTo(R - th * 0.2, 0);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -211,7 +271,7 @@ function drawWetSheen(ctx: CanvasRenderingContext2D, w: number, h: number, t: nu
   const x = -w / 2 + ((t * 0.8) % 1) * w * 1.4 - w * 0.2;
   ctx.save();
   ctx.beginPath();
-  ctx.roundRect(-w / 2, -h / 2, w, h, 3);
+  slipPath(ctx, w, h);
   ctx.clip();
   const g = ctx.createLinearGradient(x - w * 0.12, 0, x + w * 0.12, 0);
   g.addColorStop(0, 'rgba(0,245,212,0)');

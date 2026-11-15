@@ -63,7 +63,8 @@ import { spawnCelebration, drawCelebrations, type Celebration } from './noteCele
 import '../../styles/gameplayHud.css';
 import '../../styles/gameplayHudRail.css';
 import '../../styles/neonHud.css';
-import { setNoteSkin, drawSkinnedKey } from './noteSkins';
+import { setNoteSkin, resolveNoteSkin, drawSkinnedKey } from './noteSkins';
+import { hudArt } from './artPalette';
 import { drawStageGrade } from './stageGrade';
 import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
 import { noteKey, saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
@@ -635,8 +636,6 @@ const AnimatedScore = memo(({ score }: { score: number }) => {
 });
 
 // In-song HUD palette: stage colors follow the stage rail, multiplier colors step up ×1 → ×5.
-const HUD_STAGE_COLORS = ['#00E5FF', '#39FF14', '#FFD700', '#FF1493', '#FF3800'];
-const HUD_MULT_COLORS = ['#71717a', '#00E5FF', '#39FF14', '#FFD700', '#FF1493', '#FF3800'];
 const HUD_MULT_STEPS = [25, 50, 75, 100];
 
 // ── procedural chart generator for empty beatmaps ────────────────
@@ -1703,9 +1702,9 @@ export default function Game() {
   useEffect(() => { optsRef.current = opts; }, [opts]);
   // Each HUD style draws its own notes (./noteSkins); Beta keeps drawKey's original look.
   useEffect(() => {
-    setNoteSkin(opts.hudStyle ?? 'stanza');
+    setNoteSkin(resolveNoteSkin(opts.noteSkin, opts.hudStyle));
     return () => setNoteSkin(null);
-  }, [opts.hudStyle]);
+  }, [opts.hudStyle, opts.noteSkin]);
 
   // ── 6-Archetype Track Geometry & Stage Color Primer Engine ──
   const activeArchetypeRef = useRef<TrackArchetype>('cyber_tunnel');
@@ -10427,6 +10426,8 @@ export default function Game() {
 
   // ── render ──
   const gs = displayGs;
+  // HUD colours follow the lane colours in play: the cover art's, or the player's own.
+  const art = hudArt(laneColorsRef.current);
   const song = songRef.current;
   const comboColor =
     gs.combo < 10
@@ -11206,7 +11207,7 @@ export default function Game() {
             m = m * (puRef.current.active === "SIGNAL_LOCK" ? 4 : puRef.current.active === "SURGE" ? 3 : 2);
           }
           const nextAt = HUD_MULT_STEPS.find((step) => step > c);
-          const comboColor = c >= 100 ? '#39FF14' : c >= 50 ? '#FF1493' : c > 0 ? '#00E5FF' : '#f4f4f5';
+          const comboColor = c >= 100 ? art.acid : c >= 50 ? art.accent : c > 0 ? art.cyan : '#f4f4f5';
           const duration = songRef.current?.duration || 0;
           const railDuration = duration || 180;
           const elapsed = (gs.progress || 0) * railDuration;
@@ -11216,11 +11217,11 @@ export default function Game() {
             const span = Math.max(0.001, end - start);
             return { span, fill: Math.max(0, Math.min(1, (elapsed - start) / span)) };
           });
-          const stageColor = HUD_STAGE_COLORS[Math.max(0, Math.min(4, currentStage - 1))];
+          const stageColor = art.stage[Math.max(0, Math.min(4, currentStage - 1))];
           const shieldLeft = Math.max(0, 3 - missCount);
 
           return (
-            <div className="pim-rail-strip">
+            <div className="pim-rail-strip" style={art.vars as React.CSSProperties}>
               <div className="pim-rail-strip-row">
                 <div className="pim-rail-controls">
                   <button
@@ -11296,7 +11297,7 @@ export default function Game() {
                       <i
                         key={i}
                         className="pim-rail-seg"
-                        style={{ '--f': s.fill.toFixed(3), '--seg-c': HUD_STAGE_COLORS[Math.min(4, i)] } as React.CSSProperties}
+                        style={{ '--f': s.fill.toFixed(3), '--seg-c': art.stage[Math.min(4, i)] } as React.CSSProperties}
                       />
                     ))}
                   </div>
@@ -11321,7 +11322,7 @@ export default function Game() {
                   </div>
                   <div className="pim-rail-score-row">
                     <span className="pim-rail-score-value"><AnimatedScore score={gs.score} /></span>
-                    <span className="pim-rail-mult" style={{ '--mult-c': HUD_MULT_COLORS[Math.min(5, baseMult)] } as React.CSSProperties}>
+                    <span className="pim-rail-mult" style={{ '--mult-c': art.mult[Math.min(5, baseMult)] } as React.CSSProperties}>
                       <span className="pim-rail-x">×</span>{m}
                     </span>
                   </div>
@@ -11494,7 +11495,7 @@ export default function Game() {
           const day = (song as { day?: number } | null)?.day;
 
           return (
-            <div className="pim-hud-strip" style={{ '--ink': comboInk(c) } as React.CSSProperties}>
+            <div className="pim-hud-strip" style={{ ...art.vars, '--ink': comboInk(c) } as React.CSSProperties}>
               <div className="pim-hud-side pim-hud-left">
                 <div className="pim-hud-controls">
                   <button
@@ -11552,7 +11553,7 @@ export default function Game() {
                 <div className="pim-hud-meta">
                   {day ? <span>DAY {String(day).padStart(3, '0')}</span> : null}
                   <b>{song?.title}</b>
-                  <span>STAGE <i style={{ color: HUD_STAGE_COLORS[Math.max(0, Math.min(4, currentStage - 1))] }}>{currentStage === 5 ? 'FINAL' : `${currentStage} / 5`}</i></span>
+                  <span>STAGE <i style={{ color: art.stage[Math.max(0, Math.min(4, currentStage - 1))] }}>{currentStage === 5 ? 'FINAL' : `${currentStage} / 5`}</i></span>
                   <span>ACC <i ref={accuracyTextRef}>{acc.toFixed(1)}%</i></span>
                   {curMedal !== "NONE" && <span className="pim-hud-medal" style={{ '--medal': medalStyle.main } as React.CSSProperties}>{curMedal}</span>}
                 </div>
@@ -11570,7 +11571,7 @@ export default function Game() {
                       ))}
                     </span>
                   )}
-                  {m > 1 && <sup className="pim-verse-mult" style={{ '--mult-c': HUD_MULT_COLORS[Math.min(5, baseMult)] } as React.CSSProperties}>×{m}</sup>}
+                  {m > 1 && <sup className="pim-verse-mult" style={{ '--mult-c': art.mult[Math.min(5, baseMult)] } as React.CSSProperties}>×{m}</sup>}
                 </div>
                 <div
                   className="pim-verse-under"
@@ -11578,7 +11579,7 @@ export default function Game() {
                   aria-hidden="true"
                 >
                   {segments.map((s, i) => (
-                    <i key={i} style={{ '--f': s.fill.toFixed(3), '--seg-c': HUD_STAGE_COLORS[Math.min(4, i)] } as React.CSSProperties} />
+                    <i key={i} style={{ '--f': s.fill.toFixed(3), '--seg-c': art.stage[Math.min(4, i)] } as React.CSSProperties} />
                   ))}
                 </div>
                 <>

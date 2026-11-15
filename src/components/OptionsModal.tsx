@@ -1382,6 +1382,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         gameBackground: "cover_blur",
         gameTrack: "transparent",
         hudStyle: "stanza",
+        noteSkin: "match",
         backgroundBlur: 18,
         hudMisses: true,
         comboDisplay: true,
@@ -1584,6 +1585,34 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       />
                     ))}
                   </div>
+                </Panel>
+
+                <Panel title="Note skin" hint="The art the notes are drawn with">
+                  <div className="opt-seg opt-seg--3">
+                    {([
+                      { id: 'match', label: 'Match HUD', sub: 'The skin made for your HUD style' },
+                      { id: 'neon', label: 'Neon Tube', sub: 'Lit glass bars' },
+                      { id: 'ink', label: 'Ink Slip', sub: 'Brush stroke on paper' },
+                      { id: 'rail', label: 'LED Chip', sub: 'Gunmetal with a charging bar' },
+                      { id: 'vinyl', label: 'Vinyl', sub: 'Pressed record with a centre label' },
+                      { id: 'classic', label: 'Piano Key', sub: 'The original ivory key' },
+                    ] as const).map(skin => (
+                      <SegButton
+                        key={skin.id}
+                        active={(opts.noteSkin ?? 'match') === skin.id}
+                        label={skin.label}
+                        sub={skin.sub}
+                        onClick={() => {
+                          localStorage.setItem("opt_noteSkin", skin.id);
+                          setOpts(o => ({ ...o, noteSkin: skin.id }));
+                          updateSettings({ noteSkin: skin.id });
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <p className="opt-note">
+                    Every skin carries a strike line through its middle. Hit when that line sits on the track's hit line.
+                  </p>
                 </Panel>
 
                 <Panel title="Lyrics" hint="How the words show during a song">
