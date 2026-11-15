@@ -105,6 +105,12 @@
   from { opacity: 0; transform: scale(2.4); filter: blur(6px); }
   to { opacity: 1; transform: none; filter: none; }
 }
+/* On a phone the 2.4x start pushes the month name past both edges while it waits to slam in. */
+@keyframes mt-slam-sm {
+  from { opacity: 0; transform: scale(1.35); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@media (max-width: 640px) { .mt-intro-month { animation-name: mt-slam-sm; } }
 
 .mt-flash {
   position: absolute;
@@ -210,10 +216,11 @@
 .mt-version { opacity: 0.6; text-transform: none; user-select: text; }
 
 /* Entry screen: one primary Play straight into a song, then Choose entry and Settings. */
-.mt-menu { display: grid; gap: 10px; justify-items: center; margin-top: clamp(4px, 2vh, 20px); width: min(92vw, 420px); }
+/* One shrinkable column: a long song name must not push the buttons past a phone's edge. */
+.mt-menu { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; justify-items: center; margin-top: clamp(4px, 2vh, 20px); width: min(92vw, 420px); }
 .mt-play {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
-  width: 100%; padding: 14px 22px; border-radius: 16px; cursor: pointer;
+  width: 100%; min-width: 0; box-sizing: border-box; padding: 14px 22px; border-radius: 16px; cursor: pointer;
   border: 1px solid color-mix(in srgb, var(--ch) 80%, transparent);
   background: color-mix(in srgb, var(--ch) 28%, rgba(0, 0, 0, 0.55));
   font: 800 clamp(18px, 3vmin, 24px)/1 var(--shell-mono); letter-spacing: 0.28em; text-transform: uppercase; color: #fff;
@@ -228,7 +235,7 @@
 .mt-menu-row { display: flex; gap: 10px; width: 100%; }
 .mt-sub {
   flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  min-width: 0; min-height: 44px; box-sizing: border-box; padding: 10px 12px; border-radius: 12px; cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.22); background: rgba(0, 0, 0, 0.5);
   font: 700 12px/1 var(--shell-mono); letter-spacing: 0.12em; text-transform: uppercase; color: #fff;
 }

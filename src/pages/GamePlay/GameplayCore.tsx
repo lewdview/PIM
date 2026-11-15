@@ -45,6 +45,8 @@ import GameplayVisualizer from './GameplayVisualizer';
 import HudMuteButton from './HudMuteButton';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine } from './trackLyrics';
+import { setNoteSkin, resolveNoteSkin, drawSkinnedKey } from './noteSkins';
+import { hudArt } from './artPalette';
 import { getStageStarts, stageAtTime } from './stageTimeline';
 import { VerseHud, comboInk } from './verseHud';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, CHART_MASTER_DELUXE_VERSION } from '@/game/chartMaster';
@@ -624,8 +626,6 @@ const AnimatedScore = memo(({ score }: { score: number }) => {
 });
 
 // In-song HUD palette: stage colors follow the stage rail, multiplier colors step up ×1 → ×5.
-const HUD_STAGE_COLORS = ['#00E5FF', '#39FF14', '#FFD700', '#FF1493', '#FF3800'];
-const HUD_MULT_COLORS = ['#71717a', '#00E5FF', '#39FF14', '#FFD700', '#FF1493', '#FF3800'];
 const HUD_MULT_STEPS = [25, 50, 75, 100];
 
 // ── procedural chart generator for empty beatmaps ────────────────
@@ -1276,7 +1276,7 @@ export default function Game() {
           popEl.className = 'absolute pointer-events-none judgment-pop';
           popEl.style.left = `${targetPct}%`;
           popEl.style.top = `${targetYPct}%`;
-          popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id, optsRef.current.hudStyle ?? 'stanza');
+          popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id, optsRef.current.hudStyle ?? 'console');
           
           judgmentOverlayRef.current.appendChild(popEl);
           popEl.addEventListener('animationend', () => {
@@ -1293,7 +1293,7 @@ export default function Game() {
         const streamContainer = judgmentStreamRef.current;
         const itemEl = document.createElement('div');
         itemEl.className = 'judgment-stream-item shrink-0';
-        itemEl.innerHTML = getJudgmentStreamItemHtml(newJ.type, newJ.lane, optsRef.current.hudStyle ?? 'stanza');
+        itemEl.innerHTML = getJudgmentStreamItemHtml(newJ.type, newJ.lane, optsRef.current.hudStyle ?? 'console');
 
         streamContainer.appendChild(itemEl);
 
@@ -1673,6 +1673,11 @@ export default function Game() {
   const [opts, setOpts] = useState<GameOpts>(loadOpts);
   const optsRef = useRef(opts);
   useEffect(() => { optsRef.current = opts; }, [opts]);
+  // Note art: its own setting, or the skin that belongs to the HUD style.
+  useEffect(() => {
+    setNoteSkin(resolveNoteSkin(opts.noteSkin, opts.hudStyle));
+    return () => setNoteSkin(null);
+  }, [opts.hudStyle, opts.noteSkin]);
 
   // ── 6-Archetype Track Geometry & Stage Color Primer Engine ──
   const activeArchetypeRef = useRef<TrackArchetype>('cyber_tunnel');
@@ -4124,7 +4129,7 @@ export default function Game() {
       }
 
     // Stanza + Oracle HUD (throttled to ~30Hz inside VerseHud).
-    if ((optsRef.current.hudStyle ?? 'stanza') === 'stanza') {
+    if ((optsRef.current.hudStyle ?? 'console') === 'stanza') {
       const song = songRef.current;
       const verse = verseHudRef.current;
       const gsNow = gsRef.current;
@@ -10464,6 +10469,8 @@ export default function Game() {
 
   // ── render ──
   const gs = displayGs;
+  // HUD colours follow the lane colours in play: the cover art's, or the player's own.
+  const art = hudArt(laneColorsRef.current);
   const song = songRef.current;
   const comboColor =
     gs.combo < 10
@@ -11295,7 +11302,7 @@ export default function Game() {
             m = m * (puRef.current.active === "SIGNAL_LOCK" ? 4 : puRef.current.active === "SURGE" ? 3 : 2);
           }
           const nextAt = HUD_MULT_STEPS.find((step) => step > c);
-          const comboColor = c >= 100 ? '#39FF14' : c >= 50 ? '#FF1493' : c > 0 ? '#00E5FF' : '#f4f4f5';
+          const comboColor = c >= 100 ? art.acid : c >= 50 ? art.accent : c > 0 ? art.cyan : '#f4f4f5';
           const duration = songRef.current?.duration || 0;
           const railDuration = duration || 180;
           const elapsed = (gs.progress || 0) * railDuration;
@@ -11305,11 +11312,11 @@ export default function Game() {
             const span = Math.max(0.001, end - start);
             return { span, fill: Math.max(0, Math.min(1, (elapsed - start) / span)) };
           });
-          const stageColor = HUD_STAGE_COLORS[Math.max(0, Math.min(4, currentStage - 1))];
+          const stageColor = art.stage[Math.max(0, Math.min(4, currentStage - 1))];
           const shieldLeft = Math.max(0, 3 - missCount);
 
           return (
-            <div className="pim-rail-strip">
+            <div className="pim-rail-strip" style={art.vars as React.CSSProperties}>
               <div className="pim-rail-strip-row">
                 <div className="pim-rail-controls">
                   <button
@@ -11386,7 +11393,7 @@ export default function Game() {
                       <i
                         key={i}
                         className="pim-rail-seg"
-                        style={{ '--f': s.fill.toFixed(3), '--seg-c': HUD_STAGE_COLORS[Math.min(4, i)] } as React.CSSProperties}
+                        style={{ '--f': s.fill.toFixed(3), '--seg-c': art.stage[Math.min(4, i)] } as React.CSSProperties}
                       />
                     ))}
                   </div>
@@ -11411,7 +11418,7 @@ export default function Game() {
                   </div>
                   <div className="pim-rail-score-row">
                     <span className="pim-rail-score-value"><AnimatedScore score={gs.score} /></span>
-                    <span className="pim-rail-mult" style={{ '--mult-c': HUD_MULT_COLORS[Math.min(5, baseMult)] } as React.CSSProperties}>
+                    <span className="pim-rail-mult" style={{ '--mult-c': art.mult[Math.min(5, baseMult)] } as React.CSSProperties}>
                       <span className="pim-rail-x">×</span>{m}
                     </span>
                   </div>
@@ -11485,7 +11492,7 @@ export default function Game() {
         {/* ── GAMEPLAY HUD · Stanza + Oracle (logic: ./verseHud.ts, styles: src/styles/gameplayHud.css) ──
             The lyric line is inked letter by letter by the notes you hit (direct DOM updates from the draw
             loop); the oracle whisper and lane ticks sit under it. Score, chain and time flank it. */}
-        {(opts.hudStyle ?? 'stanza') === 'stanza' && (() => {
+        {(opts.hudStyle ?? 'console') === 'stanza' && (() => {
           const c = gs.combo;
           const baseMult = c >= 100 ? 5 : c >= 75 ? 4 : c >= 50 ? 3 : c >= 25 ? 2 : 1;
           let m = baseMult;
@@ -11506,7 +11513,7 @@ export default function Game() {
           const day = (song as { day?: number } | null)?.day;
 
           return (
-            <div className="pim-hud-strip" style={{ '--ink': comboInk(c) } as React.CSSProperties}>
+            <div className="pim-hud-strip" style={{ ...art.vars, '--ink': comboInk(c) } as React.CSSProperties}>
               <div className="pim-hud-side pim-hud-left">
                 <div className="pim-hud-controls">
                   <button
@@ -11565,7 +11572,7 @@ export default function Game() {
                 <div className="pim-hud-meta">
                   {day ? <span>DAY {String(day).padStart(3, '0')}</span> : null}
                   <b>{song?.title}</b>
-                  <span>STAGE <i style={{ color: HUD_STAGE_COLORS[Math.max(0, Math.min(4, currentStage - 1))] }}>{currentStage === 5 ? 'FINAL' : `${currentStage} / 5`}</i></span>
+                  <span>STAGE <i style={{ color: art.stage[Math.max(0, Math.min(4, currentStage - 1))] }}>{currentStage === 5 ? 'FINAL' : `${currentStage} / 5`}</i></span>
                   <span>ACC <i ref={accuracyTextRef}>{acc.toFixed(1)}%</i></span>
                   {curMedal !== "NONE" && <span className="pim-hud-medal" style={{ '--medal': medalStyle.main } as React.CSSProperties}>{curMedal}</span>}
                 </div>
@@ -11583,7 +11590,7 @@ export default function Game() {
                       ))}
                     </span>
                   )}
-                  {m > 1 && <sup className="pim-verse-mult" style={{ '--mult-c': HUD_MULT_COLORS[Math.min(5, baseMult)] } as React.CSSProperties}>×{m}</sup>}
+                  {m > 1 && <sup className="pim-verse-mult" style={{ '--mult-c': art.mult[Math.min(5, baseMult)] } as React.CSSProperties}>×{m}</sup>}
                 </div>
                 <div
                   className="pim-verse-under"
@@ -11591,7 +11598,7 @@ export default function Game() {
                   aria-hidden="true"
                 >
                   {segments.map((s, i) => (
-                    <i key={i} style={{ '--f': s.fill.toFixed(3), '--seg-c': HUD_STAGE_COLORS[Math.min(4, i)] } as React.CSSProperties} />
+                    <i key={i} style={{ '--f': s.fill.toFixed(3), '--seg-c': art.stage[Math.min(4, i)] } as React.CSSProperties} />
                   ))}
                 </div>
                 <>
@@ -12986,6 +12993,12 @@ function drawKey(
 
   ctx.save();
   ctx.translate(centerX, centerY);
+
+  // A note skin (see ./noteSkins) draws every note type itself; 'classic' falls through.
+  if (drawSkinnedKey(ctx, noteW, noteH, lc, prog, isHold, swipeDirection, noteType, timeOffset)) {
+    ctx.restore();
+    return;
+  }
 
   // ── 0. SPECIAL CUSTOM GEOMETRY FOR MINE HAZARD NOTES ──
   if (noteType === 'mine') {

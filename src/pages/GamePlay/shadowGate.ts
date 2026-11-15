@@ -8,6 +8,11 @@ const proto = typeof CanvasRenderingContext2D !== 'undefined' ? CanvasRenderingC
 const native = proto ? Object.getOwnPropertyDescriptor(proto, 'shadowBlur') : undefined;
 const gated = new WeakMap<CanvasRenderingContext2D, number>();
 
+/** The glow scale currently applied to a context (1 when it has never been gated). */
+export function shadowScaleOf(ctx: CanvasRenderingContext2D): number {
+  return gated.get(ctx) ?? 1;
+}
+
 export function gateShadows(ctx: CanvasRenderingContext2D, scale: number): void {
   if (!native?.get || !native.set) return;
   const s = Math.max(0, Math.min(1, scale));

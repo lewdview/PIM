@@ -803,7 +803,7 @@ export default function ChapterStory() {
                   : runMode === 'relaxed'
                     ? <span className="cs-muted mb-mode-note">Relaxed: easier chart, no fail. Medals and the leaderboard need Standard.</span>
                   : status.bombshell
-                    ? <span className="cs-muted">{status.bombshellUnlocked ? 'Bombshell art unlocked. It plays behind this track.' : 'Get a platinum medal to unlock this track’s Bombshell art.'}</span>
+                    ? <span className="cs-muted">{status.bombshellUnlocked ? 'Prestige Art unlocked. It plays behind this track.' : 'Get a platinum medal to unlock this track’s Prestige Art.'}</span>
                     : null}
               </div>
               <div className="mb-actions">
@@ -1106,8 +1106,8 @@ export default function ChapterStory() {
                       {status.bombshell && !status.locked && (
                         <div className="cs-muted" style={{ fontSize: 13 }}>
                           {status.bombshellUnlocked
-                            ? 'Bombshell art unlocked. It plays behind this track.'
-                            : 'Get a platinum medal on this track to unlock its Bombshell art.'}
+                            ? 'Prestige Art unlocked. It plays behind this track.'
+                            : 'Get a platinum medal on this track to unlock its Prestige Art.'}
                         </div>
                       )}
                       {!status.locked && status.ownsCard && status.modifier !== 'none' && (

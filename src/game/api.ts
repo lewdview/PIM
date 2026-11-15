@@ -196,7 +196,7 @@ export async function loadCatalog(): Promise<GameSong[]> {
   const promise = (async (): Promise<GameSong[]> => {
     try {
       const useLocal = (typeof localStorage !== 'undefined' && (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
-                       (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
+                       (import.meta.env.VITE_USE_LOCAL_FILES === 'true');
 
       // Create static stage & metadata lookup map
       const staticMap = new Map<number, any>();
@@ -323,7 +323,7 @@ export async function getSongById(id: string): Promise<GameSong | null> {
 
   try {
     const useLocal = (typeof localStorage !== 'undefined' && (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
-                     (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
+                     (import.meta.env.VITE_USE_LOCAL_FILES === 'true');
 
     // Robust fetchId resolution for all 365 days and special tutorial tracks
     let fetchId = '';

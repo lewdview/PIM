@@ -22,5 +22,5 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'deluxe_platinum', name: 'Deluxe Perfection', description: 'Platinum on a Deluxe chart' },
   { id: 'all_gold', name: 'Golden Month', description: 'Gold or better on every track' },
   { id: 'true_ending', name: 'True Ending', description: 'Platinum on every track' },
-  { id: 'bombshell_ending', name: 'Bombshell', description: 'Platinum on every track and every Deluxe chart' },
+  { id: 'bombshell_ending', name: 'Prestige Art', description: 'Platinum on every track and every Deluxe chart' },
 ];

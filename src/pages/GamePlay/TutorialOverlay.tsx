@@ -225,7 +225,7 @@ export default function TutorialOverlay({
                     <Volume2 size={12} />
                   </div>
                   <div>
-                    <span className="text-white font-bold block">SONIC PUNISHMENT:</span>
+                    <span className="text-white font-bold block">AUDIO PUNISHMENT:</span>
                     Each miss mutes that lane's slice of the mix (bass, mids or treble).
                   </div>
                 </div>

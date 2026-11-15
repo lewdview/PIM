@@ -105,10 +105,10 @@ export default function MonthSong(p: Props) {
             {status.bombshell && (
               status.bombshellUnlocked ? (
                 <button type="button" className="ms-art-toggle" onClick={() => setShowBombshell((v) => !v)}>
-                  {showBombshell ? 'Show cover' : 'Show Bombshell art'}
+                  {showBombshell ? 'Show cover' : 'Show Prestige Art'}
                 </button>
               ) : (
-                <figcaption className="ms-art-hint">Platinum unlocks this track's Bombshell art</figcaption>
+                <figcaption className="ms-art-hint">Platinum unlocks this track's Prestige Art</figcaption>
               )
             )}
           </figure>

@@ -468,20 +468,6 @@ function wordFx(effect: WordEffect, isActive: boolean, u: number): WordFx {
   return fx;
 }
 
-let offCanvas: HTMLCanvasElement | null = null;
-function getOffscreen(w: number, h: number): CanvasRenderingContext2D | null {
-  if (typeof document === "undefined") return null;
-  if (!offCanvas) offCanvas = document.createElement("canvas");
-  // Only ever grow the backing store; reallocating every frame is costly.
-  if (offCanvas.width < w) offCanvas.width = w;
-  if (offCanvas.height < h) offCanvas.height = h;
-  const c = offCanvas.getContext("2d");
-  if (!c) return null;
-  c.setTransform(1, 0, 0, 1, 0, 0);
-  c.clearRect(0, 0, offCanvas.width, offCanvas.height);
-  return c;
-}
-
 // ── Road-painted renderer ────────────────────────────────────────────────────
 //
 // The line is typeset flat into an offscreen "decal", then laid onto the track
@@ -507,6 +493,40 @@ const DECAL_MAX_ROWS = 3;
 interface DecalLayout {
   h: number;
 }
+
+// PERF: the road paint used to be typeset, painted and warped from scratch every frame.
+// The typesetting only changes with the line, the painted decal only when the sung word
+// (or its animation) moves on, and the warp only when the decal or the track shape does,
+// so each of the three is kept until its input changes.
+interface DecalTypeset {
+  gen: number;
+  fontPx: number;
+  rows: number[][];
+  widths: number[];
+  spacing: number;
+}
+const typesetCache = new WeakMap<TimedLine, DecalTypeset>();
+let measureCtx: CanvasRenderingContext2D | null = null;
+function getMeasure(): CanvasRenderingContext2D | null {
+  if (measureCtx) return measureCtx;
+  if (typeof document === "undefined") return null;
+  const cv = document.createElement("canvas");
+  cv.width = 8;
+  cv.height = 8;
+  measureCtx = cv.getContext("2d");
+  return measureCtx;
+}
+let decalCanvas: HTMLCanvasElement | null = null;
+let decalSig = "";
+let decalLine: TimedLine | null = null;
+let decalH = 0;
+let decalVersion = 0;
+let warpCanvas: HTMLCanvasElement | null = null;
+let warpKey = "";
+let warpBox = { x: 0, y: 0, w: 0, h: 0 };
+let lastGeom = "";
+/** Effects that redraw the sung word every frame; the rest hold still while a word is sung. */
+const ANIMATED_FX: ReadonlySet<string> = new Set(["pop", "rise", "flash", "bounce", "fade"]);
 
 function paintDecal(
   c: CanvasRenderingContext2D,
@@ -588,39 +608,64 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
 
   // ── Typeset flat: shrink type until the line wraps into ≤ DECAL_MAX_ROWS rows.
   const budget = DECAL_W * DECAL_FILL;
-  const measure = getOffscreen(DECAL_W, 8);
-  if (!measure) return drawFlatTrackLyrics(ctx, opts);
-  let fontPx = 180;
-  let rows: number[][] = [];
-  let widths: number[] = [];
-  let spacing = 0;
-  for (;;) {
-    measure.font = `500 ${fontPx}px ${line.font}`;
-    spacing = fontPx * 0.28;
-    widths = line.words.map((w) => measure.measureText(w.text).width);
-    rows = [];
-    let cur: number[] = [];
-    let curW = 0;
-    for (let i = 0; i < widths.length; i++) {
-      if (cur.length > 0 && curW + spacing + widths[i] > budget) {
-        rows.push(cur);
-        cur = [];
-        curW = 0;
+  let set = typesetCache.get(line);
+  if (!set || set.gen !== fontGen) {
+    const measure = getMeasure();
+    if (!measure) return drawFlatTrackLyrics(ctx, opts);
+    let fontPx = 180;
+    let rows: number[][] = [];
+    let widths: number[] = [];
+    let spacing = 0;
+    for (;;) {
+      measure.font = `500 ${fontPx}px ${line.font}`;
+      spacing = fontPx * 0.28;
+      widths = line.words.map((w) => measure.measureText(w.text).width);
+      rows = [];
+      let cur: number[] = [];
+      let curW = 0;
+      for (let i = 0; i < widths.length; i++) {
+        if (cur.length > 0 && curW + spacing + widths[i] > budget) {
+          rows.push(cur);
+          cur = [];
+          curW = 0;
+        }
+        if (cur.length > 0) curW += spacing;
+        cur.push(i);
+        curW += widths[i];
       }
-      if (cur.length > 0) curW += spacing;
-      cur.push(i);
-      curW += widths[i];
+      if (cur.length > 0) rows.push(cur);
+      if (rows.length <= DECAL_MAX_ROWS || fontPx <= 90) break;
+      fontPx = Math.round(fontPx * 0.86);
     }
-    if (cur.length > 0) rows.push(cur);
-    if (rows.length <= DECAL_MAX_ROWS || fontPx <= 90) break;
-    fontPx = Math.round(fontPx * 0.86);
+    set = { gen: fontGen, fontPx, rows, widths, spacing };
+    typesetCache.set(line, set);
   }
+  const { fontPx, rows, widths, spacing } = set;
 
-  // Rough decal height first (to size the offscreen), then paint for real.
-  const estH = Math.ceil(fontPx * (ROW_FILL_MAX * 1.04 * rows.length + 0.6));
-  const c = getOffscreen(DECAL_W, estH);
-  if (!c) return drawFlatTrackLyrics(ctx, opts);
-  const { h: decalH } = paintDecal(c, line, t, highlight, rows, widths, fontPx, spacing, budget);
+  // ── Paint the decal, only when what it shows has changed.
+  const activeIdx = findActiveWordIdx(line, t);
+  let sung = 0;
+  if (activeIdx < 0) for (const w of line.words) if (t >= w.end) sung++;
+  const activeWord = activeIdx >= 0 ? line.words[activeIdx] : null;
+  const moving = activeWord && ANIMATED_FX.has(activeWord.effect) ? t.toFixed(3) : "";
+  const sig = `${li}|${fontGen}|${highlight}|${activeIdx}|${sung}|${moving}|${line.words.length}|${line.start}`;
+  if (!decalCanvas && typeof document !== "undefined") decalCanvas = document.createElement("canvas");
+  if (!decalCanvas) return drawFlatTrackLyrics(ctx, opts);
+  if (sig !== decalSig || line !== decalLine) {
+    // Rough decal height first (to size the offscreen), then paint for real.
+    const estH = Math.ceil(fontPx * (ROW_FILL_MAX * 1.04 * rows.length + 0.6));
+    // Only ever grow the backing store; reallocating every repaint is costly.
+    if (decalCanvas.width < DECAL_W) decalCanvas.width = DECAL_W;
+    if (decalCanvas.height < estH) decalCanvas.height = estH;
+    const c = decalCanvas.getContext("2d");
+    if (!c) return drawFlatTrackLyrics(ctx, opts);
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, decalCanvas.width, decalCanvas.height);
+    decalH = paintDecal(c, line, t, highlight, rows, widths, fontPx, spacing, budget).h;
+    decalSig = sig;
+    decalLine = line;
+    decalVersion++;
+  }
 
   // ── Map decal onto the track surface.
   const depth = Math.min(DECAL_NEAR - DECAL_FAR_MIN, Math.max(0.12, (decalH / DECAL_W) * DECAL_DEPTH));
@@ -652,31 +697,81 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
 
   // Walk whole screen rows (2px bands) so slices tile exactly — overlapping
   // fractional slices double up the alpha on faded words and show as stripes.
-  const src = offCanvas as HTMLCanvasElement;
+  const src = decalCanvas;
   const BAND = 2;
   const yTop = Math.ceil(ys[0]);
   const yBot = Math.floor(ys[N]);
-  // Screen y → fractional sample index (ys is strictly increasing).
-  let j = 0;
-  const sampleAt = (y: number): number => {
-    while (j < N - 1 && ys[j + 1] < y) j++;
-    return j + clamp01((y - ys[j]) / Math.max(1e-6, ys[j + 1] - ys[j]));
+  const warp = (g: CanvasRenderingContext2D) => {
+    // Screen y → fractional sample index (ys is strictly increasing).
+    let j = 0;
+    const sampleAt = (y: number): number => {
+      while (j < N - 1 && ys[j + 1] < y) j++;
+      return j + clamp01((y - ys[j]) / Math.max(1e-6, ys[j + 1] - ys[j]));
+    };
+    g.imageSmoothingEnabled = true;
+    for (let y = yTop; y < yBot; y += BAND) {
+      const yEnd = Math.min(yBot, y + BAND);
+      const f0 = sampleAt(y);
+      const f1 = sampleAt(yEnd);
+      const fm = (f0 + f1) / 2;
+      const k = Math.min(N - 1, Math.floor(fm));
+      const fr = fm - k;
+      const x0 = left[k] + (left[k + 1] - left[k]) * fr;
+      const x1 = right[k] + (right[k + 1] - right[k]) * fr;
+      const sy0 = (f0 / N) * decalH;
+      const sy1 = (f1 / N) * decalH;
+      if (sy1 - sy0 <= 0 || x1 - x0 <= 0) continue;
+      g.drawImage(src, 0, sy0, DECAL_W, sy1 - sy0, x0, y, x1 - x0, yEnd - y);
+    }
   };
+
+  // The ~150 slices are the expensive part. While neither the decal nor the track shape
+  // changes (most frames on a straight track), the warped paint is kept and stamped once.
+  let geom = `${W}|${H}`;
+  for (let k = 0; k <= N; k += 4) geom += `|${Math.round(left[k] * 4)},${Math.round(right[k] * 4)},${Math.round(ys[k] * 4)}`;
+  const m = ctx.getTransform();
+  const res = Math.hypot(m.a, m.b);
+  const upright = Math.abs(m.b) < 1e-6 && Math.abs(m.c) < 1e-6 && res > 0;
+  const key = `${decalVersion}|${geom}|${res}`;
+  const still = upright && geom === lastGeom;
+  lastGeom = geom;
   ctx.save();
-  ctx.imageSmoothingEnabled = true;
-  for (let y = yTop; y < yBot; y += BAND) {
-    const yEnd = Math.min(yBot, y + BAND);
-    const f0 = sampleAt(y);
-    const f1 = sampleAt(yEnd);
-    const fm = (f0 + f1) / 2;
-    const k = Math.min(N - 1, Math.floor(fm));
-    const fr = fm - k;
-    const x0 = left[k] + (left[k + 1] - left[k]) * fr;
-    const x1 = right[k] + (right[k + 1] - right[k]) * fr;
-    const sy0 = (f0 / N) * decalH;
-    const sy1 = (f1 / N) * decalH;
-    if (sy1 - sy0 <= 0 || x1 - x0 <= 0) continue;
-    ctx.drawImage(src, 0, sy0, DECAL_W, sy1 - sy0, x0, y, x1 - x0, yEnd - y);
+  if (still && typeof document !== "undefined") {
+    if (key !== warpKey) {
+      let minX = Infinity;
+      let maxX = -Infinity;
+      for (let k = 0; k <= N; k++) {
+        if (left[k] < minX) minX = left[k];
+        if (right[k] > maxX) maxX = right[k];
+      }
+      // Even origin so the cached paint lands on whole device pixels at 1x, 1.5x and 2x.
+      const bx = Math.floor(minX / 2) * 2 - 2;
+      const by = Math.floor(yTop / 2) * 2;
+      const bw = Math.ceil(maxX - bx) + 2;
+      const bh = yBot - by;
+      if (!warpCanvas) warpCanvas = document.createElement("canvas");
+      const pw = Math.max(2, Math.ceil(bw * res));
+      const ph = Math.max(2, Math.ceil(bh * res));
+      if (warpCanvas.width < pw) warpCanvas.width = pw;
+      if (warpCanvas.height < ph) warpCanvas.height = ph;
+      const g = warpCanvas.getContext("2d");
+      if (g) {
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.clearRect(0, 0, warpCanvas.width, warpCanvas.height);
+        g.setTransform(res, 0, 0, res, -bx * res, -by * res);
+        warp(g);
+        warpBox = { x: bx, y: by, w: pw, h: ph };
+        warpKey = key;
+      }
+    }
+    if (key === warpKey) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(warpCanvas as HTMLCanvasElement, 0, 0, warpBox.w, warpBox.h, warpBox.x, warpBox.y, warpBox.w / res, warpBox.h / res);
+    } else {
+      warp(ctx);
+    }
+  } else {
+    warp(ctx);
   }
   ctx.restore();
 }

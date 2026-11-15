@@ -26,6 +26,12 @@ class TelemetryQueueManager {
 
   constructor() {
     this.sessionId = this.initSessionId();
+    // No backend in this build (a portal build has nowhere to send events): keep the local
+    // listeners, but never queue, retry or store anything, and drop a queue an older build left.
+    if (!SUPABASE_URL) {
+      try { localStorage.removeItem(OFFLINE_STORAGE_KEY); } catch { /* storage unavailable */ }
+      return;
+    }
     this.restoreOfflineQueue();
     this.setupLifecycleListeners();
     this.startTimer();
@@ -122,6 +128,7 @@ class TelemetryQueueManager {
 
     // Notify local subscribers immediately (fast-path for HUD & ticker)
     this.notifyListeners(event);
+    if (!SUPABASE_URL) return;
 
     // If offline, store immediately
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -184,7 +191,7 @@ class TelemetryQueueManager {
       };
 
       // Page unload beacon path
-      if (options.useBeacon && typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      if (SUPABASE_URL && options.useBeacon && typeof navigator !== 'undefined' && navigator.sendBeacon) {
         const edgeEndpoint = `${SUPABASE_URL}/functions/v1/vault-engine`;
         const blob = new Blob([JSON.stringify(payloadBody)], { type: 'application/json' });
         const sent = navigator.sendBeacon(edgeEndpoint, blob);

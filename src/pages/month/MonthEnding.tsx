@@ -413,11 +413,11 @@ function FinalPiece() {
   return missing ? (
     <>
       <SlamTitle text="The full gallery" className="ca-title--gold me-word" />
-      <p className="me-line">Every Bombshell piece of {meta.name.toLowerCase()} is yours.</p>
+      <p className="me-line">Every Prestige Art piece of {meta.name.toLowerCase()} is yours.</p>
     </>
   ) : (
     <div className="me-final">
-      <img src={finalPiecePath()} alt={`${meta.name} final Bombshell piece`} onError={() => setMissing(true)} />
+      <img src={finalPiecePath()} alt={`${meta.name} final Prestige Art piece`} onError={() => setMissing(true)} />
     </div>
   );
 }

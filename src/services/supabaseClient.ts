@@ -1,14 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { sharedAuthStorage } from './sharedAuthStorage';
 
-export const SUPABASE_URL = (
+// The portal build (klyo) has no backend of its own: no address, no key, and an inert client
+// (vite.config.ts swaps @supabase/supabase-js for platform/klyo/guestClient).
+const PORTAL = import.meta.env.VITE_PLATFORM === 'playgama';
+
+export const SUPABASE_URL = PORTAL ? '' : (
   import.meta.env.VITE_SUPABASE_URL || 
   import.meta.env.SUPABASE_URL || 
   import.meta.env.NEXT_PUBLIC_SUPABASE_URL || 
   'https://toemkhrfsbkfkutwcjkd.supabase.co'
 ).trim();
 
-export const SUPABASE_ANON_KEY = (
+export const SUPABASE_ANON_KEY = PORTAL ? '' : (
   import.meta.env.VITE_SUPABASE_ANON_KEY || 
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
   import.meta.env.SUPABASE_ANON_KEY || 
@@ -17,7 +21,7 @@ export const SUPABASE_ANON_KEY = (
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvZW1raHJmc2JrZmt1dHdjamtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MTQxNTQsImV4cCI6MjEwMzE5MDE1NH0.nAtlMU_ukqXMkIhKppwv1mxDKpxuwHa6ddQBBwK3Iu8'
 ).trim();
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+if (!PORTAL && (!SUPABASE_URL || !SUPABASE_ANON_KEY)) {
   throw new Error(
     'Missing Supabase environment variables. ' +
     'Copy .env.example to .env.local and fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
