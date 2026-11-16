@@ -1,68 +1,106 @@
+/// <reference types="@playgama/bridge/global" />
 /**
- * Portal integration for the klyo build (games.klyo.pl). Everything here is a
- * no-op unless the app was built with VITE_PLATFORM=playgama (the portal build
- * flag, name kept so the rest of the app is untouched), so the web/Farcaster/
- * Tauri builds and their Supabase saves are untouched.
+ * Playgama Bridge integration. Everything here is a no-op unless the app was
+ * built with VITE_PLATFORM=playgama, so the web/Farcaster/Tauri builds and
+ * their Supabase saves are untouched.
  *
- * The Playgama Bridge is gone from this build: no script of that network is
- * loaded and nothing is called on it. Ads go through the klyo SDK only, which
- * vite.config.ts adds to index.html ahead of the game script:
- *
- * - initPlatform(): installs the audio gate and wires the portal's sound switch.
- *   Awaited before first render.
- * - markGameReady(): tells the portal the player can interact (klyo.ready).
- * - showInterstitial(), showInterstitialAndWait(): the ad break between rounds
- *   (klyo.adBreak).
- * - showRewarded(): the monthly build's bonus-song unlock (klyo.rewardedAd).
- * - setLeaderboardScore(): the month total, posted after a round raises it
- *   (klyo.score); klyo shows the board on the game's page.
- *
- * Progress stays in localStorage, which the klyo SDK carries between devices
- * itself. What the Bridge used to provide and klyo is not wired for here
- * (purchases, an in-game leaderboard panel, portal achievements, portal sharing,
- * banner slots, Bridge analytics) answers "not supported", exactly as it already did
- * on a portal without that feature.
+ * - initPlatform(): loads the SDK, restores saved progress from bridge.storage
+ *   into localStorage, and wires pause/audio events. Awaited before first render.
+ * - markGameReady(): tells the platform the player can interact.
+ * - showInterstitial(): shows an interstitial at a natural break.
+ * - showRewarded(), purchase(): the monthly build's bonus-song unlocks.
  */
 import { installAudioGate, setGate } from './audioGate';
 import { installPathShim } from './paths';
+import { menuBannerSpace } from './bannerLayout';
 
 const IS_PLAYGAMA = import.meta.env.VITE_PLATFORM === 'playgama';
 
-/** Fired on window when the platform wants gameplay paused (ad, tab hidden). */
+/** bridge.storage key that holds the whole local save as one JSON object. */
+const SAVE_KEY = 'pim_save';
+/** Fired on window when the platform wants gameplay paused (ad, platform pause, tab hidden). */
 export const PLATFORM_PAUSE_EVENT = 'pim:platform-pause';
 
-/** The part of the klyo SDK this game uses (https://games.klyo.pl/game-sdk/index.md). */
-interface KlyoAnswer { ok?: boolean }
-interface KlyoSdk {
-  ready?: () => void;
-  adBreak?: (placement: string, done: (answer?: KlyoAnswer) => void) => void;
-  rewardedAd?: (done: (answer?: KlyoAnswer) => void) => void;
-  onSound?: (listener: (soundOn: boolean) => void) => void;
-  score?: (points: number, done?: (answer?: KlyoAnswer) => void) => void;
-}
-declare global {
-  interface Window { klyo?: KlyoSdk }
-}
+// Session tokens, wallet SDK state and bulky per-run telemetry stay device-local.
+// The Bridge's own keys (guest id, remote config cache, its local copy of pim_save) are its business.
+const EXCLUDED_KEY = /^(sb-|supabase\.|wagmi|-walletlink|walletlink|WCM_|wc@|telemetry_|pim_telemetry|chunk_|bridge[-_])|pim_save|pg_local_at/i;
+/** In the snapshot: when it was taken. In localStorage: when local progress last went out to be saved. */
+const SAVED_AT = '__pg_saved_at';
+const LOCAL_AT = 'pg_local_at';
+/** A platform call that never answers must not hold up every later save. */
+const STORAGE_TIMEOUT_MS = 5000;
 
-/** The klyo SDK once its script has loaded; null in every other build and when it is missing. */
-function klyoOrNull(): KlyoSdk | null {
-  return IS_PLAYGAMA && typeof window !== 'undefined' && window.klyo ? window.klyo : null;
+function withTimeout<T>(p: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('storage call timed out')), STORAGE_TIMEOUT_MS);
+    p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+  });
 }
-
-/** klyo's name for the break between rounds. */
-const KLYO_BREAK = 'next';
 
 let ready = false;
-/** Kept for the funnel; nothing saves through a portal call any more, so it never fires. */
+/** Told when a save to bridge.storage fails (the funnel reports it as save_failed). */
 const saveFailedListeners = new Set<(err: unknown) => void>();
 export function onSaveFailed(fn: (err: unknown) => void): () => void {
   saveFailedListeners.add(fn);
   return () => saveFailedListeners.delete(fn);
 }
+let lastSnapshot = '';
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let writing = false;
+let dirty = false;
+
+function bridgeOrNull(): typeof window.bridge | null {
+  return IS_PLAYGAMA && typeof window !== 'undefined' && window.bridge?.isInitialized ? window.bridge : null;
+}
+
+function snapshot(): string {
+  const data: Record<string, string> = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || EXCLUDED_KEY.test(key)) continue;
+    const value = localStorage.getItem(key);
+    if (value !== null) data[key] = value;
+  }
+  return JSON.stringify(data);
+}
+
+function stamp(json: string): string {
+  const at = Date.now();
+  try { localStorage.setItem(LOCAL_AT, String(at)); } catch { /* storage blocked */ }
+  return json.slice(0, -1) + (json.length > 2 ? ',' : '') + `${JSON.stringify(SAVED_AT)}:${JSON.stringify(String(at))}}`;
+}
+
+async function flush(): Promise<void> {
+  flushTimer = null;
+  const b = bridgeOrNull();
+  if (!b) return;
+  if (writing) { dirty = true; return; }
+  const next = snapshot();
+  if (next === lastSnapshot) return;
+  writing = true;
+  try {
+    await withTimeout(b.storage.set(SAVE_KEY, stamp(next)));
+    lastSnapshot = next;
+  } catch (err) {
+    console.warn('[Playgama] Save failed:', err);
+    saveFailedListeners.forEach((fn) => fn(err));
+  } finally {
+    writing = false;
+    // A change that landed while this save was in flight gets its own save.
+    if (dirty) { dirty = false; scheduleFlush(); }
+  }
+}
+
+function scheduleFlush() {
+  if (writing) { dirty = true; return; }
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => void flush(), 1500);
+}
 
 /**
  * Some portals load the game in an iframe with site storage blocked, so
- * localStorage throws. Progress then lives in memory for the session.
+ * localStorage throws. Progress then lives in memory for the session and is
+ * saved only through bridge.storage, which still works there.
  */
 function ensureLocalStorage() {
   try {
@@ -76,23 +114,106 @@ function ensureLocalStorage() {
     get length() { return data.size; },
     key: (i: number) => [...data.keys()][i] ?? null,
     getItem: (k: string) => (data.has(String(k)) ? data.get(String(k))! : null),
-    setItem: (k: string, v: string) => { data.set(String(k), String(v)); },
-    removeItem: (k: string) => { data.delete(String(k)); },
-    clear: () => { data.clear(); },
+    setItem: (k: string, v: string) => { data.set(String(k), String(v)); if (!EXCLUDED_KEY.test(String(k))) scheduleFlush(); },
+    removeItem: (k: string) => { data.delete(String(k)); if (!EXCLUDED_KEY.test(String(k))) scheduleFlush(); },
+    clear: () => { data.clear(); scheduleFlush(); },
   };
   try {
     Object.defineProperty(window, 'localStorage', { value: mem, configurable: true });
-    console.warn('[klyo] localStorage is blocked; progress lasts for this session only.');
+    console.warn('[Playgama] localStorage is blocked; saving through bridge.storage only.');
   } catch (err) {
-    console.warn('[klyo] localStorage is blocked and could not be replaced:', err);
+    console.warn('[Playgama] localStorage is blocked and could not be replaced:', err);
   }
+}
+
+async function restoreSave(b: typeof window.bridge) {
+  try {
+    const got = await withTimeout(b.storage.get(SAVE_KEY, false));
+    // Some platforms hand back the saved JSON already parsed.
+    const raw = typeof got === 'string' ? got : got && typeof got === 'object' ? JSON.stringify(got) : '';
+    if (!raw) return;
+    const data = JSON.parse(raw) as Record<string, string>;
+    // Local progress wins unless the saved copy is newer (another device, or
+    // storage cleared); otherwise the save only fills in what's missing here.
+    // An older copy must never roll progress back.
+    const savedAt = Number(data[SAVED_AT]) || 0;
+    const localAt = Number(localStorage.getItem(LOCAL_AT)) || 0;
+    const cloudWins = savedAt > localAt;
+    delete data[SAVED_AT];
+    for (const [key, value] of Object.entries(data)) {
+      if (typeof value !== 'string' || EXCLUDED_KEY.test(key)) continue;
+      if (cloudWins || localStorage.getItem(key) === null) localStorage.setItem(key, value);
+    }
+    if (cloudWins) {
+      try { localStorage.setItem(LOCAL_AT, String(savedAt)); } catch { /* storage blocked */ }
+    }
+    // Anything local the save lacks goes out on the next flush.
+    lastSnapshot = cloudWins ? JSON.stringify(data) : '';
+  } catch (err) {
+    console.warn('[Playgama] Could not restore save:', err);
+  }
+}
+
+/** Mirrors every localStorage write into bridge.storage (debounced, one batched key). */
+function installSaveMirror() {
+  const proto = Storage.prototype;
+  const nativeSet = proto.setItem;
+  const nativeRemove = proto.removeItem;
+  const nativeClear = proto.clear;
+  proto.setItem = function (this: Storage, key: string, value: string) {
+    nativeSet.call(this, key, value);
+    if (this === window.localStorage && !EXCLUDED_KEY.test(key)) scheduleFlush();
+  };
+  proto.removeItem = function (this: Storage, key: string) {
+    nativeRemove.call(this, key);
+    if (this === window.localStorage && !EXCLUDED_KEY.test(key)) scheduleFlush();
+  };
+  proto.clear = function (this: Storage) {
+    nativeClear.call(this);
+    if (this === window.localStorage) scheduleFlush();
+  };
+  // Write promptly when the player leaves or the device rotates.
+  const flushNow = () => {
+    if (flushTimer) clearTimeout(flushTimer);
+    void flush();
+  };
+  window.addEventListener('pagehide', flushNow);
+  window.addEventListener('orientationchange', flushNow);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) flushNow();
+  });
 }
 
 function requestGameplayPause() {
   window.dispatchEvent(new Event(PLATFORM_PAUSE_EVENT));
 }
 
-/** Sets up the portal build. Resolves even if the klyo SDK is missing. */
+let rewardedResolve: ((granted: boolean) => void) | null = null;
+let rewardedGranted = false;
+
+function onRewardedState(state: string) {
+  // 'rewarded' arrives while the ad is still on screen, so only closed/failed lift the gate.
+  const isOpen = state === 'loading' || state === 'opened' || state === 'rewarded';
+  setGate('ad', isOpen);
+  if (state === 'opened') requestGameplayPause();
+  if (state === 'rewarded') rewardedGranted = true;
+  if ((state === 'closed' || state === 'failed') && rewardedResolve) {
+    const resolve = rewardedResolve;
+    rewardedResolve = null;
+    resolve(rewardedGranted);
+  }
+}
+
+const interstitialListeners = new Set<(state: string) => void>();
+
+function onInterstitialState(state: string) {
+  const isOpen = state === 'opened';
+  setGate('ad', isOpen);
+  if (isOpen) requestGameplayPause();
+  interstitialListeners.forEach((fn) => fn(state));
+}
+
+/** Initializes the Bridge SDK and restores progress. Resolves even if the SDK is missing. */
 export async function initPlatform(): Promise<void> {
   if (!IS_PLAYGAMA || typeof window === 'undefined') return;
   installPathShim();
@@ -100,207 +221,299 @@ export async function initPlatform(): Promise<void> {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) requestGameplayPause();
   });
-  ensureLocalStorage();
 
-  // The SDK's script tag sits ahead of the game script, so it has loaded by now.
-  // Its sound switch is wired only if it is really there.
-  const k = klyoOrNull();
-  if (!k) {
-    console.warn('[klyo] SDK not loaded; continuing without it.');
+  const b = window.bridge;
+  if (!b) {
+    console.warn('[Playgama] Bridge SDK not loaded; continuing without it.');
     return;
   }
   try {
-    k.onSound?.((soundOn: boolean) => setGate('platform_audio', !soundOn));
+    await b.initialize();
   } catch (err) {
-    console.warn('[klyo] Could not listen for the sound switch:', err);
+    console.warn('[Playgama] Bridge initialize failed:', err);
+    return;
   }
+
+  ensureLocalStorage();
+  await restoreSave(b);
+  installSaveMirror();
+  // Pushes local progress the platform copy doesn't have yet.
+  scheduleFlush();
+
+  const { EVENT_NAME } = b;
+  setGate('platform_audio', !b.platform.isAudioEnabled);
+  setGate('platform_pause', b.platform.isPaused);
+  b.platform.on(EVENT_NAME.AUDIO_STATE_CHANGED, (isEnabled: boolean) => setGate('platform_audio', !isEnabled));
+  b.platform.on(EVENT_NAME.PAUSE_STATE_CHANGED, (isPaused: boolean) => {
+    setGate('platform_pause', isPaused);
+    if (isPaused) requestGameplayPause();
+  });
+  b.advertisement.on(EVENT_NAME.INTERSTITIAL_STATE_CHANGED, onInterstitialState);
+  b.advertisement.on(EVENT_NAME.REWARDED_STATE_CHANGED, onRewardedState);
+  // A platform pre-roll may already be on screen when initialize() resolves.
+  onInterstitialState(b.advertisement.interstitialState);
 }
 
-/** Tells the portal once, after the first interactive screen is up, that the game can be played. */
+/** Sends `game_ready` once, after the first interactive screen is up. */
 export function markGameReady(): void {
-  const k = klyoOrNull();
-  if (!k || ready) return;
+  const b = bridgeOrNull();
+  if (!b || ready) return;
   ready = true;
-  try { k.ready?.(); } catch { /* the portal must never break the game */ }
+  b.platform.sendMessage(b.PLATFORM_MESSAGE.GAME_READY).catch(() => {});
 }
 
-/** Bridge analytics are gone with the Bridge; the funnel's events are dropped. */
-export function sendAnalytics(_event: string, _data: Record<string, unknown>): void {}
-
-export function setAnalyticsGameVersion(_version: string): void {}
-
-/** klyo has no gameplay start/stop message. */
-export function sendGameplayMessage(_kind: 'gameplay_started' | 'gameplay_stopped'): void {}
-
 /**
- * The ad break between rounds: klyo.adBreak("next", () => next()). Sound is
- * gated and gameplay asked to pause while it is up. `next` runs exactly once:
- * when the break ends, or at once when there is no SDK to show one.
+ * A custom analytics event through the Bridge's analytics module (it batches
+ * and sends them to Playgama with the session's meta). No-op without the SDK.
  */
-function adBreak(next: () => void): void {
-  const k = klyoOrNull();
-  if (!k?.adBreak) { next(); return; }
-  let over = false;
-  const end = () => {
-    if (over) return;
-    over = true;
-    clearTimeout(cap);
-    setGate('ad', false);
-    next();
-  };
-  // Never hold the screen forever if the portal loses the answer.
-  const cap = setTimeout(end, 90_000);
-  setGate('ad', true);
-  requestGameplayPause();
+export function sendAnalytics(event: string, data: Record<string, unknown>): void {
+  const b = bridgeOrNull() as (typeof window.bridge & { analytics?: { send(e: string, d?: Record<string, unknown>): void; gameVersion: string | null } }) | null;
+  if (!b?.analytics?.send) return;
   try {
-    k.adBreak(KLYO_BREAK, () => end());
-  } catch {
-    end();
-  }
+    b.analytics.send(event, data);
+  } catch { /* analytics must never break the game */ }
 }
 
-/** Shows an ad break at a natural break. The portal decides how often one really appears. */
-export function showInterstitial(_placement: string): void {
-  adBreak(() => {});
+/** Tags the Bridge's own analytics with the build version. */
+export function setAnalyticsGameVersion(version: string): void {
+  const b = bridgeOrNull() as (typeof window.bridge & { analytics?: { gameVersion: string | null } }) | null;
+  if (!b?.analytics) return;
+  try {
+    b.analytics.gameVersion = version;
+  } catch { /* older SDK */ }
+}
+
+export function sendGameplayMessage(kind: 'gameplay_started' | 'gameplay_stopped'): void {
+  const b = bridgeOrNull();
+  if (!b) return;
+  b.platform.sendMessage(kind).catch(() => {});
+}
+
+/** Shows an interstitial at a natural break. The SDK enforces the minimum delay between ads. */
+export function showInterstitial(placement: string): void {
+  const b = bridgeOrNull();
+  if (!b || !b.advertisement.isInterstitialSupported) return;
+  b.advertisement.showInterstitial(placement);
 }
 
 /**
- * Shows an ad break and resolves once it's gone, so a screen can hold its
- * entrance until the player can see it. Resolves at once when there's no ad.
+ * Shows an interstitial and resolves once it's gone, so a screen can hold its
+ * entrance until the player can see it. Resolves at once when there's no ad,
+ * and after `waitMs` when the SDK skips this one (minimum delay not reached).
  */
-export function showInterstitialAndWait(_placement: string): Promise<void> {
-  return new Promise((resolve) => adBreak(resolve));
+export function showInterstitialAndWait(placement: string, waitMs = 600): Promise<void> {
+  const b = bridgeOrNull();
+  if (!b || !b.advertisement.isInterstitialSupported) return Promise.resolve();
+  return new Promise((resolve) => {
+    let started = false;
+    const done = () => {
+      interstitialListeners.delete(listen);
+      clearTimeout(skip);
+      clearTimeout(cap);
+      resolve();
+    };
+    const listen = (state: string) => {
+      if (state === 'loading' || state === 'opened') started = true;
+      if (state === 'closed' || state === 'failed') done();
+    };
+    const skip = setTimeout(() => { if (!started) done(); }, waitMs);
+    // Never hold the screen forever if the SDK loses a state event.
+    const cap = setTimeout(done, 90_000);
+    interstitialListeners.add(listen);
+    b.advertisement.showInterstitial(placement);
+  });
 }
-
-let rewardedOpen = false;
 
 export function isRewardedSupported(): boolean {
-  return typeof klyoOrNull()?.rewardedAd === 'function';
+  return !!bridgeOrNull()?.advertisement.isRewardedSupported;
 }
 
 /**
- * Shows a rewarded ad. Resolves true only if the portal reported the reward
- * (answer.ok === true); closing early or a failed ad resolves false.
+ * Shows a rewarded ad. Resolves true only if the platform reported the reward
+ * (state 'rewarded'); closing early or a failed ad resolves false.
  */
-export function showRewarded(_placement: string): Promise<boolean> {
-  const k = klyoOrNull();
-  if (!k?.rewardedAd || rewardedOpen) return Promise.resolve(false);
-  rewardedOpen = true;
+export function showRewarded(placement: string): Promise<boolean> {
+  const b = bridgeOrNull();
+  if (!b || !b.advertisement.isRewardedSupported || rewardedResolve) return Promise.resolve(false);
+  rewardedGranted = false;
   return new Promise<boolean>((resolve) => {
-    let over = false;
-    const end = (granted: boolean) => {
-      if (over) return;
-      over = true;
-      clearTimeout(cap);
-      rewardedOpen = false;
-      setGate('ad', false);
-      resolve(granted);
-    };
-    const cap = setTimeout(() => end(false), 90_000);
-    setGate('ad', true);
-    requestGameplayPause();
+    rewardedResolve = resolve;
     try {
-      k.rewardedAd!((answer) => end(answer?.ok === true));
+      b.advertisement.showRewarded(placement);
     } catch {
-      end(false);
+      rewardedResolve = null;
+      resolve(false);
     }
   });
 }
 
-/** Payments on klyo go through klyo only; none are wired, so the bundle isn't offered. */
+/** True when the portal takes in-game payments (a new Playgama account usually doesn't yet). */
 export function isPaymentsSupported(): boolean {
-  return false;
+  return !!bridgeOrNull()?.payments.isSupported;
 }
 
 /** Price label for a product from the platform catalog, or null if it isn't listed. */
-export async function getProductPrice(_id: string): Promise<string | null> {
-  return null;
+export async function getProductPrice(id: string): Promise<string | null> {
+  const b = bridgeOrNull();
+  if (!b || !b.payments.isSupported) return null;
+  try {
+    const product = (await b.payments.getCatalog()).find((p) => p.id === id);
+    return product?.price != null ? String(product.price) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Buys a non-consumable product. Resolves true once the platform confirms the purchase. */
-export async function purchase(_id: string): Promise<boolean> {
-  return false;
+export async function purchase(id: string): Promise<boolean> {
+  const b = bridgeOrNull();
+  if (!b || !b.payments.isSupported) return false;
+  try {
+    await b.payments.purchase(id);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-/** Ids of products the player already owns. */
+/** Ids of products the player already owns (restores a bundle bought on another device). */
 export async function getPurchasedIds(): Promise<string[]> {
-  return [];
+  const b = bridgeOrNull();
+  if (!b || !b.payments.isSupported) return [];
+  try {
+    return (await b.payments.getPurchases()).map((p) => p.id);
+  } catch {
+    return [];
+  }
 }
 
 export type LeaderboardKind = 'not_available' | 'in_game' | 'native' | 'native_popup';
 export interface LeaderboardRow { id: string; name: string; score: number; rank: number; photo: string | null }
 
 /**
- * klyo keeps one leaderboard per game and shows it on the game's page, so the
- * kind is 'native': scores are posted, and no board is drawn in the game.
+ * How this portal offers leaderboards: 'in_game' (we draw the entries),
+ * 'native_popup' (the portal draws them on request), 'native' (the portal shows
+ * them on its own page) or 'not_available'.
  */
 export function leaderboardKind(): LeaderboardKind {
-  return typeof klyoOrNull()?.score === 'function' ? 'native' : 'not_available';
+  return (bridgeOrNull()?.leaderboards.type as LeaderboardKind | undefined) ?? 'not_available';
 }
 
-/**
- * Posts a score with klyo.score. Resolves true once klyo has taken it; false
- * when it refused or never answered, so the caller sends it again next time.
- */
-export function setLeaderboardScore(_id: string, score: number): Promise<boolean> {
-  const k = klyoOrNull();
-  if (!k?.score) return Promise.resolve(false);
-  return new Promise<boolean>((resolve) => {
-    let over = false;
-    const end = (sent: boolean) => {
-      if (over) return;
-      over = true;
-      clearTimeout(cap);
-      resolve(sent);
-    };
-    const cap = setTimeout(() => end(false), 15_000);
-    try {
-      k.score!(score, (answer) => end(answer?.ok !== false));
-    } catch {
-      end(false);
-    }
-  });
+export async function setLeaderboardScore(id: string, score: number): Promise<boolean> {
+  const b = bridgeOrNull();
+  if (!b || leaderboardKind() === 'not_available') return false;
+  try {
+    await b.leaderboards.setScore(id, score);
+    return true;
+  } catch (err) {
+    console.warn('[Playgama] Leaderboard score failed:', err);
+    return false;
+  }
 }
 
-export async function getLeaderboardEntries(_id: string): Promise<LeaderboardRow[]> {
-  return [];
+export async function getLeaderboardEntries(id: string): Promise<LeaderboardRow[]> {
+  const b = bridgeOrNull();
+  if (!b || leaderboardKind() !== 'in_game') return [];
+  try {
+    return (await b.leaderboards.getEntries(id)) as LeaderboardRow[];
+  } catch {
+    return [];
+  }
 }
 
-export async function showLeaderboardPopup(_id: string): Promise<void> {}
+export async function showLeaderboardPopup(id: string): Promise<void> {
+  const b = bridgeOrNull();
+  if (!b || leaderboardKind() !== 'native_popup') return;
+  try {
+    await b.leaderboards.showNativePopup(id);
+  } catch { /* closed or refused */ }
+}
 
-/** Nothing leaves the game on klyo. */
+/** True only on portals that allow links out of the game (playgama.com does not). */
 export function externalLinksAllowed(): boolean {
-  return false;
+  return !!bridgeOrNull()?.platform.isExternalLinksAllowed;
 }
 
 /** Portal-native ways to help the game (no outside links needed). */
 export type SocialAction = 'rate' | 'share' | 'favorite' | 'community';
 
 export function socialActions(): SocialAction[] {
-  return [];
+  const s = bridgeOrNull()?.social;
+  if (!s) return [];
+  const out: SocialAction[] = [];
+  if (s.isRateSupported) out.push('rate');
+  if (s.isAddToFavoritesSupported) out.push('favorite');
+  if (s.isShareSupported) out.push('share');
+  if (s.isJoinCommunitySupported) out.push('community');
+  return out;
 }
 
-export async function runSocialAction(_action: SocialAction): Promise<void> {}
+export async function runSocialAction(action: SocialAction): Promise<void> {
+  const s = bridgeOrNull()?.social;
+  if (!s) return;
+  try {
+    if (action === 'rate') await s.rate();
+    else if (action === 'favorite') await s.addToFavorites();
+    else if (action === 'share') await s.share({ text: DEFAULT_SHARE_TEXT });
+    else await s.joinCommunity();
+  } catch { /* closed or refused */ }
+}
 
-/** Ways a portal lets a player post an accomplishment. */
+const DEFAULT_SHARE_TEXT = 'PIM: a rhythm game made from 365 days of songs by th3scr1b3.';
+
+/** Ways this portal lets a player post an accomplishment (Discord, Reddit, VK, OK, Facebook...). */
 export type ShareKind = 'share' | 'post' | 'invite';
 
 export function shareKinds(): ShareKind[] {
-  return [];
+  const s = bridgeOrNull()?.social;
+  if (!s) return [];
+  const out: ShareKind[] = [];
+  if (s.isShareSupported) out.push('share');
+  if (s.isCreatePostSupported) out.push('post');
+  if (s.isInviteFriendsSupported) out.push('invite');
+  return out;
 }
 
-/** Resolves false: there is no portal share dialog on klyo. */
-export async function shareThroughPortal(_kind: ShareKind, _text: string, _image?: string): Promise<boolean> {
-  return false;
+/**
+ * Posts an accomplishment through the portal. `image` is a data URL of the
+ * result card; portals that only take a hosted image skip it. Resolves false
+ * when the player closed the dialog or the portal refused.
+ */
+export async function shareThroughPortal(kind: ShareKind, text: string, image?: string): Promise<boolean> {
+  const s = bridgeOrNull()?.social;
+  if (!s) return false;
+  const options = image ? { text, image } : { text };
+  try {
+    if (kind === 'share') await s.share(options);
+    else if (kind === 'post') await s.createPost(options);
+    else await s.inviteFriends(options);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-/** Portal achievements came from the Bridge; the in-game list still tracks them. */
-export async function unlockPortalAchievement(_id: string): Promise<boolean> {
-  return false;
+/** Unlocks an achievement on the portal (native on Y8/Lagged, tracked by the SDK elsewhere). */
+export async function unlockPortalAchievement(id: string): Promise<boolean> {
+  const a = bridgeOrNull()?.achievements;
+  if (!a) return false;
+  try {
+    await a.unlock(id);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-/** Copies text with the browser's clipboard. */
+/** Copies text, through the Bridge where the portal wraps the clipboard. */
 export async function copyText(text: string): Promise<boolean> {
+  const c = bridgeOrNull()?.clipboard;
+  if (c?.isSupported) {
+    try {
+      await c.write(text);
+      return true;
+    } catch { /* fall through to the browser */ }
+  }
   try {
     await navigator.clipboard.writeText(text);
     return true;
@@ -320,12 +533,55 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
-/** Banner slots were the Bridge's; there are none on klyo, so no space is reserved. */
-export function setMenuBanners(_on: boolean): void {}
+/**
+ * Advanced banners (the `menu` placement in playgama-bridge-config.json): a rail
+ * on wide screens or a strip on portrait ones, shown on the chapter and results
+ * screens only. Bridge lays the slots over the page and hides them during
+ * interstitials and rewarded ads; we measure them and publish the space they take
+ * as --pg-ad-right / --pg-ad-bottom so those screens shrink to make room.
+ */
+let bannersWanted = false;
+let bannersWired = false;
 
-/** Coarse device class for analytics: pointer type plus the browser family. */
+function reserveBannerSpace() {
+  const root = document.documentElement.style;
+  let right = 0;
+  let bottom = 0;
+  const shown = bannersWanted && bridgeOrNull()?.advertisement.advancedBannersState === 'shown';
+  if (shown) {
+    for (const el of document.querySelectorAll<HTMLElement>('[id^="advanced-banner-"]')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      if (r.right >= innerWidth - 1 && r.height > r.width) right = Math.max(right, innerWidth - r.left);
+      else if (r.bottom >= innerHeight - 1) bottom = Math.max(bottom, innerHeight - r.top);
+    }
+    // Portals draw the slots outside our page, so fall back to the configured layout.
+    if (!right && !bottom) ({ right, bottom } = menuBannerSpace(innerWidth, innerHeight));
+  }
+  root.setProperty('--pg-ad-right', `${Math.round(right)}px`);
+  root.setProperty('--pg-ad-bottom', `${Math.round(bottom)}px`);
+  document.documentElement.dataset.pgAd = right ? 'right' : bottom ? 'bottom' : '';
+}
+
+export function setMenuBanners(on: boolean): void {
+  const b = bridgeOrNull();
+  if (!b || !b.advertisement.isAdvancedBannersSupported || on === bannersWanted) return;
+  bannersWanted = on;
+  if (!bannersWired) {
+    bannersWired = true;
+    // Bridge re-lays the slots ~200 ms after a resize or rotation.
+    b.advertisement.on(b.EVENT_NAME.ADVANCED_BANNERS_STATE_CHANGED, () => requestAnimationFrame(reserveBannerSpace));
+    addEventListener('resize', () => setTimeout(reserveBannerSpace, 350));
+  }
+  if (on) b.advertisement.showAdvancedBanners('menu');
+  else b.advertisement.hideAdvancedBanners();
+  reserveBannerSpace();
+}
+
+/** Coarse device class for analytics: the Bridge's device type plus the browser family. */
 export function deviceClass(): string {
-  const type = window.matchMedia?.('(pointer: coarse)').matches ? 'mobile' : 'desktop';
+  const b = bridgeOrNull() as (typeof window.bridge & { device?: { type?: string } }) | null;
+  const type = b?.device?.type || (window.matchMedia?.('(pointer: coarse)').matches ? 'mobile' : 'desktop');
   const ua = navigator.userAgent;
   const browser = /Edg\//.test(ua) ? 'edge'
     : /Firefox\//.test(ua) ? 'firefox'
