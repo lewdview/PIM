@@ -10,6 +10,7 @@
  */
 
 import type { Note, NoteType } from '../types';
+import type { RunnerStage } from './runnerCourses';
 
 export type WarpType = Extract<NoteType, 'warp' | 'warp-clear'>;
 export type SecretLevelId = 'shooter' | 'runner';
@@ -74,13 +75,51 @@ export function parseWarpOverride(search: string): WarpType | undefined {
 }
 
 const CLEARED_KEY = 'secret_levels_cleared';
+const WHISTLE_KEY = 'warp_whistle';
+type SecretClear = { best: number; clears: number };
+type ClearId = SecretLevelId | 'runner-district';
+let earnedWhistle = false;
+let clearedRooftop = false;
 
-export function markSecretLevelCleared(level: SecretLevelId, score: number) {
+function readClears(): Partial<Record<ClearId, SecretClear>> {
   try {
-    const raw = localStorage.getItem(CLEARED_KEY);
-    const data: Record<string, { best: number; clears: number }> = raw ? JSON.parse(raw) : {};
-    const prev = data[level] ?? { best: 0, clears: 0 };
-    data[level] = { best: Math.max(prev.best, score), clears: prev.clears + 1 };
+    return JSON.parse(localStorage.getItem(CLEARED_KEY) ?? '{}') ?? {};
+  } catch {
+    return {};
+  }
+}
+
+export function collectWarpWhistle() {
+  earnedWhistle = true;
+  try {
+    localStorage.setItem(WHISTLE_KEY, '1');
+  } catch { /* Remember it for the current session. */ }
+}
+
+export function hasWarpWhistle() {
+  if (earnedWhistle) return true;
+  try {
+    if (localStorage.getItem(WHISTLE_KEY) === '1') return true;
+  } catch { /* Use existing clear records when available. */ }
+  const clears = readClears();
+  return (clears.runner?.clears ?? 0) > 0 || (clears.shooter?.clears ?? 0) > 0;
+}
+
+export function highestRunnerStage(): RunnerStage {
+  return clearedRooftop || (readClears().runner?.clears ?? 0) > 0 ? 2 : 1;
+}
+
+export function runnerArcadePath(stage: RunnerStage) {
+  return `/secret/runner?via=arcade&stage=${stage}`;
+}
+
+export function markSecretLevelCleared(level: SecretLevelId, score: number, stage: RunnerStage = 1) {
+  const id = level === 'runner' && stage === 2 ? 'runner-district' : level;
+  if (id === 'runner') clearedRooftop = true;
+  try {
+    const data = readClears();
+    const prev = data[id] ?? { best: 0, clears: 0 };
+    data[id] = { best: Math.max(prev.best, score), clears: prev.clears + 1 };
     localStorage.setItem(CLEARED_KEY, JSON.stringify(data));
   } catch {
     /* storage unavailable: the clear just isn't remembered */
