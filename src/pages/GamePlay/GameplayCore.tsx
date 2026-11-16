@@ -1305,7 +1305,7 @@ export default function Game() {
           popEl.className = 'absolute pointer-events-none judgment-pop';
           popEl.style.left = `${targetPct}%`;
           popEl.style.top = `${targetYPct}%`;
-          popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id, optsRef.current.hudStyle ?? 'stanza');
+          popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id, optsRef.current.hudStyle ?? 'neon');
           
           judgmentOverlayRef.current.appendChild(popEl);
           popEl.addEventListener('animationend', () => {
@@ -1322,7 +1322,7 @@ export default function Game() {
         const streamContainer = judgmentStreamRef.current;
         const itemEl = document.createElement('div');
         itemEl.className = 'judgment-stream-item shrink-0';
-        itemEl.innerHTML = getJudgmentStreamItemHtml(newJ.type, newJ.lane, optsRef.current.hudStyle ?? 'stanza');
+        itemEl.innerHTML = getJudgmentStreamItemHtml(newJ.type, newJ.lane, optsRef.current.hudStyle ?? 'neon');
 
         streamContainer.appendChild(itemEl);
 
@@ -4032,7 +4032,7 @@ export default function Game() {
     const calculatedStage = stageAtTime(stageStartsRef.current, t);
 
     // Stanza + Oracle HUD (throttled to ~30Hz inside VerseHud).
-    if ((optsRef.current.hudStyle ?? 'stanza') === 'stanza') {
+    if ((optsRef.current.hudStyle ?? 'neon') === 'stanza') {
       const song = songRef.current;
       const verse = verseHudRef.current;
       const gsNow = gsRef.current;
@@ -11121,10 +11121,10 @@ export default function Game() {
                 <span 
                   className="px-2 py-0.5 rounded text-[8px] font-black tracking-widest transition-all duration-300 shadow-sm"
                   style={{
-                    backgroundColor: currentStage === 5 ? 'rgba(255,0,85,0.25)' : currentStage === 4 ? 'rgba(255,20,147,0.25)' : currentStage === 3 ? 'rgba(255,215,0,0.25)' : currentStage === 2 ? 'rgba(57,255,20,0.2)' : 'rgba(0,229,255,0.2)',
-                    color: currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF',
-                    border: `1px solid ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}60`,
-                    boxShadow: `0 0 10px ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}30`,
+                    backgroundColor: `${art.stage[Math.max(0, Math.min(4, currentStage - 1))]}38`,
+                    color: art.stage[Math.max(0, Math.min(4, currentStage - 1))],
+                    border: `1px solid ${art.stage[Math.max(0, Math.min(4, currentStage - 1))]}60`,
+                    boxShadow: `0 0 10px ${art.stage[Math.max(0, Math.min(4, currentStage - 1))]}30`,
                   }}
                 >
                   {currentStage === 5 ? '⚡ FINAL' : currentStage === 4 ? 'STAGE 4' : currentStage === 3 ? 'STAGE 3' : currentStage === 2 ? 'STAGE 2' : 'STAGE 1'}
@@ -11168,15 +11168,7 @@ export default function Game() {
                   className="h-full rounded-full transition-all duration-150 ease-out"
                   style={{
                     width: `${Math.min(100, Math.max(0, (gs.progress || 0) * 100))}%`,
-                    background: currentStage === 5
-                      ? "linear-gradient(90deg, #FF1493, #FFD700, #FF0055)"
-                      : currentStage === 4
-                        ? "linear-gradient(90deg, #00E5FF, #FFD700, #FF1493)"
-                        : currentStage === 3
-                          ? "linear-gradient(90deg, #00E5FF, #39FF14, #FFD700)"
-                          : currentStage === 2
-                            ? "linear-gradient(90deg, #00E5FF, #39FF14)"
-                            : "#00E5FF",
+                    background: currentStage <= 1 ? art.stage[0] : `linear-gradient(90deg, ${art.stage.slice(0, Math.min(5, currentStage)).join(', ')})`,
                     boxShadow: (gs.progress || 0) > 0
                       ? currentStage === 5
                         ? "0 0 10px rgba(255,0,85,0.7), 0 0 20px rgba(255,215,0,0.4)"
@@ -11403,7 +11395,7 @@ export default function Game() {
           const shieldLeft = Math.max(0, 3 - missCount);
           const cover = (song as any)?.coverArt || (song as any)?.coverUrl;
           return (
-            <div className="neon-hud" data-lyrics={activeLyricsMode(opts) === 'poetic' ? 'poetic' : undefined} style={{ opacity: activePovMode === 'cyber_tunnel' ? 0.4 : 1 }}>
+            <div className="neon-hud" data-lyrics={activeLyricsMode(opts) === 'poetic' ? 'poetic' : undefined} style={{ ...art.vars, opacity: activePovMode === 'cyber_tunnel' ? 0.4 : 1 } as React.CSSProperties}>
               <div className="neon-hud-top">
                 <div className="neon-hud-left">
                   <div className="neon-hud-ctrls">
@@ -11474,7 +11466,7 @@ export default function Game() {
         {/* ── GAMEPLAY HUD · Stanza + Oracle (logic: ./verseHud.ts, styles: src/styles/gameplayHud.css) ──
             The lyric line is inked letter by letter by the notes you hit (direct DOM updates from the draw
             loop); the oracle whisper and lane ticks sit under it. Score, chain and time flank it. */}
-        {(opts.hudStyle ?? 'stanza') === 'stanza' && (() => {
+        {(opts.hudStyle ?? 'neon') === 'stanza' && (() => {
           const c = gs.combo;
           const baseMult = c >= 100 ? 5 : c >= 75 ? 4 : c >= 50 ? 3 : c >= 25 ? 2 : 1;
           let m = baseMult;

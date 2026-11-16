@@ -41,7 +41,7 @@ export function defaultLyricsMode(): LyricsMode {
  * itself, so it turns the other modes off.
  */
 export function activeLyricsMode(o: { hudStyle?: HudStyle; lyricsMode: LyricsMode }): LyricsMode {
-  return (o.hudStyle ?? 'stanza') === 'stanza' ? 'off' : o.lyricsMode;
+  return (o.hudStyle ?? 'neon') === 'stanza' ? 'off' : o.lyricsMode;
 }
 export const HUD_STYLES: readonly HudStyle[] = ['beta', 'console', 'stanza', 'neon'];
 /**
@@ -51,10 +51,10 @@ export const HUD_STYLES: readonly HudStyle[] = ['beta', 'console', 'stanza', 'ne
 export type NoteSkin = 'match' | 'classic' | 'neon' | 'ink' | 'rail' | 'vinyl';
 export const NOTE_SKINS: readonly NoteSkin[] = ['match', 'classic', 'neon', 'ink', 'rail', 'vinyl'];
 export function toNoteSkin(v: unknown): NoteSkin {
-  return NOTE_SKINS.includes(v as NoteSkin) ? (v as NoteSkin) : 'match';
+  return NOTE_SKINS.includes(v as NoteSkin) ? (v as NoteSkin) : 'classic';
 }
 export function toHudStyle(v: unknown): HudStyle {
-  return HUD_STYLES.includes(v as HudStyle) ? (v as HudStyle) : 'stanza';
+  return HUD_STYLES.includes(v as HudStyle) ? (v as HudStyle) : 'neon';
 }
 
 export type GameOpts = {
@@ -160,8 +160,8 @@ export const DEFAULT_OPTS: GameOpts = {
   musicVolume: 0.5,
   gameBackground: "cover_blur",
   gameTrack: "transparent",
-  hudStyle: "stanza",
-  noteSkin: "match",
+  hudStyle: "neon",
+  noteSkin: "classic",
   backgroundBlur: 10,
   cardBack: "classic",
   haptics: true,

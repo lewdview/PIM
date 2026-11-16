@@ -1381,8 +1381,8 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         cardBack: "classic",
         gameBackground: "cover_blur",
         gameTrack: "transparent",
-        hudStyle: "stanza",
-        noteSkin: "match",
+        hudStyle: "neon",
+        noteSkin: "classic",
         backgroundBlur: 18,
         hudMisses: true,
         comboDisplay: true,
@@ -1599,7 +1599,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     ] as const).map(skin => (
                       <SegButton
                         key={skin.id}
-                        active={(opts.noteSkin ?? 'match') === skin.id}
+                        active={(opts.noteSkin ?? 'classic') === skin.id}
                         label={skin.label}
                         sub={skin.sub}
                         onClick={() => {
