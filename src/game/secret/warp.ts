@@ -10,7 +10,6 @@
  */
 
 import type { Note, NoteType } from '../types';
-import type { RunnerStage } from './runnerCourses';
 
 export type WarpType = Extract<NoteType, 'warp' | 'warp-clear'>;
 export type SecretLevelId = 'shooter' | 'runner';
@@ -77,15 +76,15 @@ export function parseWarpOverride(search: string): WarpType | undefined {
 const CLEARED_KEY = 'secret_levels_cleared';
 const WHISTLE_KEY = 'warp_whistle';
 type SecretClear = { best: number; clears: number };
-type ClearId = SecretLevelId | 'runner-district';
 let earnedWhistle = false;
-let clearedRooftop = false;
+let sessionClears: Partial<Record<string, SecretClear>> = {};
 
-function readClears(): Partial<Record<ClearId, SecretClear>> {
+export function readSecretClears(): Partial<Record<string, SecretClear>> {
   try {
-    return JSON.parse(localStorage.getItem(CLEARED_KEY) ?? '{}') ?? {};
+    const stored = JSON.parse(localStorage.getItem(CLEARED_KEY) ?? '{}');
+    return { ...stored, ...sessionClears };
   } catch {
-    return {};
+    return { ...sessionClears };
   }
 }
 
@@ -101,27 +100,19 @@ export function hasWarpWhistle() {
   try {
     if (localStorage.getItem(WHISTLE_KEY) === '1') return true;
   } catch { /* Use existing clear records when available. */ }
-  const clears = readClears();
+  const clears = readSecretClears();
   return (clears.runner?.clears ?? 0) > 0 || (clears.shooter?.clears ?? 0) > 0;
 }
 
-export function highestRunnerStage(): RunnerStage {
-  return clearedRooftop || (readClears().runner?.clears ?? 0) > 0 ? 2 : 1;
-}
-
-export function runnerArcadePath(stage: RunnerStage) {
-  return `/secret/runner?via=arcade&stage=${stage}`;
-}
-
-export function markSecretLevelCleared(level: SecretLevelId, score: number, stage: RunnerStage = 1) {
-  const id = level === 'runner' && stage === 2 ? 'runner-district' : level;
-  if (id === 'runner') clearedRooftop = true;
+export function markSecretLevelCleared(id: string, score: number) {
+  const data = readSecretClears();
+  const prev = data[id] ?? { best: 0, clears: 0 };
+  const clear = { best: Math.max(prev.best, score), clears: prev.clears + 1 };
+  data[id] = clear;
   try {
-    const data = readClears();
-    const prev = data[id] ?? { best: 0, clears: 0 };
-    data[id] = { best: Math.max(prev.best, score), clears: prev.clears + 1 };
     localStorage.setItem(CLEARED_KEY, JSON.stringify(data));
+    sessionClears = {};
   } catch {
-    /* storage unavailable: the clear just isn't remembered */
+    sessionClears[id] = clear;
   }
 }

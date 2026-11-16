@@ -11,18 +11,26 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams, useSearch } from 'wouter';
+import { AudioLines, Shield, Sword } from 'lucide-react';
 import { BeatClock, SECRET_TRACKS } from '../game/secret/chiptune';
 import { ShooterLevel } from '../game/secret/shooter';
 import { RunnerLevel } from '../game/secret/runner';
-import type { RunnerStage } from '../game/secret/runnerCourses';
+import { RUNNER_COURSES, RUNNER_STAGES, RUNNER_WHISTLES, parseRunnerStage, type RunnerStage, type RunnerWhistleId } from '../game/secret/runnerCourses';
 import { prepareRunnerSprites } from '../game/secret/runnerSprites';
-import { hasWarpWhistle, highestRunnerStage, markSecretLevelCleared, runnerArcadePath, type SecretLevelId } from '../game/secret/warp';
+import { markSecretLevelCleared, type SecretLevelId } from '../game/secret/warp';
+import { findRunnerWhistle, readRunnerProgress, runnerArcadePath, runnerMapPath } from '../game/secret/runnerProgress';
 import { warpResumePath } from '../game/secret/warpResume';
 import type { SecretGame, SecretInput } from '../game/secret/types';
 
 type Phase = 'intro' | 'playing' | 'over';
+type LevelResult = { won: boolean; score: number; newWhistle: RunnerWhistleId | null };
 
 const COUNT_IN = 4; // beats of countdown before the level starts
+const RUNNER_ACTIONS = [
+  { kind: 'taunt', key: 'T', label: 'Taunt', icon: AudioLines },
+  { kind: 'block', key: 'C', label: 'Block', icon: Shield },
+  { kind: 'attack', key: 'X', label: 'Slash', icon: Sword },
+] as const;
 
 function makeLevel(id: SecretLevelId, stage: RunnerStage, recovering = false): SecretGame {
   return id === 'runner' ? new RunnerLevel(stage, recovering) : new ShooterLevel();
@@ -44,15 +52,18 @@ export default function SecretLevel() {
   const params = useParams<{ level: string }>();
   const levelId: SecretLevelId = params.level === 'runner' ? 'runner' : 'shooter';
   const query = new URLSearchParams(useSearch());
-  const stage: RunnerStage = levelId === 'runner' && query.get('stage') === '2' ? 2 : 1;
-  if (levelId === 'runner' && (!hasWarpWhistle() || stage > highestRunnerStage())) {
+  const stage = parseRunnerStage(query.get('stage')) ?? 1;
+  const progress = levelId === 'runner' ? readRunnerProgress() : null;
+  if (progress && !progress.available.includes(stage)) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-[#100b27] px-6 text-center text-white font-mono">
         <h1 className="text-3xl font-black">BEAT RUNNER</h1>
         <p className="text-sm text-purple-200">
-          {hasWarpWhistle() ? 'Clear Rooftop Run to open Signal District.' : 'Hit a warp note during a song to earn the Warp Whistle.'}
+          {progress.hasEntry ? 'Clear the previous course or open a shortcut with a Warp Whistle.' : 'Hit a warp note during a song to earn the Warp Whistle.'}
         </p>
-        <Link href="/warp" className="mt-2 rounded-full bg-fuchsia-500 px-6 py-3 font-bold">WARP ZONE</Link>
+        <Link href={progress.hasEntry ? runnerMapPath(stage) : '/warp'} className="mt-2 rounded-full bg-fuchsia-500 px-6 py-3 font-bold">
+          {progress.hasEntry ? 'WORLD MAP' : 'WARP ZONE'}
+        </Link>
       </div>
     );
   }
@@ -77,7 +88,8 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
   const drawnBeat = useRef(-COUNT_IN);
   const rafRef = useRef(0);
   const [phase, setPhase] = useState<Phase>('intro');
-  const [result, setResult] = useState<{ won: boolean; score: number } | null>(null);
+  const [result, setResult] = useState<LevelResult | null>(null);
+  const nextCourse = RUNNER_STAGES[RUNNER_STAGES.indexOf(stage) + 1];
 
   const send = useCallback((a: SecretInput) => {
     const clock = clockRef.current;
@@ -132,9 +144,15 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
       return () => { if (debug.render_game_to_text === snapshot) delete debug.render_game_to_text; };
     }
     let last = performance.now();
+    let processedWhistle = false;
+    let newWhistle: RunnerWhistleId | null = null;
     const drawFrame = (beat: number, dt: number) => {
       drawnBeat.current = beat;
       if (beat >= 0) game.update(beat, dt);
+      if (game instanceof RunnerLevel && game.foundWhistle && !processedWhistle) {
+        processedWhistle = true;
+        if (findRunnerWhistle(game.foundWhistle)) newWhistle = game.foundWhistle;
+      }
       const { w, h } = canvasFrame(canvas, ctx);
       game.draw(ctx, w, h, beat);
       drawHud(ctx, w, h, game, beat);
@@ -142,8 +160,8 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
       if (game.done) {
         clockRef.current?.stop();
         clockRef.current = null;
-        if (game.won) markSecretLevelCleared(levelId, game.score, stage);
-        setResult({ won: game.won, score: game.score });
+        if (game.won) markSecretLevelCleared(levelId === 'runner' ? RUNNER_COURSES[stage].clearId : levelId, game.score);
+        setResult({ won: game.won, score: game.score, newWhistle });
         setPhase('over');
       }
     };
@@ -189,8 +207,8 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
       else if (k === 'ArrowRight' || k === 'd' || k === 'D') a = 'right';
       else if (k === 'ArrowUp' || k === 'w' || k === 'W') a = 'jump';
       else if (k === 'ArrowDown' || k === 's' || k === 'S') a = 'duck';
-      else if (levelId === 'runner' && k.toLowerCase() === 'x') a = 'attack';
       else if (k === ' ' || k === 'Enter') a = 'fire';
+      else if (levelId === 'runner') a = RUNNER_ACTIONS.find(action => action.key === k.toUpperCase())?.kind ?? null;
       if (!a) return;
       if (a === 'fire' && e.target instanceof HTMLButtonElement) return;
       e.preventDefault();
@@ -216,21 +234,24 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
     send({ kind: 'pointer', x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height });
   };
 
+  const mapStage = result?.newWhistle ? RUNNER_WHISTLES[result.newWhistle].to : result?.won ? nextCourse ?? stage : stage;
+  const songResults = via && fromSong && hasResult(fromSong) ? `/results/${fromSong}` : null;
   const leave = () => {
     clockRef.current?.stop();
     if (resumePath) setLocation(resumePath);
-    else if (via && fromSong && hasResult(fromSong)) setLocation(`/results/${fromSong}`);
-    else if (levelId === 'runner') setLocation('/warp');
+    else if (songResults) setLocation(songResults);
+    else if (levelId === 'runner') setLocation(runnerMapPath(mapStage));
     else setLocation('/songs');
   };
 
   const nextStage = () => {
+    if (!nextCourse) return;
     if (!fromSong || !via) {
-      setLocation(runnerArcadePath(2) + (stepRunner ? '&step=1' : ''));
+      setLocation(runnerArcadePath(nextCourse) + (stepRunner ? '&step=1' : ''));
       return;
     }
     const next = new URLSearchParams(query);
-    next.set('stage', '2');
+    next.set('stage', String(nextCourse));
     setLocation(`${location}?${next}`);
   };
 
@@ -250,7 +271,11 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
           <h1 className="text-4xl sm:text-6xl font-black font-mono" style={{ textShadow: '0 0 24px #B967FF' }}>
             {game.title}
           </h1>
-          <p className="max-w-md text-sm text-zinc-300 font-mono">{game.hint}</p>
+          {levelId === 'runner' && <p className="max-w-md text-base text-violet-100">{RUNNER_COURSES[stage].brief}</p>}
+          <p className="max-w-md text-sm text-zinc-300 font-mono">
+            {game.hint}
+            {levelId === 'runner' && <span className="mt-1 block text-zinc-400 sm:hidden">Tap high to jump or low to slide.</span>}
+          </p>
           <button
             id={levelId === 'runner' ? 'runner-start' : undefined}
             onClick={() => void start()}
@@ -259,23 +284,29 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
             START
           </button>
           <button onClick={leave} className="text-xs text-zinc-300 font-mono underline">
-            {resumePath ? 'skip · back to the song' : via === 'arcade' ? 'back to Warp Zone' : 'skip'}
+            {resumePath || songResults ? 'back to the song' : levelId === 'runner' ? 'back to world map' : 'skip'}
           </button>
         </div>
       )}
 
       {phase === 'playing' && levelId === 'runner' && (
-        <button
-          type="button"
-          onClick={(event) => {
-            send({ kind: 'attack' });
-            if (event.detail > 0) event.currentTarget.blur();
-          }}
-          aria-keyshortcuts="X"
-          className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] min-h-12 rounded-xl border border-fuchsia-300/65 bg-[#28123b]/90 px-5 text-sm font-black tracking-widest shadow-[0_0_16px_#c26bf34d] font-mono active:bg-fuchsia-600"
-        >
-          SLASH <kbd className="ml-1 text-fuchsia-200/80">X</kbd>
-        </button>
+        <div className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] flex gap-1.5 sm:gap-2">
+          {RUNNER_ACTIONS.map(({ kind, key, label, icon: Icon }) => (
+            <button
+              type="button"
+              key={kind}
+              onClick={(event) => {
+                send({ kind });
+                if (event.detail > 0) event.currentTarget.blur();
+              }}
+              aria-keyshortcuts={key}
+              className={`flex min-h-12 items-center justify-center gap-1.5 rounded-xl border px-2.5 font-mono text-xs font-black uppercase active:brightness-150 sm:px-4 ${kind === 'block' ? 'border-cyan-200/65 bg-[#103142]/90 text-cyan-50' : 'border-fuchsia-300/65 bg-[#28123b]/90 text-fuchsia-50'}`}
+            >
+              <Icon size={14} aria-hidden />
+              {label} <kbd className="hidden text-white/60 sm:inline">{key}</kbd>
+            </button>
+          ))}
+        </div>
       )}
 
       {phase === 'over' && result && (
@@ -285,6 +316,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
             {result.won ? 'LEVEL CLEAR' : 'SIGNAL LOST'}
           </h2>
           <div className="text-2xl font-mono">{result.score.toLocaleString()}</div>
+          {result.newWhistle && <p className="flex items-center gap-2 text-sm font-bold text-amber-200"><AudioLines size={17} aria-hidden /> {RUNNER_WHISTLES[result.newWhistle].name} found</p>}
           <div className="flex flex-wrap justify-center gap-3 mt-2">
             <button
               onClick={() => void start()}
@@ -292,18 +324,21 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
             >
               RETRY
             </button>
-            {levelId === 'runner' && stage === 1 && result.won && (
+            {levelId === 'runner' && nextCourse && result.won && (
               <button onClick={nextStage} className="px-6 py-3 rounded-full bg-fuchsia-500 hover:bg-fuchsia-400 font-black font-mono tracking-widest">
                 NEXT LEVEL
               </button>
             )}
             <button
               onClick={leave}
-              className={`px-6 py-3 rounded-full font-black font-mono tracking-widest ${levelId === 'runner' && stage === 1 && result.won ? 'border border-fuchsia-400' : 'bg-fuchsia-500 hover:bg-fuchsia-400'}`}
+              className={`px-6 py-3 rounded-full font-black font-mono tracking-widest ${levelId === 'runner' && nextCourse && result.won ? 'border border-fuchsia-400' : 'bg-fuchsia-500 hover:bg-fuchsia-400'}`}
             >
-              {resumePath ? 'RESUME SONG' : via === 'arcade' ? 'WARP ZONE' : 'CONTINUE'}
+              {resumePath ? 'RESUME SONG' : songResults || levelId === 'shooter' ? 'CONTINUE' : 'WORLD MAP'}
             </button>
           </div>
+          {levelId === 'runner' && songResults && (
+            <Link href={runnerMapPath(mapStage)} className="text-sm text-fuchsia-200 underline">World Map</Link>
+          )}
         </div>
       )}
     </div>

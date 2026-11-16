@@ -1,5 +1,5 @@
 export type SecretInput =
-  | { kind: 'left' | 'right' | 'fire' | 'jump' | 'duck' | 'attack' }
+  | { kind: 'left' | 'right' | 'fire' | 'jump' | 'duck' | 'attack' | 'taunt' | 'block' }
   /** A tap or click, in canvas CSS pixels. */
   | { kind: 'pointer'; x: number; y: number; w: number; h: number };
 

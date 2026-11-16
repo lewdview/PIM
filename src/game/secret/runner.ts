@@ -1,14 +1,14 @@
 /**
- * Secret level: ROOFTOP RUN — a beat platformer.
+ * Beat Runner — a beat platformer.
  *
  * The runner moves at one beat per step. Spikes and pits arrive half a
  * beat after a beat, so jumping on the beat clears them; laser bars come
  * at head height and are ducked. Later sections add raised platforms over
- * spike beds, with coins on top.
+ * spike beds, with coins on top, and vertical lasers that must be blocked.
  */
 
 import { offBeat, seeded, type SecretGame, type SecretInput } from './types';
-import { RUNNER_COURSES, runnerCourse, type RunnerObstacle, type RunnerStage } from './runnerCourses';
+import { RUNNER_COURSES, RUNNER_WHISTLES, runnerCourse, type RunnerObstacle, type RunnerStage, type RunnerWhistleId } from './runnerCourses';
 import { drawRunnerSprite, type RunnerPose } from './runnerSprites';
 
 const JUMP_H = 0.2;            // apex height, in screen heights
@@ -20,17 +20,29 @@ const DUCK_H = 0.088;
 const BAR_LOW = 0.09;
 const ON_BEAT = 0.12;
 const SWING_BEATS = 0.88;
+const BLOCK_BEATS = 0.94;
+const TAUNT_BEATS = 1.5;
 const DEFEAT_BEATS = 1.3;
 const actionFrame = (elapsed: number, duration: number) => Math.min(9, Math.max(0, Math.floor(elapsed / duration * 10)));
 
+const SKIES = {
+  1: ['#38204f', '#ad538f', '#fce4ff', '#41284f'],
+  2: ['#12314a', '#246468', '#b1ffe5', '#234657'],
+  3: ['#173957', '#285c89', '#b3efff', '#1f3d62'],
+  4: ['#392744', '#8a5477', '#ffd9d2', '#5d3754'],
+  5: ['#25203f', '#47348c', '#c6b4ff', '#352254'],
+  6: ['#3c2136', '#97455e', '#ffd6af', '#502739'],
+} as const;
+
 export class RunnerLevel implements SecretGame {
   readonly title: string;
-  readonly hint = 'Space / ↑ to jump · ↓ to slide · X to slash. On touch, tap high to jump, low to slide, or use Slash.';
+  readonly hint = 'Space / ↑ jump · ↓ slide · X slash · C block · T taunt';
   readonly totalBeats: number;
   score = 0;
   lives = 4;
   done = false;
   won = false;
+  foundWhistle: RunnerWhistleId | null = null;
 
   private readonly stage: RunnerStage;
   private readonly recovering: boolean;
@@ -42,6 +54,8 @@ export class RunnerLevel implements SecretGame {
   private hurtUntil = -1;
   private jumpAt = -Infinity;
   private swingAt = -Infinity;
+  private blockAt = -Infinity;
+  private tauntAt = -Infinity;
   private hitAt = -Infinity;
   private defeatAt = Infinity;
   private lastBeat = 0;
@@ -87,15 +101,29 @@ export class RunnerLevel implements SecretGame {
       this.vy = JUMP_V;
       this.jumpAt = beat;
       this.duckUntil = -1;
+      this.tauntAt = -Infinity;
+      this.blockAt = -Infinity;
       if (offBeat(beat) < ON_BEAT) {
         this.score += 50;
         this.popups.push({ text: 'ON BEAT +50', at: beat, y: this.y });
       }
     } else if (kind === 'duck') {
+      this.tauntAt = -Infinity;
+      this.blockAt = -Infinity;
       if (this.grounded(beat)) this.duckUntil = beat + 0.8;
       else this.vy = Math.min(this.vy, -JUMP_V); // fast-fall
     } else if (kind === 'attack' && beat >= this.swingAt + SWING_BEATS && !this.ducking(beat) && beat >= this.hitAt + 0.8) {
       this.swingAt = beat;
+      this.blockAt = -Infinity;
+      this.tauntAt = -Infinity;
+    } else if (kind === 'block' && beat >= this.blockAt + BLOCK_BEATS && beat >= this.hitAt + 0.8) {
+      this.blockAt = beat;
+      this.duckUntil = -1;
+      this.swingAt = -Infinity;
+      this.tauntAt = -Infinity;
+    } else if (kind === 'taunt' && this.grounded(beat) && !this.ducking(beat) && beat >= this.hitAt + 0.8
+        && beat >= this.swingAt + SWING_BEATS && beat >= this.blockAt + BLOCK_BEATS && beat >= this.tauntAt + TAUNT_BEATS) {
+      this.tauntAt = beat;
     }
   }
 
@@ -109,8 +137,15 @@ export class RunnerLevel implements SecretGame {
     this.hitAt = beat;
     this.hurtUntil = beat + 1.5;
     this.swingAt = -Infinity;
+    this.blockAt = -Infinity;
+    this.tauntAt = -Infinity;
     if (!this.lives) this.defeatAt = beat;
     this.popups.push({ text: 'OUCH', at: beat, y: this.y });
+  }
+
+  private revealWhistle(id: RunnerWhistleId, beat: number) {
+    this.foundWhistle = id;
+    this.popups.push({ text: 'WARP WHISTLE!', at: beat, y: this.y });
   }
 
   update(beat: number, _dt: number) {
@@ -159,6 +194,20 @@ export class RunnerLevel implements SecretGame {
           o.done = true;
           this.hurt(beat);
         }
+      } else if (o.kind === 'laser' && Math.abs(beat - o.beat) <= 0.11) {
+        o.done = true;
+        const guardAge = beat - this.blockAt;
+        if (guardAge >= 0.16 && guardAge < BLOCK_BEATS) {
+          o.destroyedAt = beat;
+          this.score += 300;
+          if (this.isGoldLaser(o)) this.revealWhistle('prism', beat);
+          else this.popups.push({ text: 'BLOCK +300', at: beat, y: this.y });
+        } else {
+          this.hurt(beat);
+        }
+      } else if (o.kind === 'whistle' && Math.abs(beat - o.beat) <= 0.35 && this.grounded(beat) && beat - this.tauntAt < TAUNT_BEATS) {
+        o.done = true;
+        this.revealWhistle('rooftop', beat);
       } else if (o.kind === 'spike' && Math.abs(beat - o.beat) < 0.12 && this.y < 0.05) {
         o.done = true;
         this.hurt(beat);
@@ -185,6 +234,10 @@ export class RunnerLevel implements SecretGame {
     }
   }
 
+  private isGoldLaser(o: RunnerObstacle) {
+    return this.stage === RUNNER_WHISTLES.prism.from && o.beat === RUNNER_WHISTLES.prism.beat;
+  }
+
   private coinY(o: RunnerObstacle) {
     return this.platformAt(o.beat) ? PLATFORM_H + 0.08 : JUMP_H * 0.85;
   }
@@ -196,9 +249,11 @@ export class RunnerLevel implements SecretGame {
       return ['jump', 0];
     }
     if (beat - this.hitAt < 0.8) return ['damage', actionFrame(beat - this.hitAt, 0.8)];
+    if (beat - this.blockAt < BLOCK_BEATS) return ['block', actionFrame(beat - this.blockAt, BLOCK_BEATS)];
     if (this.ducking(beat)) return ['slide', Math.min(9, 3 + Math.floor((beat - this.duckUntil + 0.8) * 7 / 0.8))];
     if (beat - this.swingAt < SWING_BEATS) return ['attack', actionFrame(beat - this.swingAt, SWING_BEATS)];
     if (this.vy !== 0) return ['jump', Math.max(2, actionFrame(beat - this.jumpAt, 1))];
+    if (beat - this.tauntAt < TAUNT_BEATS) return ['taunt', actionFrame(beat - this.tauntAt, TAUNT_BEATS)];
     return ['run', Math.floor(beat % 1 * 10)];
   }
 
@@ -207,7 +262,7 @@ export class RunnerLevel implements SecretGame {
     const courseBeat = Math.min(beat, this.defeatAt);
     const beatPx = this.beatPixels(w);
     return {
-      stage: this.stage, beat, pose, frame, lives: this.lives, score: this.score, won: this.won,
+      stage: this.stage, beat, pose, frame, lives: this.lives, score: this.score, won: this.won, whistle: this.foundWhistle,
       coordinates: 'Canvas pixels from the top left. Player y is at the feet.',
       player: { x: w * 0.22, y: h * (0.78 - this.y), grounded: this.grounded(courseBeat) },
       obstacles: this.obstacles.filter(o => !o.done && o.beat + o.len >= courseBeat - 1 && o.beat <= courseBeat + w * 0.78 / beatPx)
@@ -227,19 +282,20 @@ export class RunnerLevel implements SecretGame {
     const beatPx = this.beatPixels(w);
     const sx = (b: number) => px + (b - beat) * beatPx;
     const sy = (y: number) => groundY - y * h;
+    const [skyColor, horizon, moonColor, skyline] = SKIES[this.stage];
 
     const sky = ctx.createLinearGradient(0, 0, 0, h);
     sky.addColorStop(0, '#100b27');
-    sky.addColorStop(0.48, this.stage === 2 ? '#12314a' : '#38204f');
-    sky.addColorStop(0.79, this.stage === 2 ? '#246468' : '#ad538f');
+    sky.addColorStop(0.48, skyColor);
+    sky.addColorStop(0.79, horizon);
     sky.addColorStop(1, '#240d34');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, w, h);
 
     const moon = ctx.createRadialGradient(w * 0.66, h * 0.36, 0, w * 0.66, h * 0.36, h * 0.21);
-    moon.addColorStop(0, this.stage === 2 ? '#b1ffe5' : '#fce4ff');
-    moon.addColorStop(0.45, this.stage === 2 ? '#b1ffe5' : '#fce4ff');
-    moon.addColorStop(0.46, this.stage === 2 ? '#8dfde747' : '#ffc2ff52');
+    moon.addColorStop(0, moonColor);
+    moon.addColorStop(0.45, moonColor);
+    moon.addColorStop(0.46, `${moonColor}52`);
     moon.addColorStop(1, 'transparent');
     ctx.fillStyle = moon;
     ctx.fillRect(0, 0, w, h);
@@ -251,7 +307,7 @@ export class RunnerLevel implements SecretGame {
       const roof = groundY - b.h * h * (b.layer ? 1 : 1.3);
       const width = b.w * beatPx * 0.5;
       if (x >= w || x + width <= 0) continue;
-      ctx.fillStyle = b.layer ? '#151229' : this.stage === 2 ? '#234657' : '#41284f';
+      ctx.fillStyle = b.layer ? '#151229' : skyline;
       ctx.fillRect(x, roof, width, groundY - roof);
       ctx.fillStyle = b.layer ? '#e7a9ef39' : '#f6c8e52b';
       ctx.fillRect(x, roof, width, 2);
@@ -287,8 +343,20 @@ export class RunnerLevel implements SecretGame {
         const y = sy(0.065);
         if (!o.done) this.drawDrone(ctx, x, y + Math.sin(beat * Math.PI * 2) * 3, h, pulse);
         if (o.destroyedAt !== undefined && time - o.destroyedAt < 0.44) {
-          this.drawDroneBurst(ctx, x, y, (time - o.destroyedAt) / 0.44);
+          this.drawBurst(ctx, x, y, (time - o.destroyedAt) / 0.44, '#feb8ed');
         }
+      } else if (o.kind === 'laser') {
+        const color = this.isGoldLaser(o) ? '#ffda81' : '#6bfaff';
+        if (!o.done) {
+          this.drawLaser(ctx, x, groundY, h, pulse, color);
+          ctx.fillStyle = color;
+          ctx.fillRect(sx(Math.floor(o.beat)) - 2, groundY + 3, 4, 11);
+        }
+        if (o.destroyedAt !== undefined && time - o.destroyedAt < 0.44) {
+          this.drawBurst(ctx, Math.max(px, x), sy(0.08), (time - o.destroyedAt) / 0.44, color);
+        }
+      } else if (o.kind === 'whistle') {
+        this.drawSpeaker(ctx, x, groundY, pulse, o.done);
       } else if (o.kind === 'spike') {
         ctx.fillStyle = '#FF3B6B';
         ctx.shadowColor = '#FF3B6B';
@@ -353,10 +421,48 @@ export class RunnerLevel implements SecretGame {
       const age = time - p.at;
       if (age >= 1.2) continue;
       ctx.globalAlpha = 1 - age / 1.2;
-      ctx.fillStyle = p.text === 'OUCH' ? '#FF829D' : '#FFFFFF';
+      ctx.fillStyle = p.text === 'OUCH' ? '#FF829D' : p.text === 'WARP WHISTLE!' ? '#ffda81' : '#FFFFFF';
       ctx.fillText(p.text, px, sy(p.y) - size - 12 - age * 24);
     }
     ctx.globalAlpha = 1;
+  }
+
+  private drawLaser(ctx: CanvasRenderingContext2D, x: number, groundY: number, h: number, pulse: number, color: string) {
+    const top = groundY - h * 0.46;
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10 + pulse * 10;
+    ctx.globalAlpha = 0.35 + pulse * 0.3;
+    ctx.fillRect(x - 7, top, 14, groundY - top);
+    ctx.globalAlpha = 1;
+    ctx.fillRect(x - 2, top, 4, groundY - top);
+    ctx.fillRect(x - 12, top - 4, 24, 6);
+    ctx.fillRect(x - 12, groundY - 5, 24, 6);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#f5ffff';
+    ctx.fillRect(x - 0.5, top + 3, 1, groundY - top - 6);
+    ctx.restore();
+  }
+
+  private drawSpeaker(ctx: CanvasRenderingContext2D, x: number, groundY: number, pulse: number, opened: boolean) {
+    ctx.save();
+    ctx.translate(x, groundY - 21);
+    ctx.fillStyle = '#29203c';
+    ctx.strokeStyle = opened ? '#66583a' : '#f5ce79';
+    ctx.shadowColor = '#f7b94a';
+    ctx.shadowBlur = opened ? 0 : pulse * 12;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-14, -21, 28, 42, 3);
+    ctx.fill();
+    ctx.stroke();
+    for (const [y, radius] of [[-10, 4], [6, 8]]) {
+      ctx.beginPath();
+      ctx.arc(0, y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   private drawDrone(ctx: CanvasRenderingContext2D, x: number, y: number, h: number, pulse: number) {
@@ -382,10 +488,10 @@ export class RunnerLevel implements SecretGame {
     ctx.restore();
   }
 
-  private drawDroneBurst(ctx: CanvasRenderingContext2D, x: number, y: number, progress: number) {
+  private drawBurst(ctx: CanvasRenderingContext2D, x: number, y: number, progress: number, color: string) {
     ctx.save();
     ctx.globalAlpha = 1 - progress;
-    ctx.strokeStyle = '#feb8ed';
+    ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.beginPath();
     for (let i = 0; i < 8; i++) {

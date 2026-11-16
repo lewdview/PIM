@@ -23,14 +23,13 @@ import { loadCatalog, type GameSong } from '../game/api';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { audioManager } from '../game/audio';
-import { RUNNER_COURSES } from '../game/secret/runnerCourses';
-import { hasWarpWhistle, highestRunnerStage, runnerArcadePath } from '../game/secret/warp';
+import { runnerMapPath } from '../game/secret/runnerProgress';
+import { hasWarpWhistle } from '../game/secret/warp';
 
 type WarpModule = 'hub' | 'mood' | 'ascii' | 'lore';
 
 function BeatRunnerPortal() {
   const unlocked = hasWarpWhistle();
-  const secondCourse = unlocked && highestRunnerStage() === 2;
 
   return (
     <section className="flex flex-col gap-5 rounded-2xl border border-fuchsia-500/40 bg-gradient-to-br from-[#291338] to-[#100d21] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
@@ -41,27 +40,14 @@ function BeatRunnerPortal() {
         <div>
           <h2 className="text-xl font-black uppercase text-white">Beat Runner</h2>
           <p className="mt-1 max-w-sm font-mono text-xs leading-relaxed text-fuchsia-100/75">
-            {unlocked ? 'Jump the gaps, slide under lasers, and slash drones to the beat.' : 'Earn the Warp Whistle by hitting a warp note during a song.'}
+            {unlocked ? 'Clear courses and find the Warp Whistles hidden along the way.' : 'Earn the first Warp Whistle by hitting a warp note during a song.'}
           </p>
         </div>
       </div>
       {unlocked && (
-        <div className="flex flex-wrap items-center gap-2 font-mono text-xs font-bold uppercase">
-          <Link href={runnerArcadePath(1)} className="rounded-lg bg-fuchsia-300 px-4 py-3 text-[#190d24] hover:bg-fuchsia-200">
-            {RUNNER_COURSES[1].title} <ArrowUpRight size={14} className="ml-1 inline" aria-hidden />
-          </Link>
-          {secondCourse ? (
-            <Link href={runnerArcadePath(2)} className="rounded-lg border border-fuchsia-300/55 px-4 py-3 text-fuchsia-100 hover:bg-fuchsia-300/15">
-              {RUNNER_COURSES[2].title} <ArrowUpRight size={14} className="ml-1 inline" aria-hidden />
-            </Link>
-          ) : (
-            <span className="rounded-lg border border-fuchsia-300/20 px-4 py-3 text-fuchsia-200/55">
-              <LockKeyhole size={13} className="mr-2 inline" aria-hidden />
-              {RUNNER_COURSES[2].title}
-              <span className="sr-only"> unlocks after clearing Rooftop Run</span>
-            </span>
-          )}
-        </div>
+        <Link href={runnerMapPath()} className="self-start rounded-lg bg-fuchsia-300 px-4 py-3 font-mono text-xs font-bold uppercase text-[#190d24] hover:bg-fuchsia-200 sm:self-auto">
+          Open World Map <ArrowUpRight size={14} className="ml-1 inline" aria-hidden />
+        </Link>
       )}
     </section>
   );
