@@ -48,8 +48,10 @@ export class BeatClock {
       await this.audio.play().catch(() => undefined);
       return;
     }
-    this.ctx = new Ctx();
-    await this.ctx.resume().catch(() => undefined);
+    const ctx = new Ctx();
+    this.ctx = ctx;
+    await ctx.resume().catch(() => undefined);
+    if (this.ctx !== ctx) return;
     this.master = this.ctx.createGain();
     this.master.gain.value = 0.18;
     this.master.connect(this.ctx.destination);

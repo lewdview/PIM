@@ -74,15 +74,45 @@ export function parseWarpOverride(search: string): WarpType | undefined {
 }
 
 const CLEARED_KEY = 'secret_levels_cleared';
+const WHISTLE_KEY = 'warp_whistle';
+type SecretClear = { best: number; clears: number };
+let earnedWhistle = false;
+let sessionClears: Partial<Record<string, SecretClear>> = {};
 
-export function markSecretLevelCleared(level: SecretLevelId, score: number) {
+export function readSecretClears(): Partial<Record<string, SecretClear>> {
   try {
-    const raw = localStorage.getItem(CLEARED_KEY);
-    const data: Record<string, { best: number; clears: number }> = raw ? JSON.parse(raw) : {};
-    const prev = data[level] ?? { best: 0, clears: 0 };
-    data[level] = { best: Math.max(prev.best, score), clears: prev.clears + 1 };
-    localStorage.setItem(CLEARED_KEY, JSON.stringify(data));
+    const stored = JSON.parse(localStorage.getItem(CLEARED_KEY) ?? '{}');
+    return { ...stored, ...sessionClears };
   } catch {
-    /* storage unavailable: the clear just isn't remembered */
+    return { ...sessionClears };
+  }
+}
+
+export function collectWarpWhistle() {
+  earnedWhistle = true;
+  try {
+    localStorage.setItem(WHISTLE_KEY, '1');
+  } catch { /* Remember it for the current session. */ }
+}
+
+export function hasWarpWhistle() {
+  if (earnedWhistle) return true;
+  try {
+    if (localStorage.getItem(WHISTLE_KEY) === '1') return true;
+  } catch { /* Use existing clear records when available. */ }
+  const clears = readSecretClears();
+  return (clears.runner?.clears ?? 0) > 0 || (clears.shooter?.clears ?? 0) > 0;
+}
+
+export function markSecretLevelCleared(id: string, score: number) {
+  const data = readSecretClears();
+  const prev = data[id] ?? { best: 0, clears: 0 };
+  const clear = { best: Math.max(prev.best, score), clears: prev.clears + 1 };
+  data[id] = clear;
+  try {
+    localStorage.setItem(CLEARED_KEY, JSON.stringify(data));
+    sessionClears = {};
+  } catch {
+    sessionClears[id] = clear;
   }
 }
