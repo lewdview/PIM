@@ -17,6 +17,10 @@ import { RunnerLevel } from '../game/secret/runner';
 import { markSecretLevelCleared, type SecretLevelId } from '../game/secret/warp';
 import { warpResumePath } from '../game/secret/warpResume';
 import type { SecretGame, SecretInput } from '../game/secret/types';
+import {
+  drawWarpIntro, drawWarpReveal, playWarpStinger, prefersReducedMotion,
+  INTRO_LOOKS, INTRO_OUTRO_S, INTRO_READY_AT, INTRO_REVEAL_S,
+} from '../game/secret/intro';
 import { sendGameplayMessage } from '@/platform';
 import { PLAYGAMA_MONTH } from '@/platform/playgama/month';
 
@@ -48,6 +52,19 @@ function readPad(): Set<PadAction> | null {
   return held;
 }
 
+/** Keep the canvas backing store matched to its CSS size; returns the CSS size. */
+function fitCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { w, h };
+}
+
 function makeLevel(id: SecretLevelId): SecretGame {
   return id === 'runner' ? new RunnerLevel(SECRET_TRACKS.runner.bpm) : new ShooterLevel();
 }
@@ -69,6 +86,11 @@ export default function SecretLevel() {
   const [phase, setPhase] = useState<Phase>('intro');
   const [result, setResult] = useState<{ won: boolean; score: number } | null>(null);
   const [padConnected, setPadConnected] = useState(false);
+  // Motion intro: clock origin (ms), whether the START card is up, and when START was pressed
+  const [reduced] = useState(prefersReducedMotion);
+  const introT0Ref = useRef(performance.now());
+  const [introReady, setIntroReady] = useState(false);
+  const outroAtRef = useRef<number | null>(null);
 
   const send = useCallback((a: SecretInput) => {
     const clock = clockRef.current;
@@ -77,6 +99,13 @@ export default function SecretLevel() {
   }, []);
 
   const start = useCallback(async () => {
+    // Before the card is up, the first press only fast-forwards the intro
+    if (phase === 'intro' && !introReady) {
+      introT0Ref.current = performance.now() - INTRO_READY_AT * 1000;
+      setIntroReady(true);
+      return;
+    }
+    outroAtRef.current = phase === 'intro' ? performance.now() : null;
     gameRef.current = makeLevel(levelId);
     setResult(null);
     clockRef.current?.stop();
@@ -85,7 +114,31 @@ export default function SecretLevel() {
     await clock.start();
     sendGameplayMessage('gameplay_started');
     setPhase('playing');
-  }, [levelId]);
+  }, [levelId, phase, introReady]);
+
+  // Intro loop: tunnel → flash → title slam → level diorama, then the START card
+  useEffect(() => {
+    if (phase !== 'intro') return;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    let raf = 0;
+    const frame = (now: number) => {
+      const { w, h } = fitCanvas(canvas, ctx);
+      const t = (now - introT0Ref.current) / 1000;
+      drawWarpIntro(ctx, w, h, t, levelId, gameRef.current.title, { reduced });
+      if (t >= (reduced ? 0.6 : INTRO_READY_AT)) setIntroReady(true);
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [phase, levelId, reduced]);
+
+  // Stinger plays once, in time with the intro
+  useEffect(() => {
+    const stop = playWarpStinger(levelId, reduced);
+    return stop;
+  }, [levelId, reduced]);
 
   // Render loop
   useEffect(() => {
@@ -97,20 +150,26 @@ export default function SecretLevel() {
     const frame = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-        canvas.width = Math.round(w * dpr);
-        canvas.height = Math.round(h * dpr);
-      }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const { w, h } = fitCanvas(canvas, ctx);
 
       const game = gameRef.current;
       const beat = (clockRef.current?.beat() ?? 0) - COUNT_IN;
       if (beat >= 0) game.update(beat, dt);
       game.draw(ctx, w, h, beat);
       drawHud(ctx, w, h, game, beat);
+
+      // Leaving the intro: the card collapses into the tunnel, then the level irises open
+      const outroAt = outroAtRef.current;
+      if (outroAt !== null && !reduced) {
+        const since = (now - outroAt) / 1000;
+        if (since < INTRO_OUTRO_S) {
+          drawWarpIntro(ctx, w, h, (now - introT0Ref.current) / 1000, levelId, game.title, { outro: since / INTRO_OUTRO_S });
+        } else if (since < INTRO_OUTRO_S + INTRO_REVEAL_S) {
+          drawWarpReveal(ctx, w, h, (since - INTRO_OUTRO_S) / INTRO_REVEAL_S, now / 1000);
+        } else {
+          outroAtRef.current = null;
+        }
+      }
 
       if (game.done) {
         clockRef.current?.stop();
@@ -124,7 +183,7 @@ export default function SecretLevel() {
     };
     rafRef.current = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [phase, levelId]);
+  }, [phase, levelId, reduced]);
 
   // Keyboard
   useEffect(() => {
@@ -218,23 +277,51 @@ export default function SecretLevel() {
       />
 
       {phase === 'intro' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6 text-center bg-black/80">
-          <div className="text-xs tracking-[0.4em] text-fuchsia-300 font-mono">★ WARP ZONE ★ SECRET LEVEL FOUND</div>
-          <h1 className="text-4xl sm:text-6xl font-black font-mono" style={{ textShadow: '0 0 24px #B967FF' }}>
-            {game.title}
-          </h1>
-          <p className="max-w-md text-sm text-zinc-300 font-mono">{game.hint}</p>
-          {padConnected && <p className="max-w-md text-xs text-fuchsia-200 font-mono">{game.padHint}</p>}
-          <button
-            onClick={() => void start()}
-            className="mt-2 px-8 py-3 rounded-full bg-fuchsia-500 hover:bg-fuchsia-400 font-black font-mono tracking-widest"
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-end gap-4 px-6 text-center"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 9vh)' }}
+          onPointerDown={() => { if (!introReady) void start(); }}
+        >
+          {/* The title is drawn on the canvas; this keeps it readable for screen readers */}
+          <h1 className="sr-only">Warp zone · secret level found · {game.title}</h1>
+          <div
+            className="flex flex-col items-center gap-4 transition-all duration-500 ease-out"
+            style={{
+              opacity: introReady ? 1 : 0,
+              transform: introReady ? 'translateY(0)' : 'translateY(16px)',
+              pointerEvents: introReady ? 'auto' : 'none',
+            }}
           >
-            START
-          </button>
-          <button onClick={leave} className="text-xs text-zinc-500 font-mono underline">
-            {resumePath ? 'skip · back to the song' : 'skip'}
-          </button>
-          {padConnected && <div className="text-xs text-zinc-400 font-mono">Ⓐ start · Ⓑ skip</div>}
+            <p
+              className="max-w-md text-xs sm:text-sm text-zinc-200 font-mono px-4 py-2 rounded-lg border"
+              style={{ background: 'rgba(5,1,15,0.7)', borderColor: `${INTRO_LOOKS[levelId].accent}55` }}
+            >
+              {game.hint}
+            </p>
+            {padConnected && <p className="max-w-md text-xs text-fuchsia-200 font-mono">{game.padHint}</p>}
+            <button
+              onClick={() => void start()}
+              className="warp-start px-10 py-3 rounded-full font-black font-mono tracking-[0.3em] text-white"
+              style={{
+                background: `linear-gradient(90deg, ${INTRO_LOOKS[levelId].accent2}, ${INTRO_LOOKS[levelId].accent})`,
+                boxShadow: `0 0 24px ${INTRO_LOOKS[levelId].accent}`,
+              }}
+            >
+              START
+            </button>
+            <button onClick={leave} className="text-xs text-zinc-400 font-mono underline">
+              {resumePath ? 'skip · back to the song' : 'skip'}
+            </button>
+            {padConnected && <div className="text-xs text-zinc-400 font-mono">Ⓐ start · Ⓑ skip</div>}
+          </div>
+          {!introReady && (
+            <div className="absolute bottom-4 right-4 text-[10px] tracking-[0.3em] text-zinc-500 font-mono">TAP TO SKIP ▸▸</div>
+          )}
+          <style>{`
+            @keyframes warpStartPulse { 0%,100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.06); filter: brightness(1.25); } }
+            .warp-start { animation: warpStartPulse ${(60 / SECRET_TRACKS[levelId].bpm) * 2}s ease-in-out infinite; }
+            @media (prefers-reduced-motion: reduce) { .warp-start { animation: none; } }
+          `}</style>
         </div>
       )}
 
