@@ -1,11 +1,13 @@
 // Neon Reel notes: the showcase rhythm demo's look (components/showcase/scenes/RhythmScene)
-// for every note type in the real game. Each note is a glowing rounded bar with a white
-// highlight strip; special notes keep their meaning through their own colour, label and
+// for every note type in the real game. Each note is a lit glass tube: a glowing rounded bar
+// with a bright rim, a soft top highlight and a white-hot strike line through its middle (see
+// ./noteStrike); special notes keep their meaning through their own colour, label and
 // motion (REMIX, DROP, BEAT, WARP, LIFT, ZIGZAG, BURST, the AVOID mine, the see-through
 // ghost; ZIGZAG shows its line instead of a label). Swipe directions on taps, slide heads
 // and hold tails get a thick animated double chevron in the strip's white; hold heads stay plain.
 
 import type { Note, NoteType } from '../../game/types';
+import { drawStrike } from './noteStrike';
 
 let neonOn = false;
 
@@ -48,7 +50,7 @@ export function drawNeonKey(
 ): boolean {
   const t = (performance.now() + timeOffset) / 1000;
   const p = Math.max(0, Math.min(1, prog));
-  const w = noteW * 0.92;
+  const w = noteW * 0.88; // leaves room for the strike sights inside the lane
   const h = Math.max(5, noteH * (isHold ? 0.55 : 0.64));
 
   ctx.save();
@@ -68,6 +70,7 @@ export function drawNeonKey(
     if (isWarp) drawWarpRing(ctx, w, h, t);
 
     drawBar(ctx, w, h, color, p, isHold);
+    drawStrike(ctx, w, h, color, p, { inset: Math.min(h / 2, 10) * 0.7, glow: false });
 
     if (noteType === 'zigzag') drawZigzag(ctx, w, h, t);
     if (noteType === 'remix') drawShimmer(ctx, w, h, t);
@@ -92,28 +95,42 @@ export function drawNeonKey(
   return true;
 }
 
-/** The base bar: lane-coloured glow, inner shade and the white highlight strip. */
+/** The base tube: lane-coloured bloom, glass shading, a bright rim and a soft top highlight. */
 function drawBar(ctx: CanvasRenderingContext2D, w: number, h: number, color: string, p: number, isHold: boolean) {
   const r = Math.min(h / 2, 10);
+  const x = -w / 2, y = -h / 2;
   ctx.save();
   ctx.globalAlpha = isHold ? 0.78 : 1;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 10 + 18 * p;
+  ctx.shadowBlur = 12 + 20 * p;
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.roundRect(-w / 2, -h / 2, w, h, r);
+  ctx.roundRect(x, y, w, h, r);
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  const shade = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
-  shade.addColorStop(0, 'rgba(255,255,255,0.18)');
-  shade.addColorStop(1, 'rgba(0,0,0,0.3)');
+  // Glass shading: lit from above, falling to shadow underneath, clear through the middle
+  // so the strike line sits on the purest colour.
+  const shade = ctx.createLinearGradient(0, y, 0, y + h);
+  shade.addColorStop(0, 'rgba(255,255,255,0.34)');
+  shade.addColorStop(0.42, 'rgba(255,255,255,0)');
+  shade.addColorStop(0.58, 'rgba(0,0,0,0)');
+  shade.addColorStop(1, 'rgba(0,0,0,0.46)');
   ctx.fillStyle = shade;
   ctx.fill();
 
-  ctx.fillStyle = 'rgba(255,255,255,0.82)';
+  // Rim: the tube wall catching the light.
+  const inset = Math.max(0.75, h * 0.035);
+  ctx.strokeStyle = 'rgba(255,255,255,0.62)';
+  ctx.lineWidth = Math.max(1, h * 0.05);
   ctx.beginPath();
-  ctx.roundRect(-w / 2 + Math.min(6, w * 0.06), -h / 2 + Math.max(1.5, h * 0.12), w - Math.min(12, w * 0.12), Math.max(1.5, h * 0.18), 2);
+  ctx.roundRect(x + inset, y + inset, w - inset * 2, h - inset * 2, Math.max(1, r - inset));
+  ctx.stroke();
+
+  // Top highlight, kept thin so it never reads as the strike line.
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.beginPath();
+  ctx.roundRect(x + Math.min(8, w * 0.07), y + Math.max(1.5, h * 0.13), w - Math.min(16, w * 0.14), Math.max(1, h * 0.09), 2);
   ctx.fill();
   ctx.restore();
 }
@@ -122,7 +139,7 @@ function drawBar(ctx: CanvasRenderingContext2D, w: number, h: number, color: str
  * Thick double chevron in the strip's white, glowing in the note colour. The pair marches
  * toward the swipe direction and fades as it goes, so the direction reads at a glance.
  */
-function drawArrow(ctx: CanvasRenderingContext2D, w: number, h: number, dir: string, color: string, t: number) {
+export function drawArrow(ctx: CanvasRenderingContext2D, w: number, h: number, dir: string, color: string, t: number) {
   const s = Math.max(8, Math.min(h * 1.15, w * 0.34));
   const travel = s * 0.42;
   ctx.save();
@@ -147,7 +164,7 @@ function drawArrow(ctx: CanvasRenderingContext2D, w: number, h: number, dir: str
 }
 
 /** End of a plain hold: a white core with a ring that breathes. */
-function drawHoldCap(ctx: CanvasRenderingContext2D, h: number, color: string, t: number) {
+export function drawHoldCap(ctx: CanvasRenderingContext2D, h: number, color: string, t: number) {
   const core = Math.max(3, h * 0.22);
   ctx.save();
   ctx.shadowColor = color;
@@ -167,7 +184,7 @@ function drawHoldCap(ctx: CanvasRenderingContext2D, h: number, color: string, t:
 }
 
 /** Anton label sitting on the bar, dark with a white edge so it reads on any colour. */
-function drawLabel(ctx: CanvasRenderingContext2D, w: number, h: number, label: string, color: string) {
+export function drawLabel(ctx: CanvasRenderingContext2D, w: number, h: number, label: string, color: string) {
   const size = Math.min(h * 0.62, (w * 0.82) / (label.length * 0.62));
   if (size < 7) return;
   ctx.save();
@@ -187,7 +204,7 @@ function drawLabel(ctx: CanvasRenderingContext2D, w: number, h: number, label: s
 }
 
 /** REMIX: a bright band sweeps across the bar. */
-function drawShimmer(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+export function drawShimmer(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
   const x = -w / 2 + ((t * 0.9) % 1) * w * 1.4 - w * 0.2;
   ctx.save();
   ctx.beginPath();
@@ -203,7 +220,7 @@ function drawShimmer(ctx: CanvasRenderingContext2D, w: number, h: number, t: num
 }
 
 /** WARP: two counter-spinning dashed rings behind the bar. */
-function drawWarpRing(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+export function drawWarpRing(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
   const r = Math.max(h, w * 0.32);
   ctx.save();
   ctx.lineWidth = 2;
@@ -223,7 +240,7 @@ function drawWarpRing(ctx: CanvasRenderingContext2D, w: number, h: number, t: nu
 }
 
 /** BURST: short rays pulsing out from the bar. */
-function drawBurstRays(ctx: CanvasRenderingContext2D, w: number, h: number, color: string, t: number) {
+export function drawBurstRays(ctx: CanvasRenderingContext2D, w: number, h: number, color: string, t: number) {
   const k = (t * 2.2) % 1;
   ctx.save();
   ctx.strokeStyle = color;
@@ -245,7 +262,7 @@ function drawBurstRays(ctx: CanvasRenderingContext2D, w: number, h: number, colo
 }
 
 /** ZIGZAG: a white zigzag line running along the bar. */
-function drawZigzag(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+export function drawZigzag(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
   const steps = 6;
   const amp = h * 0.24;
   const shift = (t * 3) % 2;
@@ -264,7 +281,7 @@ function drawZigzag(ctx: CanvasRenderingContext2D, w: number, h: number, t: numb
 }
 
 /** MINE: a red hazard plate with warning stripes, a skull and AVOID, pulsing. */
-function drawMine(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, t: number) {
+export function drawMine(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, t: number) {
   const pulse = 1 + 0.08 * Math.sin(t * 11);
   const mw = w * 0.86 * pulse, mh = h * 1.1 * pulse;
   const r = Math.min(mh / 2, 10);
@@ -310,7 +327,7 @@ function drawMine(ctx: CanvasRenderingContext2D, w: number, h: number, p: number
 }
 
 /** GHOST: an outline-only bar that flickers, so it reads as "not really there". */
-function drawGhost(ctx: CanvasRenderingContext2D, w: number, h: number, color: string, t: number) {
+export function drawGhost(ctx: CanvasRenderingContext2D, w: number, h: number, color: string, t: number) {
   const r = Math.min(h / 2, 10);
   ctx.save();
   ctx.globalAlpha = 0.45 + 0.25 * Math.sin(t * 7);

@@ -1,6 +1,7 @@
-// Rail notes: the Console Rail's own note skin. Each note is a cut-corner gunmetal chip
-// with an LED bar in the lane colour whose segments charge up as the note nears the hit
-// line, so timing reads off the note itself. Special notes keep their meaning through a
+// Rail notes: the Console Rail's own note skin. Each note is a cut-corner chip of brushed
+// gunmetal with lane-colour edge lights and an LED bar split along its middle by a lit
+// groove. The groove is the strike line (see ./noteStrike); the segments either side charge
+// up as the note nears the hit line, so timing reads off the note itself. Special notes keep their meaning through a
 // coloured mono tag (REMIX, DROP, BEAT, WARP, BURST); the mine is a red hazard chip with a
 // blinking AVOID, the ghost a wireframe. Swipe directions on taps, slide heads and hold
 // tails get blocky LED chevrons that step toward the swipe; hold heads stay plain, and hold
@@ -8,6 +9,7 @@
 
 import type { Note, NoteType } from '../../game/types';
 import { SWIPE_ROT, SPECIAL } from './neonNotes';
+import { drawSights, drawStrike } from './noteStrike';
 
 const PLATE = '#15171d';
 const PLATE_HI = '#3a3f4b';
@@ -26,7 +28,7 @@ export function drawRailKey(
 ): boolean {
   const t = (performance.now() + timeOffset) / 1000;
   const p = Math.max(0, Math.min(1, prog));
-  const w = noteW * 0.92;
+  const w = noteW * 0.88; // leaves room for the strike sights inside the lane
   const h = Math.max(6, noteH * (isHold ? 0.55 : 0.64));
 
   ctx.save();
@@ -45,16 +47,20 @@ export function drawRailKey(
     const holdHead = !isHold && (noteType === 'hold' || noteType === 'hold-swipe');
     const hasArrow = (!!swipeDirection && !lift && !holdHead) || lift;
 
-    drawChip(ctx, w, h, isHold);
-    if (noteType === 'zigzag') drawTrace(ctx, w, h, color, t);
+    drawChip(ctx, w, h, isHold, color, p);
+    if (noteType === 'zigzag') {
+      drawTrace(ctx, w, h, color, t);
+      drawStrike(ctx, w - h * 0.9, h, color, p, { sights: false, glow: false, weight: Math.max(1, h * 0.05) });
+    }
     else {
       // BEAT notes flash every segment on the beat; the rest charge with approach.
       const beatFlash = noteType === 'accent' && Math.sin(t * 9.4) > 0.3;
       ctx.save();
       if (hasArrow) ctx.globalAlpha = 0.3; // the arrow is the message; the bar steps back
-      drawLeds(ctx, w, h, color, beatFlash ? 1 : 0.18 + 0.82 * p, noteType === 'remix' ? t : -1);
+      drawLeds(ctx, w, h, color, beatFlash ? 1 : 0.18 + 0.82 * p, noteType === 'remix' ? t : -1, p);
       ctx.restore();
     }
+    drawSights(ctx, w, h, color, p);
     if (swipeDirection && !lift && !holdHead) drawPixelChevron(ctx, w, h, swipeDirection, color, t);
     else if (lift) drawPixelChevron(ctx, w, h, 'up', color, t);
     else if (isHold) drawHoldLed(ctx, h, color, t);
@@ -82,62 +88,106 @@ function chipPath(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.closePath();
 }
 
-/** Cut-corner gunmetal plate: dark body, bright top bevel, screw dots at the ends. */
-function drawChip(ctx: CanvasRenderingContext2D, w: number, h: number, isHold: boolean) {
+/**
+ * Cut-corner gunmetal plate: dark body with a brushed grain, bevels top and bottom, and a
+ * lane-colour edge light at each end that brightens as the note arrives.
+ */
+function drawChip(ctx: CanvasRenderingContext2D, w: number, h: number, isHold: boolean, color: string, p: number) {
+  const c = Math.min(h * 0.32, 8);
   ctx.save();
   ctx.globalAlpha = isHold ? 0.85 : 1;
   ctx.shadowColor = 'rgba(0,0,0,0.6)';
   ctx.shadowBlur = 6;
   ctx.shadowOffsetY = 2;
   const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
-  g.addColorStop(0, '#262a33');
+  g.addColorStop(0, '#2b303a');
+  g.addColorStop(0.5, '#1b1e26');
   g.addColorStop(1, PLATE);
   ctx.fillStyle = g;
   chipPath(ctx, w, h);
   ctx.fill();
   ctx.shadowColor = 'transparent';
+
+  // Brushed grain: faint horizontal scratches, clipped to the plate.
+  ctx.save();
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 0.6;
+  const rows = Math.max(3, Math.round(h / 5));
+  for (let i = 1; i < rows; i++) {
+    const y = -h / 2 + (i / rows) * h;
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, y);
+    ctx.lineTo(w / 2, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
   ctx.strokeStyle = PLATE_HI;
   ctx.lineWidth = 1;
+  chipPath(ctx, w, h);
   ctx.stroke();
-  // Top bevel highlight.
-  ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+  // Bevels: a bright top edge and a dark bottom one.
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
   ctx.beginPath();
-  ctx.moveTo(-w / 2 + Math.min(h * 0.32, 8), -h / 2 + 1);
-  ctx.lineTo(w / 2 - Math.min(h * 0.32, 8), -h / 2 + 1);
+  ctx.moveTo(-w / 2 + c, -h / 2 + 1);
+  ctx.lineTo(w / 2 - c, -h / 2 + 1);
   ctx.stroke();
-  const sr = Math.max(1, h * 0.06);
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  for (const sx of [-1, 1]) {
-    ctx.beginPath();
-    ctx.arc(sx * (w / 2 - h * 0.28), 0, sr, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath();
+  ctx.moveTo(-w / 2 + c, h / 2 - 1);
+  ctx.lineTo(w / 2 - c, h / 2 - 1);
+  ctx.stroke();
+
+  // Edge lights: a lane-colour bar inside each end.
+  const ew = Math.max(2, h * 0.09), eh = h * 0.5;
+  ctx.globalAlpha *= 0.35 + 0.65 * p;
+  ctx.fillStyle = color;
+  for (const sx of [-1, 1]) ctx.fillRect(sx * (w / 2 - h * 0.26) - ew / 2, -eh / 2, ew, eh);
   ctx.restore();
 }
 
-/** LED bar: N segments; `lit` (0..1) of them glow in the lane colour. sweepT ≥ 0 runs a scanner. */
-function drawLeds(ctx: CanvasRenderingContext2D, w: number, h: number, color: string, lit: number, sweepT: number) {
+/**
+ * LED bar: N segments, each split into an upper and lower half by the centre groove; `lit`
+ * (0..1) of them glow in the lane colour. sweepT ≥ 0 runs a scanner. The groove itself is
+ * the strike line, lit white-hot over the lane colour and brightening with approach `p`.
+ */
+function drawLeds(ctx: CanvasRenderingContext2D, w: number, h: number, color: string, lit: number, sweepT: number, p: number) {
   const n = w > 90 ? 8 : 6;
   const span = w - h * 0.9;
   const gap = Math.max(1.5, span * 0.025);
   const sw = (span - gap * (n - 1)) / n;
-  const sh = Math.max(2, h * 0.34);
+  const sh = Math.max(3, h * 0.46);
+  const groove = Math.max(1.5, h * 0.08);
+  const half = (sh - groove) / 2;
   const x0 = -span / 2;
   const litN = Math.round(lit * n);
   const scan = sweepT >= 0 ? Math.floor((sweepT * 10) % n) : -1;
   ctx.save();
+  // One glow for the whole lit run. A shadow per segment costs sixteen blurred fills a note,
+  // which is what made this skin stutter; a single blurred bar behind the run looks the same.
+  if (litN > 0) {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = color;
+    ctx.fillRect(x0, -sh / 2, litN * (sw + gap) - gap, sh);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = PLATE;
+    ctx.fillRect(x0, -sh / 2, litN * (sw + gap) - gap, sh);
+  }
   for (let i = 0; i < n; i++) {
     const on = i < litN || i === scan;
+    const x = x0 + i * (sw + gap);
     ctx.fillStyle = on ? color : LED_OFF;
-    if (on) { ctx.shadowColor = color; ctx.shadowBlur = 8; } else ctx.shadowBlur = 0;
-    ctx.fillRect(x0 + i * (sw + gap), -sh / 2, sw, sh);
+    ctx.fillRect(x, -sh / 2, sw, half);
+    ctx.fillRect(x, groove / 2, sw, half);
     if (on) {
-      ctx.shadowBlur = 0;
       ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.fillRect(x0 + i * (sw + gap), -sh / 2, sw, Math.max(1, sh * 0.28));
+      ctx.fillRect(x, -sh / 2, sw, Math.max(1, half * 0.4));
     }
   }
   ctx.restore();
+  drawStrike(ctx, span + gap * 2, h, color, p, { inset: 0, sights: false, glow: false, weight: groove * 0.7 });
 }
 
 /** Blocky LED chevrons built from squares, stepping (not gliding) toward the swipe. */
