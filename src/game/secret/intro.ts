@@ -577,7 +577,7 @@ function drawBurst(ctx: CanvasRenderingContext2D, x: number, y: number, age: num
 
 // ── ROOFTOP RUN diorama ───────────────────────────────────────────────────
 
-function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, s: number, look: IntroLook) {
+function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, s: number, _look: IntroLook) {
   const sky = ctx.createLinearGradient(0, 0, 0, h);
   sky.addColorStop(0, '#12002B');
   sky.addColorStop(0.7, '#3B0A4F');
@@ -691,7 +691,7 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
     if (local < 1) air = 4 * local * (1 - local);
   }
   const jumpH = h * 0.14;
-  drawRunner(ctx, runnerX, roof - air * jumpH, unit * 2.6, beat, air > 0.05, look);
+  drawRunner(ctx, runnerX, roof - 8 - air * jumpH, h, beat, air > 0.05);
 
   // Speed lines at the start, while the camera catches up
   const lines = Math.max(0, 1 - s / 1.2);
@@ -712,60 +712,31 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
   }
 }
 
-function drawRunner(ctx: CanvasRenderingContext2D, x: number, footY: number, size: number, beat: number, airborne: boolean, look: IntroLook) {
-  const stride = Math.sin(beat * Math.PI * 2);
+/** The ROOFTOP RUN runner exactly as the level draws it: a mint capsule with an eye and beat-cycling legs. */
+function drawRunner(ctx: CanvasRenderingContext2D, x: number, footY: number, h: number, beat: number, airborne: boolean) {
+  const bodyH = 0.075 * h; // PLAYER_H in runner.ts
+  const bodyW = 24;
   ctx.save();
-  ctx.translate(x, footY);
-  ctx.strokeStyle = '#7CFFCB';
   ctx.fillStyle = '#7CFFCB';
   ctx.shadowColor = '#7CFFCB';
   ctx.shadowBlur = 14;
-  ctx.lineWidth = Math.max(2, size * 0.14);
-  ctx.lineCap = 'round';
-  const hip = -size * 0.55;
-  const shoulder = -size * 1.05;
-  // trail
-  ctx.save();
-  ctx.globalAlpha = 0.25;
-  ctx.fillStyle = look.accent;
-  ctx.fillRect(-size * 1.6, shoulder, size * 1.2, size * 0.9);
-  ctx.restore();
-  // legs
-  const legA = airborne ? 0.9 : stride;
-  const leg = (sgn: number) => {
-    const a = legA * sgn * 0.8;
-    const kx = Math.sin(a) * size * 0.3;
-    const fx = Math.sin(a) * size * 0.55 + (airborne ? -sgn * size * 0.15 : 0);
-    const fy = airborne ? -size * 0.15 : 0;
-    ctx.beginPath();
-    ctx.moveTo(0, hip);
-    ctx.lineTo(kx, hip * 0.45);
-    ctx.lineTo(fx, fy);
-    ctx.stroke();
-  };
-  leg(1);
-  leg(-1);
-  // body leaning forward
   ctx.beginPath();
-  ctx.moveTo(0, hip);
-  ctx.lineTo(size * 0.18, shoulder);
-  ctx.stroke();
-  // arms
-  const arm = (sgn: number) => {
-    const a = -stride * sgn * 0.9;
-    ctx.beginPath();
-    ctx.moveTo(size * 0.16, shoulder + size * 0.08);
-    ctx.lineTo(size * 0.16 + Math.sin(a) * size * 0.45, shoulder + size * 0.45);
-    ctx.stroke();
-  };
-  arm(1);
-  arm(-1);
-  // head + visor
-  ctx.beginPath();
-  ctx.arc(size * 0.26, shoulder - size * 0.24, size * 0.2, 0, Math.PI * 2);
+  ctx.roundRect(x - bodyW / 2, footY - bodyH, bodyW, bodyH, 8);
   ctx.fill();
+  ctx.shadowBlur = 0;
   ctx.fillStyle = '#05010F';
-  ctx.fillRect(size * 0.28, shoulder - size * 0.3, size * 0.18, size * 0.08);
+  ctx.fillRect(x + 2, footY - bodyH + 8, 5, 5);
+  if (!airborne) {
+    const step = Math.sin(beat * Math.PI * 4) * 6;
+    ctx.strokeStyle = '#7CFFCB';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x - 5, footY);
+    ctx.lineTo(x - 5 + step, footY + 8);
+    ctx.moveTo(x + 5, footY);
+    ctx.lineTo(x + 5 - step, footY + 8);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
