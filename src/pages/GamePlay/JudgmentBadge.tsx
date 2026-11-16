@@ -183,7 +183,7 @@ export const JudgmentBadge: React.FC<{ type: JudgmentDisplay['type']; scale?: nu
   );
 };
 
-type HudStyle = 'beta' | 'console' | 'stanza';
+type HudStyle = 'beta' | 'console' | 'stanza' | 'neon';
 
 const JUDGE = {
   'PERFECT+': { c: '#FFD700', label: 'PERFECT+', word: 'perfect+', chip: 'P+' },
@@ -228,7 +228,18 @@ function poeticBadgeSvg(type: JudgmentDisplay['type'], scale: number): string {
     </svg>`;
 }
 
+/** Neon Reel judgment: a tall Anton word with a hard neon glow, as in the showcase demo. */
+function neonBadgeSvg(type: JudgmentDisplay['type'], scale: number): string {
+  const j = JUDGE[type] ?? JUDGE.MISS;
+  const w = 30 + j.label.length * 15;
+  const h = 40;
+  return `<svg width="${w * scale}" height="${h * scale}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 10px ${j.c}) drop-shadow(0 0 22px ${j.c}88);">
+      <text x="${w / 2}" y="31" text-anchor="middle" fill="${j.c}" font-family="Anton, Impact, sans-serif" font-size="30" letter-spacing="1">${j.label}</text>
+    </svg>`;
+}
+
 export function getJudgmentBadgeSvgHtml(type: JudgmentDisplay['type'], scale = 1, idSuffix: number | string = '', hudStyle: HudStyle = 'beta'): string {
+  if (hudStyle === 'neon') return neonBadgeSvg(type, scale);
   if (hudStyle === 'console') return railBadgeSvg(type, scale);
   if (hudStyle === 'stanza') return poeticBadgeSvg(type, scale);
   if (type === "PERFECT+") {
@@ -294,6 +305,9 @@ export function getJudgmentBadgeSvgHtml(type: JudgmentDisplay['type'], scale = 1
 export function getJudgmentStreamItemHtml(type: JudgmentDisplay['type'], _lane: number, hudStyle: HudStyle = 'beta'): string {
   if (hudStyle !== 'beta') {
     const j = JUDGE[type] ?? JUDGE.MISS;
+    if (hudStyle === 'neon') {
+      return `<div class="select-none" style="font:400 13px/1 Anton, Impact, sans-serif;letter-spacing:0.06em;color:${j.c};text-shadow:0 0 8px ${j.c};">${j.label}</div>`;
+    }
     if (hudStyle === 'console') {
       // sheared chip, like the rail's pips
       return `<div class="flex items-center justify-center select-none" style="width:28px;height:16px;transform:skewX(-20deg);background:${type === 'PERFECT+' ? j.c : 'rgba(8,8,12,0.85)'};border:1px solid ${j.c};box-shadow:0 0 6px ${j.c}66;">

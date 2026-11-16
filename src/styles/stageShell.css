@@ -500,6 +500,17 @@
     0 0 30px rgba(255, 30, 140, 0.55);
 }
 .pim-dock a:active .pim-dock-play { transform: translateY(4px); box-shadow: 0 1px 0 var(--shell-accent-deep); }
+/* Results / pack reveal sequences: floating chrome steps aside until the sequence ends
+   (useChromeHold). th3-ecosystem-bar is the external 365 pill. */
+.pim-dock, [data-pim-chrome], th3-ecosystem-bar { transition: opacity 0.25s ease, translate 0.25s ease; }
+body.pim-chrome-hold .pim-dock,
+body.pim-chrome-hold [data-pim-chrome],
+body.pim-chrome-hold th3-ecosystem-bar {
+  opacity: 0 !important;
+  translate: 0 24px;
+  pointer-events: none !important;
+  visibility: hidden;
+}
 @media (max-width: 767px) {
   body.pim-has-dock .pim-app-root main { padding-bottom: calc(var(--shell-dock-h) + 24px + var(--pim-dock-lift, 0px)); }
 }

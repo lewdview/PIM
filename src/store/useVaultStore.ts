@@ -15,7 +15,7 @@ export interface ProfileSettings {
   cardBack: string;
   gameBackground: string;
   gameTrack?: string;
-  hudStyle?: 'beta' | 'console' | 'stanza';
+  hudStyle?: 'beta' | 'console' | 'stanza' | 'neon';
   noteSkin?: 'match' | 'classic' | 'neon' | 'ink' | 'rail' | 'vinyl';
   lyricsMode?: 'off' | 'track' | 'poetic';
   /** Old on/off lyrics toggle, read once to seed lyricsMode. */

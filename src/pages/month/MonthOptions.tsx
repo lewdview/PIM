@@ -46,7 +46,7 @@ const VIEWS: { id: PovMode; name: string }[] = [
   { id: 'mobius_loop', name: 'Möbius loop' },
 ];
 const HUDS: { id: HudStyle; name: string }[] = [
-  { id: 'stanza', name: 'Poetic GUI' }, { id: 'console', name: 'Console Rail' }, { id: 'beta', name: 'Beta' },
+  { id: 'neon', name: 'Neon Reel' }, { id: 'stanza', name: 'Poetic GUI' }, { id: 'console', name: 'Console Rail' }, { id: 'beta', name: 'Beta' },
 ];
 const NOTE_SKIN_ITEMS: { id: NoteSkin; name: string }[] = [
   { id: 'match', name: 'Match HUD' }, { id: 'rail', name: 'LED Chip' }, { id: 'ink', name: 'Ink Slip' },
@@ -184,7 +184,7 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
             <Cycle label="View" value={opts.povMode} items={VIEWS} onChange={(v) => save('povMode', v)} />
             <Toggle label="Change view each stage" {...bool('stagePovSwitch')} />
             <Cycle label="HUD" value={opts.hudStyle} items={HUDS} onChange={(v) => save('hudStyle', v)} />
-            <Cycle label="Notes" value={opts.noteSkin ?? 'match'} items={NOTE_SKIN_ITEMS} onChange={(v) => save('noteSkin', v)} />
+            <Cycle label="Notes" value={opts.noteSkin ?? 'classic'} items={NOTE_SKIN_ITEMS} onChange={(v) => save('noteSkin', v)} />
             {opts.hudStyle === 'stanza'
               ? <p className="mo-hint">The Poetic GUI inks each lyric line as you play.</p>
               : <Cycle label="Lyrics" value={opts.lyricsMode} items={LYRICS} onChange={(v) => save('lyricsMode', v)} />}

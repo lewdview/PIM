@@ -40,11 +40,12 @@ const HUD_SKIN: Record<HudStyle, DrawnNoteSkin> = {
   stanza: 'ink',
   console: 'rail',
   beta: 'classic',
+  neon: 'neon',
 };
 
 /** The skin to draw for a player's settings. */
 export function resolveNoteSkin(skin: NoteSkin | null | undefined, hudStyle: HudStyle | null | undefined): DrawnNoteSkin {
-  return skin && skin !== 'match' ? skin : HUD_SKIN[hudStyle ?? 'console'];
+  return skin && skin !== 'match' ? skin : HUD_SKIN[hudStyle ?? 'neon'];
 }
 
 let active: SkinFn | null = null;

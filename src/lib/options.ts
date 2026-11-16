@@ -27,8 +27,8 @@ export type PovMode =
 
 export type { ChartVariant };
 
-/** 'stanza' is shown to players as "Poetic GUI". */
-export type HudStyle = 'beta' | 'console' | 'stanza';
+/** 'stanza' is shown to players as "Poetic GUI"; 'neon' as "Neon Reel" (the showcase demo's look). */
+export type HudStyle = 'beta' | 'console' | 'stanza' | 'neon';
 /** How lyrics show during play: none, painted on the track, or Poetic Lines (kinetic lyrics across the sky). */
 export type LyricsMode = 'off' | 'track' | 'poetic';
 export const LYRICS_MODES: readonly LyricsMode[] = ['off', 'track', 'poetic'];
@@ -41,9 +41,9 @@ export function defaultLyricsMode(): LyricsMode {
  * itself, so it turns the other modes off.
  */
 export function activeLyricsMode(o: { hudStyle?: HudStyle; lyricsMode: LyricsMode }): LyricsMode {
-  return (o.hudStyle ?? 'console') === 'stanza' ? 'off' : o.lyricsMode;
+  return (o.hudStyle ?? 'neon') === 'stanza' ? 'off' : o.lyricsMode;
 }
-export const HUD_STYLES: readonly HudStyle[] = ['beta', 'console', 'stanza'];
+export const HUD_STYLES: readonly HudStyle[] = ['beta', 'console', 'stanza', 'neon'];
 /**
  * The art notes are drawn with. 'match' follows the HUD style (see GamePlay/noteSkins.ts);
  * 'classic' is the original piano key.
@@ -51,10 +51,10 @@ export const HUD_STYLES: readonly HudStyle[] = ['beta', 'console', 'stanza'];
 export type NoteSkin = 'match' | 'classic' | 'neon' | 'ink' | 'rail' | 'vinyl';
 export const NOTE_SKINS: readonly NoteSkin[] = ['match', 'classic', 'neon', 'ink', 'rail', 'vinyl'];
 export function toNoteSkin(v: unknown): NoteSkin {
-  return NOTE_SKINS.includes(v as NoteSkin) ? (v as NoteSkin) : 'match';
+  return NOTE_SKINS.includes(v as NoteSkin) ? (v as NoteSkin) : 'classic';
 }
 export function toHudStyle(v: unknown): HudStyle {
-  return HUD_STYLES.includes(v as HudStyle) ? (v as HudStyle) : 'console';
+  return HUD_STYLES.includes(v as HudStyle) ? (v as HudStyle) : 'neon';
 }
 
 export type GameOpts = {
@@ -76,7 +76,7 @@ export type GameOpts = {
   musicVolume: number;
   gameBackground: string;
   gameTrack: string;
-  /** In-song HUD: the original beta HUD, the console rail, or Stanza + Oracle. */
+  /** In-song HUD: the original beta HUD, the console rail, Stanza + Oracle, or Neon Reel. */
   hudStyle: HudStyle;
   /** Note art, chosen separately from the HUD; 'match' follows hudStyle. */
   noteSkin: NoteSkin;
@@ -160,8 +160,8 @@ export const DEFAULT_OPTS: GameOpts = {
   musicVolume: 0.5,
   gameBackground: "cover_blur",
   gameTrack: "transparent",
-  hudStyle: "console",
-  noteSkin: "match",
+  hudStyle: "neon",
+  noteSkin: "classic",
   backgroundBlur: 10,
   cardBack: "classic",
   haptics: true,

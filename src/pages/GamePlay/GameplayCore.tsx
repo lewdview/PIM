@@ -44,9 +44,25 @@ import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } fro
 import GameplayVisualizer from './GameplayVisualizer';
 import HudMuteButton from './HudMuteButton';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
-import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine } from './trackLyrics';
+import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine, type LyricAvoidRect } from './trackLyrics';
 import { setNoteSkin, resolveNoteSkin, drawSkinnedKey } from './noteSkins';
 import { hudArt } from './artPalette';
+
+// Fixed HUD blocks per style that Poetic Lines words fit around (Neon / Console / Beta).
+const LYRIC_AVOID_SELECTOR = '.neon-hud-left, .neon-hud-score, .neon-hud-combo, .pim-rail-strip-row, .pim-rail-panel, .gameplay-hud-left-wing, .gameplay-hud-right-wing, [data-lyric-avoid]';
+
+/** HUD blocks Poetic / on-track lyrics fit around, relative to `box`. Layout reads, so at most twice a second. */
+function measureLyricAvoidInto(store: { at: number; rects: LyricAvoidRect[] }, boxEl: Element, nowMs: number) {
+  if (nowMs - store.at <= 500) return;
+  store.at = nowMs;
+  const box = boxEl.getBoundingClientRect();
+  store.rects = [];
+  document.querySelectorAll(LYRIC_AVOID_SELECTOR).forEach((el) => {
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) return;
+    store.rects.push({ x0: r.left - box.left, y0: r.top - box.top, x1: r.right - box.left, y1: r.bottom - box.top });
+  });
+}
 import { getStageStarts, stageAtTime } from './stageTimeline';
 import { VerseHud, comboInk } from './verseHud';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, CHART_MASTER_DELUXE_VERSION } from '@/game/chartMaster';
@@ -56,6 +72,8 @@ import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPilla
 import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
 import '../../styles/gameplayHud.css';
 import '../../styles/gameplayHudRail.css';
+import '../../styles/neonHud.css';
+import { drawStageGrade } from './stageGrade';
 import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
 import { noteKey, saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
 
@@ -1228,6 +1246,8 @@ export default function Game() {
   const judgmentOverlayRef = useRef<HTMLDivElement | null>(null);
   const judgmentBannerRef = useRef<HTMLDivElement | null>(null);
   const judgmentStreamRef = useRef<HTMLDivElement | null>(null);
+  const lyricAvoidRef = useRef<{ at: number; rects: LyricAvoidRect[] }>({ at: -1e9, rects: [] });
+  const measureLyricAvoid = (boxEl: Element, nowMs: number) => measureLyricAvoidInto(lyricAvoidRef.current, boxEl, nowMs);
   const lastInputModalityRef = useRef<'touch' | 'mouse' | 'key' | 'gamepad'>(
     typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 'touch' : 'key'
   );
@@ -1276,7 +1296,7 @@ export default function Game() {
           popEl.className = 'absolute pointer-events-none judgment-pop';
           popEl.style.left = `${targetPct}%`;
           popEl.style.top = `${targetYPct}%`;
-          popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id, optsRef.current.hudStyle ?? 'console');
+          popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id, optsRef.current.hudStyle ?? 'neon');
           
           judgmentOverlayRef.current.appendChild(popEl);
           popEl.addEventListener('animationend', () => {
@@ -1293,7 +1313,7 @@ export default function Game() {
         const streamContainer = judgmentStreamRef.current;
         const itemEl = document.createElement('div');
         itemEl.className = 'judgment-stream-item shrink-0';
-        itemEl.innerHTML = getJudgmentStreamItemHtml(newJ.type, newJ.lane, optsRef.current.hudStyle ?? 'console');
+        itemEl.innerHTML = getJudgmentStreamItemHtml(newJ.type, newJ.lane, optsRef.current.hudStyle ?? 'neon');
 
         streamContainer.appendChild(itemEl);
 
@@ -1511,6 +1531,13 @@ export default function Game() {
   const [currentStage, setCurrentStage] = useState(1);
   const [stageStingerNumber, setStageStingerNumber] = useState<number | null>(null);
   const [stageStingerPhase, setStageStingerPhase] = useState<'cleared' | 'start' | 'transmission_complete'>('cleared');
+  // While the stage stinger is up, HUD combo counters / power-up pills step aside so they
+  // never sit on top of it (all HUD styles; selectors in neonHud.css).
+  useEffect(() => {
+    if (!stageStingerNumber) return;
+    document.body.classList.add('pim-stinger');
+    return () => document.body.classList.remove('pim-stinger');
+  }, [stageStingerNumber]);
   const [isStageFadingOut, setIsStageFadingOut] = useState(false);
   const lastDetectedStageRef = useRef(1);
   const stingerTimeout1Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2330,8 +2357,8 @@ export default function Game() {
         shards: particleDensity === 'minimal' ? undefined : makeHitShards(kind, particleDensity === 'half' ? 6 : 12),
       });
 
-      // Break (drop), accent (beat) and remix notes get their own celebration on top
-      if ((noteType === 'break' || noteType === 'accent' || noteType === 'remix' || noteType === 'warp' || noteType === 'warp-clear') && kind !== 'SHIELDED' && particleDensity !== 'minimal') {
+      // Break (drop), accent (beat), remix, warp and lift notes get their own celebration on top
+      if ((noteType === 'break' || noteType === 'accent' || noteType === 'remix' || noteType === 'warp' || noteType === 'warp-clear' || noteType === 'lift') && kind !== 'SHIELDED' && particleDensity !== 'minimal') {
         spawnCelebration(celebrationsRef.current, noteType, cx, customY !== undefined ? customY : hitY, Date.now(), particleDensity === 'half' ? 0.5 : 1);
       }
     },
@@ -2905,7 +2932,7 @@ export default function Game() {
         else gs.goods++;
 
         audioManager.playSfx("tap_nav", 0.25);
-        triggerHitFx(liftCandidate.currentLane, j);
+        triggerHitFx(liftCandidate.currentLane, j, undefined, 'up', 'lift');
         addJudgment({ type: j, lane: liftCandidate.currentLane, id: ++jCounter.current, ts: Date.now() });
         syncDisplay();
 
@@ -4129,7 +4156,7 @@ export default function Game() {
       }
 
     // Stanza + Oracle HUD (throttled to ~30Hz inside VerseHud).
-    if ((optsRef.current.hudStyle ?? 'console') === 'stanza') {
+    if ((optsRef.current.hudStyle ?? 'neon') === 'stanza') {
       const song = songRef.current;
       const verse = verseHudRef.current;
       const gsNow = gsRef.current;
@@ -4321,6 +4348,8 @@ export default function Game() {
         octx.clearRect(0, 0, pw, ph);
         if (poeticOn) {
           octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          measureLyricAvoid(lyricOverlay, nowMs);
+          const av = lyricAvoidRef.current;
           drawLyricBackdrop(octx, {
             W: oW,
             H: oH,
@@ -4329,6 +4358,7 @@ export default function Game() {
             colors: laneColorsRef.current,
             animate: optsRef.current.bgAnimation,
             layer: 'text',
+            avoid: av.rects,
           });
         }
       }
@@ -5658,6 +5688,23 @@ export default function Game() {
     const hwTop = hwAtProgress(0, W, trackTopRatio, trackBotRatio, H);
     const hwBot = hwAtProgress(1, W, trackTopRatio, trackBotRatio, H);
 
+    // ── 1z. CINEMATIC GRADE (./stageGrade): horizon bloom, vignette, grain over every
+    // stage background and POV scene, under the lanes' own surface and the notes.
+    {
+      const bpmG = songRef.current?.bpm || 120;
+      const beatG = Math.pow(Math.max(0, Math.cos(((t * bpmG) / 60) * Math.PI * 2)), 8);
+      drawStageGrade({
+        ctx,
+        W,
+        H,
+        horizonY: hitY * (is3DEnvironment ? 0.28 : 0.12),
+        beat: beatG,
+        energy: Math.min(1, gsRef.current.combo / 60),
+        colors: laneColorsRef.current,
+        lite: effGfx === 'low' || optsRef.current.legacyGraphics,
+      });
+    }
+
     // ── 2. LANE TRACK SURFACE ───────────────────────────────────
     if (!offscreenCanvasRef.current) {
       // Fallback: draw static rails, tints, grid lines, dividers if offscreen cache is missing
@@ -6070,7 +6117,9 @@ export default function Game() {
 
     // ── 4b. ON-TRACK LYRICS (painted on the track surface; notes render over) ──
     if (activeLyricsMode(optsRef.current) === 'track' && trackLyricsRef.current.lines.length > 0) {
+      measureLyricAvoid(canvas, nowMs);
       drawTrackLyrics(ctx, {
+        avoid: lyricAvoidRef.current.rects,
         W,
         H,
         t,
@@ -8618,7 +8667,7 @@ export default function Game() {
         else if (j === "PERFECT") gs.perfects++;
         else gs.goods++;
         audioManager.playSfx("tap_nav", 0.25);
-        triggerHitFx(liftCandidate.currentLane, j);
+        triggerHitFx(liftCandidate.currentLane, j, undefined, 'up', 'lift');
 
         // Track lift note telemetry
         recordedTelemetryRef.current.push({
@@ -11135,8 +11184,7 @@ export default function Game() {
           <canvas
             ref={setLyricOverlayEl}
             aria-hidden="true"
-            className="absolute inset-0 w-full h-full pointer-events-none z-[45]"
-            style={{ opacity: 0.85 }}
+            className="pim-lyric-overlay absolute inset-0 w-full h-full pointer-events-none z-[45]"
           />
         )}
         {/* ── GAMEPLAY HUD · Beta (the original HUD, kept as a selectable style) ── */}
@@ -11216,10 +11264,10 @@ export default function Game() {
                 <span 
                   className="px-2 py-0.5 rounded text-[8px] font-black tracking-widest transition-all duration-300 shadow-sm"
                   style={{
-                    backgroundColor: currentStage === 5 ? 'rgba(255,0,85,0.25)' : currentStage === 4 ? 'rgba(255,20,147,0.25)' : currentStage === 3 ? 'rgba(255,215,0,0.25)' : currentStage === 2 ? 'rgba(57,255,20,0.2)' : 'rgba(0,229,255,0.2)',
-                    color: currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF',
-                    border: `1px solid ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}60`,
-                    boxShadow: `0 0 10px ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}30`,
+                    backgroundColor: `${art.stage[Math.max(0, Math.min(4, currentStage - 1))]}38`,
+                    color: art.stage[Math.max(0, Math.min(4, currentStage - 1))],
+                    border: `1px solid ${art.stage[Math.max(0, Math.min(4, currentStage - 1))]}60`,
+                    boxShadow: `0 0 10px ${art.stage[Math.max(0, Math.min(4, currentStage - 1))]}30`,
                   }}
                 >
                   {currentStage === 5 ? '⚡ FINAL' : currentStage === 4 ? 'STAGE 4' : currentStage === 3 ? 'STAGE 3' : currentStage === 2 ? 'STAGE 2' : 'STAGE 1'}
@@ -11263,15 +11311,7 @@ export default function Game() {
                   className="h-full rounded-full transition-all duration-150 ease-out"
                   style={{
                     width: `${Math.min(100, Math.max(0, (gs.progress || 0) * 100))}%`,
-                    background: currentStage === 5
-                      ? "linear-gradient(90deg, #FF1493, #FFD700, #FF0055)"
-                      : currentStage === 4
-                        ? "linear-gradient(90deg, #00E5FF, #FFD700, #FF1493)"
-                        : currentStage === 3
-                          ? "linear-gradient(90deg, #00E5FF, #39FF14, #FFD700)"
-                          : currentStage === 2
-                            ? "linear-gradient(90deg, #00E5FF, #39FF14)"
-                            : "#00E5FF",
+                    background: currentStage <= 1 ? art.stage[0] : `linear-gradient(90deg, ${art.stage.slice(0, Math.min(5, currentStage)).join(', ')})`,
                     boxShadow: (gs.progress || 0) > 0
                       ? currentStage === 5
                         ? "0 0 10px rgba(255,0,85,0.7), 0 0 20px rgba(255,215,0,0.4)"
@@ -11489,10 +11529,89 @@ export default function Game() {
           );
         })()}
 
+        {/* ── GAMEPLAY HUD · Neon Reel (styles: src/styles/neonHud.css) ──
+            The showcase demo's screen as a HUD: track chip and controls top-left, score and
+            multiplier top-right, a big combo over the highway, shield pips and the power-up pill. */}
+        {opts.hudStyle === 'neon' && (() => {
+          const c = gs.combo;
+          const baseMult = c >= 100 ? 5 : c >= 75 ? 4 : c >= 50 ? 3 : c >= 25 ? 2 : 1;
+          const puMult = puRef.current.active === "SIGNAL_LOCK" ? 4 : puRef.current.active === "SURGE" ? 3 : puRef.current.active ? 2 : 1;
+          const shieldLeft = Math.max(0, 3 - missCount);
+          const cover = (song as any)?.coverArt || (song as any)?.coverUrl;
+          return (
+            <div className="neon-hud" data-lyrics={activeLyricsMode(opts) === 'poetic' ? 'poetic' : undefined} style={{ ...art.vars, opacity: activePovMode === 'cyber_tunnel' ? 0.4 : 1 } as React.CSSProperties}>
+              <div className="neon-hud-top">
+                <div className="neon-hud-left">
+                  <div className="neon-hud-ctrls">
+                    <button
+                      data-testid="button-quit"
+                      className="neon-hud-btn"
+                      aria-label="Quit"
+                      onClick={() => {
+                        audioRef.current?.pause();
+                        const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
+                        setLocation(origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign');
+                      }}
+                    >✕</button>
+                    <button
+                      className="neon-hud-btn"
+                      aria-label="Options"
+                      onClick={() => {
+                        audioManager.playSfx('menu_confirm', 0.15);
+                        if (phase === 'playing' && !paused) doPause();
+                        useVaultStore.getState().setOptionsModalOpen(true);
+                      }}
+                    >⚙</button>
+                    <button
+                      className="neon-hud-btn"
+                      onClick={toggleFullscreen}
+                      aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                      data-on={isFullscreen}
+                    >⛶</button>
+                    {PLAYGAMA_MONTH > 0 && <HudMuteButton variant="neon" />}
+                  </div>
+                  <div className="neon-hud-track">
+                    {cover && <img src={cover} alt="" />}
+                    <div>
+                      <b>{song?.title}</b>
+                      <span>{song?.artist} · STAGE {currentStage === 5 ? 'FINAL' : currentStage} · {formatTimeSec(getT())}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="neon-hud-score">
+                  <span className="neon-hud-score-value"><AnimatedScore score={gs.score} /></span>
+                  <span className="neon-hud-mult">×{baseMult * puMult}</span>
+                  <span className="neon-hud-acc">
+                    {curMedal !== "NONE" && <i style={{ color: medalStyle.main }}>{curMedal} · </i>}
+                    <span ref={accuracyTextRef}>{acc.toFixed(1)}%</span>
+                  </span>
+                  {opts.hudMisses && (
+                    <span className="neon-hud-pips" aria-label={`${shieldLeft} of 3 misses left`}>
+                      {[0, 1, 2].map(i => <i key={i} data-on={i < shieldLeft} />)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="neon-hud-progress" aria-hidden="true"><i style={{ transform: `scaleX(${Math.max(0, Math.min(1, gs.progress || 0))})` }} /></div>
+              {opts.comboDisplay && (
+                <div className="neon-hud-combo" data-hot={c >= 20}>
+                  <span key={c} ref={comboTextRef} className={c > 0 ? 'bump' : ''}>{c}</span>
+                  <small>COMBO</small>
+                </div>
+              )}
+              <div ref={puPillRef} className="neon-hud-pu">
+                <span ref={puPillDotRef} className="neon-hud-pu-dot" />
+                <span ref={puPillPingRef} className="neon-hud-pu-ping" />
+                <span ref={puPillTextRef} />
+              </div>
+              <div ref={puTimerBarRef} className="neon-hud-pu-bar" />
+            </div>
+          );
+        })()}
         {/* ── GAMEPLAY HUD · Stanza + Oracle (logic: ./verseHud.ts, styles: src/styles/gameplayHud.css) ──
             The lyric line is inked letter by letter by the notes you hit (direct DOM updates from the draw
             loop); the oracle whisper and lane ticks sit under it. Score, chain and time flank it. */}
-        {(opts.hudStyle ?? 'console') === 'stanza' && (() => {
+        {(opts.hudStyle ?? 'neon') === 'stanza' && (() => {
           const c = gs.combo;
           const baseMult = c >= 100 ? 5 : c >= 75 ? 4 : c >= 50 ? 3 : c >= 25 ? 2 : 1;
           let m = baseMult;
@@ -11882,7 +12001,12 @@ export default function Game() {
                         {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
                       </span>
                       <span
-                        className="relative z-20 font-mono text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-white tracking-tight"
+                        // Step the size down as digits are added so 7-figure scores stay inside the dial.
+                        className={`relative z-20 font-mono font-black text-white tracking-tight ${
+                          gs.score >= 1_000_000_000 ? 'text-xs sm:text-sm md:text-base lg:text-lg xl:text-[22px]'
+                            : gs.score >= 1_000_000 ? 'text-base sm:text-lg md:text-xl lg:text-2xl xl:text-[32px]'
+                            : 'text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl'
+                        }`}
                         style={{
                           WebkitTextStroke: "1.5px #000000",
                           paintOrder: "stroke fill",
@@ -12179,14 +12303,14 @@ export default function Game() {
                   <motion.div
                     key={`top-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
-                      initial: { scale: 0.5, y: -85, opacity: 0 },
+                      initial: { scale: 0.5, y: -100, opacity: 0 },
                       animate: { 
                         scale: 1, 
-                        y: -65, 
+                        y: -82, 
                         opacity: 1, 
                         transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.2 } 
                       },
-                      exit: { scale: 1.2, y: -85, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
+                      exit: { scale: 1.2, y: -100, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
                     className="absolute text-white/90 font-black text-xs md:text-sm tracking-[0.6em] z-10"
                     style={{ 
@@ -12210,7 +12334,11 @@ export default function Game() {
                       },
                       exit: { scale: 1.6, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
-                    className="absolute text-white font-black text-5xl sm:text-7xl md:text-8xl z-10 text-center px-4"
+                    className={`absolute text-white font-black z-10 text-center px-4 whitespace-nowrap ${
+                      stageStingerPhase === 'transmission_complete' || stageStingerNumber === 5 || (stageStingerPhase === 'cleared' && stageStingerNumber === 6)
+                        ? 'text-4xl sm:text-5xl md:text-6xl'
+                        : 'text-5xl sm:text-7xl md:text-8xl'
+                    }`}
                     style={{ 
                       fontFamily: '"Impact", "Arial Black", sans-serif',
                       textShadow: "0 0 25px rgba(255,255,255,0.95), 0 0 50px rgba(0,229,255,0.6)",
@@ -12228,16 +12356,16 @@ export default function Game() {
                   <motion.div
                     key={`bottom-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
-                      initial: { scale: 0.5, y: 85, opacity: 0 },
+                      initial: { scale: 0.5, y: 98, opacity: 0 },
                       animate: { 
                         scale: 1, 
-                        y: 65, 
+                        y: 80, 
                         opacity: 1, 
                         transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.3 } 
                       },
-                      exit: { scale: 1.2, y: 85, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
+                      exit: { scale: 1.2, y: 98, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
-                    className="absolute font-black text-xs md:text-sm tracking-[0.4em] z-10"
+                    className="absolute font-black text-[10px] sm:text-xs md:text-sm tracking-[0.3em] sm:tracking-[0.4em] whitespace-nowrap z-10"
                     style={{ 
                       fontFamily: '"JetBrains Mono", monospace',
                       textShadow: stageStingerPhase === 'transmission_complete'
