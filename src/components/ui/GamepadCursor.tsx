@@ -44,7 +44,8 @@ export default function GamepadCursor() {
     return () => observer.disconnect();
   }, [isPlaying, location]);
 
-  const showCursor = !isPlaying || isOverlayActive;
+  const isRunnerRoute = /^\/(warp|secret)\/runner\/?$/.test(location);
+  const showCursor = !isRunnerRoute && (!isPlaying || isOverlayActive);
 
   useEffect(() => {
     if (!showCursor) {

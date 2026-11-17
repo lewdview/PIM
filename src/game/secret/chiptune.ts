@@ -32,6 +32,8 @@ export class BeatClock {
   private timer: ReturnType<typeof setInterval> | null = null;
   private noise: AudioBuffer | null = null;
   private master: GainNode | null = null;
+  private silentStart: number | null = null;
+  private pausedBeat: number | null = null;
 
   constructor(private track: SecretTrack) {}
 
@@ -39,8 +41,7 @@ export class BeatClock {
     return this.track.bpm;
   }
 
-  /** Must be called from a user gesture so the browser allows audio. */
-  async start(): Promise<void> {
+  async start(allowSilent = false): Promise<void> {
     const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (this.track.audioUrl) {
       this.audio = new Audio(this.track.audioUrl);
@@ -48,28 +49,57 @@ export class BeatClock {
       await this.audio.play().catch(() => undefined);
       return;
     }
+    if (allowSilent || !Ctx) this.silentStart = performance.now() / 1000 + 0.1;
+    if (!Ctx) return;
     const ctx = new Ctx();
     this.ctx = ctx;
+    const audio = this.unlockSound();
+    if (!allowSilent) await audio;
+  }
+
+  /** Gamepad presses may start play before the browser grants sound access. */
+  async unlockSound() {
+    const ctx = this.ctx;
+    if (!ctx || this.master || this.pausedBeat !== null) return;
     await ctx.resume().catch(() => undefined);
-    if (this.ctx !== ctx) return;
-    this.master = this.ctx.createGain();
+    if (this.ctx !== ctx || this.master || ctx.state !== 'running') return;
+    const beat = this.pausedBeat ?? this.beat();
+    this.master = ctx.createGain();
     this.master.gain.value = 0.18;
-    this.master.connect(this.ctx.destination);
-    const len = this.ctx.sampleRate * 0.2;
-    this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    this.master.connect(ctx.destination);
+    const len = ctx.sampleRate * 0.2;
+    this.noise = ctx.createBuffer(1, len, ctx.sampleRate);
     const data = this.noise.getChannelData(0);
     for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
-    this.startAt = this.ctx.currentTime + 0.1;
-    this.nextStep = 0;
+    this.startAt = this.silentStart === null ? ctx.currentTime + 0.1 : ctx.currentTime - beat * 60 / this.track.bpm;
+    this.nextStep = Math.max(0, Math.ceil(beat * 4));
     this.timer = setInterval(() => this.schedule(), 25);
+    if (this.pausedBeat !== null) void ctx.suspend().catch(() => undefined);
     this.schedule();
   }
 
   /** Current position in beats (fractional). Negative before beat 0. */
   beat(): number {
+    if (this.pausedBeat !== null) return this.pausedBeat;
     if (this.audio) return ((this.audio.currentTime - (this.track.offset ?? 0)) * this.track.bpm) / 60;
-    if (!this.ctx) return -1;
-    return ((this.ctx.currentTime - this.startAt) * this.track.bpm) / 60;
+    if (this.ctx && this.master) return ((this.ctx.currentTime - this.startAt) * this.track.bpm) / 60;
+    return this.silentStart === null ? -1 : ((performance.now() / 1000 - this.silentStart) * this.track.bpm) / 60;
+  }
+
+  pause() {
+    if (this.pausedBeat !== null) return;
+    this.pausedBeat = this.beat();
+    this.audio?.pause();
+    if (this.ctx?.state === 'running') void this.ctx.suspend().catch(() => undefined);
+  }
+
+  resume() {
+    if (this.pausedBeat === null) return;
+    if (this.silentStart !== null) this.silentStart = performance.now() / 1000 - this.pausedBeat * 60 / this.track.bpm;
+    this.pausedBeat = null;
+    void this.audio?.play().catch(() => undefined);
+    if (this.master) void this.ctx?.resume().catch(() => undefined);
+    else void this.unlockSound();
   }
 
   stop() {
@@ -79,12 +109,16 @@ export class BeatClock {
     this.audio = null;
     this.ctx?.close().catch(() => undefined);
     this.ctx = null;
+    this.master = null;
+    this.noise = null;
+    this.silentStart = null;
+    this.pausedBeat = null;
   }
 
   // ── Placeholder chiptune: 16th-note sequencer, scheduled ahead ──
   private schedule() {
     const ctx = this.ctx;
-    if (!ctx) return;
+    if (!ctx || this.pausedBeat !== null) return;
     const stepDur = 60 / this.track.bpm / 4;
     while (this.startAt + this.nextStep * stepDur < ctx.currentTime + 0.12) {
       this.playStep(this.nextStep, this.startAt + this.nextStep * stepDur, stepDur);

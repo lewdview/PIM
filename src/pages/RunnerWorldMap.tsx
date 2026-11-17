@@ -1,18 +1,22 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { ArrowLeft, ArrowRight, AudioLines, Check, LockKeyhole, Play } from 'lucide-react';
-import { Link, useSearch } from 'wouter';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, AudioLines, Check, Gamepad2, LockKeyhole, Play } from 'lucide-react';
+import { Link, useLocation, useSearch } from 'wouter';
 import {
   RUNNER_COURSES, RUNNER_STAGES, RUNNER_WHISTLES, parseRunnerStage, type RunnerStage,
 } from '../game/secret/runnerCourses';
 import { drawRunnerMap, MAP_REGIONS, runnerMapLayout } from '../game/secret/runnerMapArt';
 import { openRunnerShortcut, readRunnerProgress, runnerArcadePath } from '../game/secret/runnerProgress';
 import { prepareRunnerSprites } from '../game/secret/runnerSprites';
+import { useRunnerGamepad, type RunnerDirection } from '../game/secret/useRunnerGamepad';
 import './RunnerWorldMap.css';
 
 const WHISTLES = ['rooftop', 'prism'] as const;
+const ARROWS: Record<string, RunnerDirection> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+const STEPS = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] } as const;
 
 export default function RunnerWorldMap() {
   const query = new URLSearchParams(useSearch());
+  const [, setLocation] = useLocation();
   const [progress, setProgress] = useState(readRunnerProgress);
   const [selected, setSelected] = useState<RunnerStage>(() =>
     parseRunnerStage(query.get('stage'))
@@ -63,12 +67,9 @@ export default function RunnerWorldMap() {
   }, [progress, selected]);
 
   const layout = runnerMapLayout(compact);
-  const navigateMap = (event: KeyboardEvent<HTMLButtonElement>, from: RunnerStage) => {
-    const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
-    if (!direction) return;
-    event.preventDefault();
+  const navigateMap = (direction: RunnerDirection, from: RunnerStage) => {
     const [x, y] = layout[from];
-    const [dx, dy] = direction;
+    const [dx, dy] = STEPS[direction];
     let nearest: RunnerStage | null = null;
     let bestDistance = Infinity;
     for (const stage of RUNNER_STAGES) {
@@ -89,26 +90,47 @@ export default function RunnerWorldMap() {
     }
   };
 
+  const available = progress.available.includes(selected);
+  const whistleToCourse = WHISTLES.find(id => RUNNER_WHISTLES[id].to === selected);
+  const canOpenShortcut = whistleToCourse && progress.whistles[whistleToCourse] === 'found' ? whistleToCourse : null;
+  const readyWhistle = WHISTLES.find(id => progress.whistles[id] === 'found' && id !== whistleToCourse);
+  const openShortcut = () => {
+    if (!canOpenShortcut) return;
+    openRunnerShortcut(canOpenShortcut);
+    setProgress(readRunnerProgress());
+  };
+  const pad = useRunnerGamepad(true, pressed => {
+    if (pressed.includes('back') || (!progress.hasEntry && pressed.includes('confirm'))) {
+      setLocation('/warp');
+    } else if (progress.hasEntry && (pressed.includes('confirm') || pressed.includes('menu'))) {
+      if (available) setLocation(runnerArcadePath(selected));
+      else openShortcut();
+    } else if (progress.hasEntry && pressed.includes('taunt')) {
+      if (canOpenShortcut) openShortcut();
+      else if (readyWhistle) setSelected(RUNNER_WHISTLES[readyWhistle].to);
+    } else if (progress.hasEntry) {
+      const direction = pressed.find((key): key is RunnerDirection => key in STEPS);
+      if (direction) navigateMap(direction, selected);
+    }
+  });
+
   if (!progress.hasEntry) {
     return (
       <div className="runner-world runner-world--locked">
         <LockKeyhole size={26} aria-hidden />
         <h1>Beat Runner</h1>
         <p>Hit a warp note during a song to earn the first Warp Whistle.</p>
-        <Link href="/warp" className="runner-map-action"><ArrowLeft size={17} aria-hidden /> Warp Zone</Link>
+        <Link href="/warp" className="runner-map-action"><ArrowLeft size={17} aria-hidden /> Warp Zone {pad && <kbd>{pad.back}</kbd>}</Link>
       </div>
     );
   }
 
   const course = RUNNER_COURSES[selected];
   const region = MAP_REGIONS[Math.floor((selected - 1) / 2)];
-  const available = progress.available.includes(selected);
   const cleared = progress.cleared.includes(selected);
   const best = progress.clears[course.clearId]?.best;
   const whistleAtCourse = WHISTLES.find(id => RUNNER_WHISTLES[id].from === selected);
-  const whistleToCourse = WHISTLES.find(id => RUNNER_WHISTLES[id].to === selected);
   const foundCount = 1 + WHISTLES.filter(id => progress.whistles[id] !== 'hidden').length;
-  const readyWhistle = WHISTLES.find(id => progress.whistles[id] === 'found' && id !== whistleToCourse);
 
   return (
     <div className="runner-world">
@@ -153,7 +175,12 @@ export default function RunnerWorldMap() {
                     data-state={done ? 'clear' : open ? 'open' : 'locked'}
                     aria-label={`Level ${stage} ${RUNNER_COURSES[stage].title}, ${done ? 'cleared' : open ? 'available' : 'locked'}`}
                     aria-pressed={isSelected}
-                    onKeyDown={(event) => navigateMap(event, stage)}
+                    onKeyDown={(event) => {
+                      const direction = ARROWS[event.key];
+                      if (!direction) return;
+                      event.preventDefault();
+                      navigateMap(direction, stage);
+                    }}
                     onClick={() => setSelected(stage)}
                   >
                     <span className="runner-map-node-marker">
@@ -168,6 +195,7 @@ export default function RunnerWorldMap() {
               <span><i className="runner-map-key runner-map-key--open" /> Open route</span>
               <span><i className="runner-map-key" /> Locked route</span>
               <span><i className="runner-map-key runner-map-key--warp" /> Warp shortcut</span>
+              {pad && <span className="runner-map-pad"><Gamepad2 size={16} aria-hidden /> D-pad select · {pad.confirm} confirm · {pad.back} back</span>}
             </div>
           </section>
 
@@ -187,12 +215,9 @@ export default function RunnerWorldMap() {
                 <p className="runner-map-locked"><LockKeyhole size={16} aria-hidden /> Clear {RUNNER_COURSES[RUNNER_STAGES[RUNNER_STAGES.indexOf(selected) - 1]].title} to unlock.</p>
               )}
 
-              {whistleToCourse && progress.whistles[whistleToCourse] === 'found' && (
-                <button type="button" className="runner-map-whistle-action" onClick={() => {
-                  openRunnerShortcut(whistleToCourse);
-                  setProgress(readRunnerProgress());
-                }}>
-                  <AudioLines size={18} aria-hidden /> Use {RUNNER_WHISTLES[whistleToCourse].name} <ArrowRight size={16} aria-hidden />
+              {canOpenShortcut && (
+                <button type="button" className="runner-map-whistle-action" onClick={openShortcut}>
+                  <AudioLines size={18} aria-hidden /> Use {RUNNER_WHISTLES[canOpenShortcut].name} <ArrowRight size={16} aria-hidden />
                 </button>
               )}
               {whistleToCourse && progress.whistles[whistleToCourse] === 'opened' && (
@@ -209,6 +234,7 @@ export default function RunnerWorldMap() {
               {readyWhistle && (
                 <button type="button" className="runner-map-shortcut" onClick={() => setSelected(RUNNER_WHISTLES[readyWhistle].to)}>
                   View {RUNNER_WHISTLES[readyWhistle].name} shortcut <ArrowRight size={15} aria-hidden />
+                  {pad && <kbd>{pad.taunt}</kbd>}
                 </button>
               )}
             </div>
