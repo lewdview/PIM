@@ -21,7 +21,7 @@ import { primeGameCover } from '../utils/gameCover';
 
 type SortBy = 'day' | 'rarity' | 'recent';
 type FilterRarity = Rarity | 'all';
-type SetFilter = 'all' | 'gen-0' | 'bombshell';
+type SetFilter = 'all' | 'gen-0' | 'bombshell' | 'audius';
 
 export default function CollectionPage() {
   const [sortBy, setSortBy] = useState<SortBy>('recent');
@@ -124,6 +124,9 @@ export default function CollectionPage() {
     const bombshellUniqueDays = new Set(bombshellCards.map(c => c.card.day)).size;
     const bombshellUniqueCovers = new Set(bombshellCards.map(c => (c as any).coverArtwork || c.card.coverArtwork || c.card.coverUrl || c.cardId)).size;
 
+    const audiusCards = collection.filter(c => c && c.card && isAudiusCard(c));
+    const audiusUnique = new Set(audiusCards.map(c => c.cardId)).size;
+
     const unique = setFilter === 'gen-0' 
       ? gen0Unique 
       : setFilter === 'bombshell' 
@@ -144,6 +147,8 @@ export default function CollectionPage() {
       bombshellUniqueDays,
       bombshellUniqueCovers,
       bombshellCardsCount: bombshellCards.length,
+      audiusUnique,
+      audiusCardsCount: audiusCards.length,
       byRarity, 
       score 
     };
@@ -213,7 +218,9 @@ export default function CollectionPage() {
           <div className="flex items-center gap-4">
             <div className="sticker-gun-tag sticker-slits" style={{ background: '#fdfdfd', '--slit-color': 'rgba(0,0,0,0.1)', transform: 'rotate(-1deg)', padding: '4px 10px' } as any}>
               <span className="text-[11px] font-black tracking-tighter uppercase">
-                {setFilter === 'bombshell' 
+                {setFilter === 'audius'
+                  ? `${stats.audiusUnique} AUDIUS WEEKLY CARDS`
+                  : setFilter === 'bombshell' 
                   ? `${stats.bombshellUniqueCovers} COVERS (${stats.bombshellUniqueDays}/365 DAYS)` 
                   : `${stats.gen0Unique} / 365 GEN-0 UNIQUE`}
               </span>
@@ -240,17 +247,21 @@ export default function CollectionPage() {
           <motion.div
             initial={{ width: 0 }}
             animate={{ 
-              width: setFilter === 'bombshell'
+              width: setFilter === 'audius' ? (stats.audiusUnique > 0 ? '100%' : '0%') : setFilter === 'bombshell'
                 ? `${Math.min(100, (stats.bombshellUniqueDays / 365) * 100)}%`
                 : `${(stats.gen0Unique / 365) * 100}%` 
             }}
             transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
             className="h-full relative overflow-hidden"
             style={{
-              background: setFilter === 'bombshell'
+              background: setFilter === 'audius'
+                ? 'linear-gradient(90deg, #7C3AED, #00E5FF)'
+                : setFilter === 'bombshell'
                 ? 'linear-gradient(90deg, #FF1493, #ff85c0, #00E5FF)'
                 : 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple), var(--color-neon-gold))',
-              boxShadow: setFilter === 'bombshell'
+              boxShadow: setFilter === 'audius'
+                ? '0 0 15px rgba(124, 58, 237, 0.4)'
+                : setFilter === 'bombshell'
                 ? '0 0 15px rgba(255, 20, 147, 0.4)'
                 : '0 0 15px rgba(0, 240, 255, 0.4)',
             }}
@@ -259,7 +270,12 @@ export default function CollectionPage() {
           </motion.div>
         </div>
         <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.2em] opacity-40">
-          {setFilter === 'bombshell' ? (
+          {setFilter === 'audius' ? (
+            <>
+              <span>{stats.audiusUnique} WEEKLY CARDS COLLECTED</span>
+              <span>NEW CARDS EVERY MONDAY</span>
+            </>
+          ) : setFilter === 'bombshell' ? (
             <>
               <span>{Math.round((stats.bombshellUniqueDays / 365) * 100)}% BOMBSHELL DAYS UNLOCKED ({stats.bombshellUniqueCovers} TOTAL COVERS)</span>
               <span>{365 - stats.bombshellUniqueDays} DAYS REMAINING</span>
@@ -275,20 +291,21 @@ export default function CollectionPage() {
 
       {/* Set Filter Switcher */}
       <div className="flex flex-wrap gap-2">
-        {(['all', 'gen-0', 'bombshell'] as SetFilter[]).map((st) => {
+        {(['all', 'gen-0', 'bombshell', 'audius'] as SetFilter[]).map((st) => {
           const isActive = setFilter === st;
           const isBomb = st === 'bombshell';
-          const label = st === 'all' ? 'All Sets' : st === 'gen-0' ? 'Gen-0 Archive' : '🔥 Bombshell Series';
+          const isAudius = st === 'audius';
+          const label = st === 'all' ? 'All Sets' : st === 'gen-0' ? 'Gen-0 Archive' : st === 'audius' ? '🎧 Audius Weekly' : '🔥 Bombshell Series';
           return (
             <button
               key={st}
               onClick={() => setSetFilter(st)}
               className="px-3 py-1.5 rounded font-mono text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer"
               style={{
-                background: isActive ? (isBomb ? '#FF1493' : '#ff3800') : 'rgba(255,255,255,0.04)',
+                background: isActive ? (isBomb ? '#FF1493' : isAudius ? '#7C3AED' : '#ff3800') : 'rgba(255,255,255,0.04)',
                 color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
-                border: `1px solid ${isActive ? (isBomb ? '#FF1493' : '#ff3800') : 'rgba(255,255,255,0.08)'}`,
-                boxShadow: isActive ? `0 0 10px ${isBomb ? 'rgba(255,20,147,0.4)' : 'rgba(255,56,0,0.4)'}` : 'none',
+                border: `1px solid ${isActive ? (isBomb ? '#FF1493' : isAudius ? '#7C3AED' : '#ff3800') : 'rgba(255,255,255,0.08)'}`,
+                boxShadow: isActive ? `0 0 10px ${isBomb ? 'rgba(255,20,147,0.4)' : isAudius ? 'rgba(124,58,237,0.4)' : 'rgba(255,56,0,0.4)'}` : 'none',
               }}
             >
               {label}
@@ -364,6 +381,7 @@ export default function CollectionPage() {
 
       <WeeklyCardShelf collection={collection} />
 
+      {setFilter !== 'audius' && (<>
       {/* Cards Grid */}
       {filtered.length === 0 ? (
         <div
@@ -775,6 +793,7 @@ export default function CollectionPage() {
           </button>
         </div>
       )}
+      </>)}
 
       <UltraRewardModal
         isOpen={ultraModalOpen}
