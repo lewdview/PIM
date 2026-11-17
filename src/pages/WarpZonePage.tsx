@@ -16,15 +16,42 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import {
   Sparkles, Compass, Terminal, Activity, BookOpen, Layers,
-  Play, Pause, Disc, ArrowUpRight, Shuffle, Volume2, Shield, Eye, Flame
+  Play, Pause, Disc, ArrowUpRight, Shuffle, Volume2, Shield, Eye, Flame, Gamepad2, LockKeyhole
 } from 'lucide-react';
 import { getCurrentDay } from '../utils/dayCalc';
 import { loadCatalog, type GameSong } from '../game/api';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { audioManager } from '../game/audio';
+import { runnerMapPath } from '../game/secret/runnerProgress';
+import { hasWarpWhistle } from '../game/secret/warp';
 
 type WarpModule = 'hub' | 'mood' | 'ascii' | 'lore';
+
+function BeatRunnerPortal() {
+  const unlocked = hasWarpWhistle();
+
+  return (
+    <section className="flex flex-col gap-5 rounded-2xl border border-fuchsia-500/40 bg-gradient-to-br from-[#291338] to-[#100d21] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <div className="flex items-start gap-4">
+        <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-fuchsia-400/35 bg-fuchsia-400/10 text-fuchsia-300">
+          {unlocked ? <Gamepad2 size={22} aria-hidden /> : <LockKeyhole size={19} aria-hidden />}
+        </div>
+        <div>
+          <h2 className="text-xl font-black uppercase text-white">Beat Runner</h2>
+          <p className="mt-1 max-w-sm font-mono text-xs leading-relaxed text-fuchsia-100/75">
+            {unlocked ? 'Clear courses and find the Warp Whistles hidden along the way.' : 'Earn the first Warp Whistle by hitting a warp note during a song.'}
+          </p>
+        </div>
+      </div>
+      {unlocked && (
+        <Link href={runnerMapPath()} className="self-start rounded-lg bg-fuchsia-300 px-4 py-3 font-mono text-xs font-bold uppercase text-[#190d24] hover:bg-fuchsia-200 sm:self-auto">
+          Open World Map <ArrowUpRight size={14} className="ml-1 inline" aria-hidden />
+        </Link>
+      )}
+    </section>
+  );
+}
 
 export default function WarpZonePage() {
   const [, setLocation] = useLocation();
@@ -228,6 +255,7 @@ export default function WarpZonePage() {
         {/* MODULE 1: THE WARP HUB / PORTALS */}
         {activeModule === 'hub' && (
           <div className="flex flex-col gap-10">
+            <BeatRunnerPortal />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               
               {/* Portal 1: Mood Map */}
