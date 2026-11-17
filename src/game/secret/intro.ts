@@ -36,14 +36,33 @@ const TITLE_AT = 1.7;
 const LETTER_GAP = 0.075;
 const LETTER_DROP = 0.22;
 
+/** Draws a frame of a character sprite with its feet at (x, feet); false if the sheet isn't loaded yet. */
+export type IntroSpriteFn = (
+  ctx: CanvasRenderingContext2D, pose: 'run' | 'jump' | 'attack', frame: number, x: number, feet: number, size: number,
+) => boolean;
+
+export interface IntroOptions {
+  reduced?: boolean;
+  outro?: number;
+  /** Two header lines over the title; defaults to WARP ZONE / SECRET LEVEL FOUND. */
+  header?: readonly [string, string];
+  /** The runner's sprite sheet. Without it the runner is drawn as the mint capsule. */
+  runnerSprite?: IntroSpriteFn;
+  /** Course sky: [top, horizon, moon, skyline]. */
+  sky?: readonly [string, string, string, string];
+}
+
 export interface IntroLook {
   title: string;
+  header: readonly [string, string];
+  runnerSprite?: IntroSpriteFn;
+  sky?: readonly [string, string, string, string];
   accent: string;   // main glow colour for the level
   accent2: string;  // secondary colour
   bg: string;
 }
 
-export const INTRO_LOOKS: Record<SecretLevelId, Omit<IntroLook, 'title'>> = {
+export const INTRO_LOOKS: Record<SecretLevelId, Pick<IntroLook, 'accent' | 'accent2' | 'bg'>> = {
   shooter: { accent: '#00E5FF', accent2: '#B967FF', bg: '#05010F' },
   runner: { accent: '#FF4FD8', accent2: '#FFD23F', bg: '#12002B' },
 };
@@ -82,9 +101,15 @@ export function drawWarpIntro(
   t: number,
   level: SecretLevelId,
   title: string,
-  opts: { reduced?: boolean; outro?: number } = {},
+  opts: IntroOptions = {},
 ) {
-  const look = { ...INTRO_LOOKS[level], title };
+  const look: IntroLook = {
+    ...INTRO_LOOKS[level],
+    title,
+    header: opts.header ?? ['★ WARP ZONE ★', 'SECRET LEVEL FOUND'],
+    runnerSprite: opts.runnerSprite,
+    sky: opts.sky,
+  };
   const reduced = !!opts.reduced;
   const outro = clamp01(opts.outro ?? 0);
   // Reduced motion: start at the resting frame, no tunnel, no slams
@@ -219,11 +244,11 @@ function drawHeader(ctx: CanvasRenderingContext2D, w: number, h: number, t: numb
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = `700 ${size}px ${MONO}`;
-  const top = scramble('★ WARP ZONE ★', local, 0.03, 11);
+  const top = scramble(look.header[0], local, 0.03, 11);
   // letter-spaced
   drawSpaced(ctx, top, w / 2, y, size * 0.45, '#F5D0FE', look.accent2);
   ctx.font = `700 ${size * 0.82}px ${MONO}`;
-  const sub = scramble('SECRET LEVEL FOUND', local - 0.22, 0.022, 41);
+  const sub = scramble(look.header[1], local - 0.22, 0.022, 41);
   drawSpaced(ctx, sub, w / 2, y + size * 1.9, size * 0.35, 'rgba(255,255,255,0.72)', look.accent);
   // Scan bars either side
   const barW = easeOutCubic(local / 0.5) * Math.min(w * 0.18, 140);
@@ -231,7 +256,7 @@ function drawHeader(ctx: CanvasRenderingContext2D, w: number, h: number, t: numb
   ctx.shadowColor = look.accent2;
   ctx.shadowBlur = 10;
   ctx.font = `700 ${size}px ${MONO}`;
-  const tw = ctx.measureText('★ WARP ZONE ★').width / 2 + size * 3.6 + 12;
+  const tw = ctx.measureText(look.header[0]).width / 2 + look.header[0].length * size * 0.22 + 12;
   ctx.fillRect(w / 2 - tw - barW, y - 1, barW, 2);
   ctx.fillRect(w / 2 + tw, y - 1, barW, 2);
   ctx.restore();
@@ -577,42 +602,45 @@ function drawBurst(ctx: CanvasRenderingContext2D, x: number, y: number, age: num
 
 // ── ROOFTOP RUN diorama ───────────────────────────────────────────────────
 
-function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, s: number, _look: IntroLook) {
+const RUNNER_BPM = 128;
+const RUNNER_LOOP = 4; // beats: a gap to jump on beat 0, a patrol drone to slash on beat 2
+const SWING_BEATS = 0.88; // as in runner.ts
+const actionFrame = (elapsed: number, duration: number) => Math.min(9, Math.max(0, Math.floor((elapsed / duration) * 10)));
+
+function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, s: number, look: IntroLook) {
+  const [skyTop, horizon, moon, skyline] = look.sky ?? ['#12002B', '#3B0A4F', '#FFD23F', '#0A0014'];
   const sky = ctx.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, '#12002B');
-  sky.addColorStop(0.7, '#3B0A4F');
-  sky.addColorStop(1, '#FF4FD8');
+  sky.addColorStop(0, skyTop);
+  sky.addColorStop(0.72, horizon);
+  sky.addColorStop(1, look.accent);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, w, h);
 
-  // Synth sun with slats, rising behind the city
+  // Moon with slats, rising behind the city
   const sunR = Math.min(w, h) * 0.2;
   const sunY = h * 0.66 - easeOutCubic(s / 1.5) * h * 0.06;
   ctx.save();
   const sg = ctx.createLinearGradient(0, sunY - sunR, 0, sunY + sunR);
-  sg.addColorStop(0, '#FFD23F');
-  sg.addColorStop(1, '#FF4FD8');
+  sg.addColorStop(0, moon);
+  sg.addColorStop(1, look.accent);
   ctx.fillStyle = sg;
-  ctx.shadowColor = '#FF4FD8';
+  ctx.shadowColor = look.accent;
   ctx.shadowBlur = 40;
   ctx.beginPath();
   ctx.arc(w / 2, sunY, sunR, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.fillStyle = '#3B0A4F';
-  for (let i = 0; i < 6; i++) {
-    const y = sunY + sunR * (0.1 + i * 0.16);
-    ctx.fillRect(w / 2 - sunR, y, sunR * 2, 2 + i * 1.4);
-  }
+  ctx.fillStyle = horizon;
+  for (let i = 0; i < 6; i++) ctx.fillRect(w / 2 - sunR, sunY + sunR * (0.1 + i * 0.16), sunR * 2, 2 + i * 1.4);
   ctx.restore();
 
   // Parallax skyline: three layers, scrolling faster as the camera dollies in
   const roof = h * 0.78;
-  const speed = 0.4 + easeOutCubic(s / 1) * 0.6;
+  const speed = 0.4 + easeOutCubic(s) * 0.6;
   const layers = [
-    { k: 0.15, col: 'rgba(40,0,70,0.9)', hMin: 0.18, hMax: 0.36, win: 'rgba(255,79,216,0.25)' },
-    { k: 0.35, col: 'rgba(22,0,44,0.95)', hMin: 0.12, hMax: 0.3, win: 'rgba(0,229,255,0.35)' },
-    { k: 0.7, col: '#0A0014', hMin: 0.06, hMax: 0.2, win: 'rgba(255,210,63,0.5)' },
+    { k: 0.15, col: horizon, a: 0.8, hMin: 0.18, hMax: 0.36, win: 'rgba(255,79,216,0.25)' },
+    { k: 0.35, col: skyline, a: 0.9, hMin: 0.12, hMax: 0.3, win: 'rgba(0,229,255,0.35)' },
+    { k: 0.7, col: '#0A0014', a: 1, hMin: 0.06, hMax: 0.2, win: 'rgba(255,210,63,0.5)' },
   ];
   layers.forEach((L, li) => {
     const scroll = s * speed * L.k * w;
@@ -622,16 +650,16 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
       const bh = h * (L.hMin + hash(b * 7 + li * 100) * (L.hMax - L.hMin));
       const x = b * bw - scroll;
       const top = roof - bh + li * h * 0.02;
+      ctx.globalAlpha = L.a;
       ctx.fillStyle = L.col;
       ctx.fillRect(x, top, bw - 3, roof - top + h);
-      // windows
+      ctx.globalAlpha = 1;
       ctx.fillStyle = L.win;
       for (let wy = top + 8; wy < roof - 6; wy += 10) {
         for (let wx = x + 5; wx < x + bw - 8; wx += 8) {
           if (hash(b * 13 + wx * 0.7 + wy * 1.3 + li) > 0.62) ctx.fillRect(wx, wy, 3, 4);
         }
       }
-      // antenna blink
       if (li === 1 && hash(b) > 0.7) {
         ctx.fillStyle = Math.floor(s * 2 + b) % 2 ? '#FF3B6B' : 'rgba(255,59,107,0.2)';
         ctx.fillRect(x + bw / 2, top - 12, 2, 12);
@@ -639,9 +667,10 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
     }
   });
 
-  // The rooftop the runner is on
+  // The rooftop
   ctx.fillStyle = '#05010F';
   ctx.fillRect(0, roof, w, h - roof);
+  ctx.save();
   ctx.strokeStyle = '#7CFFCB';
   ctx.shadowColor = '#7CFFCB';
   ctx.shadowBlur = 12;
@@ -650,48 +679,75 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
   ctx.moveTo(0, roof);
   ctx.lineTo(w, roof);
   ctx.stroke();
-  ctx.shadowBlur = 0;
+  ctx.restore();
 
-  // Spikes scroll past; the runner jumps each one on the beat
-  const bpm = 128;
-  const beat = s * (bpm / 60);
+  // Course loop: she jumps a spike on the beat, then cuts down a patrol drone
+  const beat = s * (RUNNER_BPM / 60) - 2; // the first loop starts once she's on screen
   const runnerX = w * 0.3 + (1 - easeOutCubic((s - 0.6) / 0.9)) * -w * 0.45;
-  const step = w * 0.22; // pixels per beat
-  const spikeEvery = 2;
+  const step = Math.max(72, w * 0.2); // pixels per beat, as in the level
   const unit = Math.min(w, h) * 0.03;
-  for (let n = Math.floor(beat / spikeEvery) - 1; n < Math.floor(beat / spikeEvery) + 6; n++) {
-    if (n < 1) continue;
-    const sb = n * spikeEvery + 0.5; // spike at half past the beat
-    const x = runnerX + (sb - beat) * step;
-    if (x < -40 || x > w + 40) continue;
-    ctx.fillStyle = '#FF3B6B';
-    ctx.shadowColor = '#FF3B6B';
-    ctx.shadowBlur = 12;
-    ctx.beginPath();
-    ctx.moveTo(x - unit, roof);
-    ctx.lineTo(x, roof - unit * 1.6);
-    ctx.lineTo(x + unit, roof);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    // coin above every other spike
-    if (n % 2 === 0) {
-      ctx.fillStyle = '#FFD23F';
-      ctx.shadowColor = '#FFD23F';
-      ctx.shadowBlur = 10;
+  const spriteSize = Math.min(h * 0.19, w * 0.5); // a touch larger than in play: she's the star here
+  const loop0 = Math.floor(beat / RUNNER_LOOP);
+  for (let n = loop0 - 1; n < loop0 + 4; n++) {
+    if (n < 0) continue;
+    // spike half a beat into the jump
+    const sx = runnerX + (n * RUNNER_LOOP + 0.5 - beat) * step;
+    if (sx > -40 && sx < w + 40) {
+      ctx.save();
+      ctx.fillStyle = '#FF3B6B';
+      ctx.shadowColor = '#FF3B6B';
+      ctx.shadowBlur = 12;
       ctx.beginPath();
-      ctx.ellipse(x, roof - unit * 4.3, unit * 0.45 * Math.abs(Math.cos(s * 4 + n)) + 1, unit * 0.45, 0, 0, Math.PI * 2);
+      ctx.moveTo(sx - unit, roof);
+      ctx.lineTo(sx, roof - unit * 1.6);
+      ctx.lineTo(sx + unit, roof);
       ctx.fill();
-      ctx.shadowBlur = 0;
+      ctx.restore();
+      // coin over the spike, collected in the air
+      if (beat < n * RUNNER_LOOP + 0.5) drawCoin(ctx, sx, roof - h * 0.17, unit, s + n);
+    }
+    // drone arrives at chest height and is slashed as it reaches her
+    const hitBeat = n * RUNNER_LOOP + 2.4;
+    const dx = runnerX + spriteSize * 0.22 + (hitBeat - beat) * step;
+    const dy = roof - spriteSize * 0.55 + Math.sin(s * 6 + n) * 4;
+    if (beat < hitBeat) {
+      if (dx < w + 40) drawDrone(ctx, dx, dy, unit * 0.9, beat, '#FF3B6B');
+    } else if (beat - hitBeat < 0.9) {
+      drawBurst(ctx, dx, dy, (beat - hitBeat) * (60 / RUNNER_BPM), n);
+      drawSlashArc(ctx, runnerX + spriteSize * 0.12, roof - spriteSize * 0.55, spriteSize * 0.5, (beat - hitBeat) / 0.4);
     }
   }
-  // Jump arc: one beat of air starting on the beat before each spike
+
+  // Pose for this beat, timed like RunnerLevel.animation()
+  const local = beat - loop0 * RUNNER_LOOP;
+  let pose: 'run' | 'jump' | 'attack' = 'run';
+  let frame = Math.floor((((beat % 1) + 1) % 1) * 10);
   let air = 0;
-  if (s > 1.4) {
-    const local = beat - Math.floor(beat / spikeEvery) * spikeEvery; // 0..2
-    if (local < 1) air = 4 * local * (1 - local);
+  if (beat >= 0 && local < 1) {
+    pose = 'jump';
+    frame = Math.max(2, actionFrame(local, 1));
+    air = 4 * local * (1 - local);
+  } else if (beat >= 0 && local >= 2.4 - SWING_BEATS * 0.45 && local < 2.4 - SWING_BEATS * 0.45 + SWING_BEATS) {
+    pose = 'attack';
+    frame = actionFrame(local - (2.4 - SWING_BEATS * 0.45), SWING_BEATS);
   }
-  const jumpH = h * 0.14;
-  drawRunner(ctx, runnerX, roof - 8 - air * jumpH, h, beat, air > 0.05);
+  const feet = roof - air * h * 0.2; // JUMP_H in runner.ts
+  // Backlight so her dark silhouette reads against the skyline
+  ctx.save();
+  const cy = feet - spriteSize * 0.45;
+  const glow = ctx.createRadialGradient(runnerX, cy, 0, runnerX, cy, spriteSize * 0.7);
+  glow.addColorStop(0, 'rgba(255,141,233,0.45)');
+  glow.addColorStop(0.5, 'rgba(255,141,233,0.16)');
+  glow.addColorStop(1, 'rgba(255,141,233,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(runnerX - spriteSize, cy - spriteSize, spriteSize * 2, spriteSize * 2);
+  ctx.restore();
+  ctx.save();
+  ctx.shadowColor = '#ff8de9';
+  ctx.shadowBlur = 16;
+  const drawn = look.runnerSprite?.(ctx, pose, frame, runnerX, feet, spriteSize) ?? false;
+  ctx.restore();
+  if (!drawn) drawRunner(ctx, runnerX, feet - 8, h, beat, air > 0.05);
 
   // Speed lines at the start, while the camera catches up
   const lines = Math.max(0, 1 - s / 1.2);
@@ -701,7 +757,7 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
     ctx.strokeStyle = 'rgba(255,255,255,0.6)';
     for (let i = 0; i < 20; i++) {
       const y = hash(i) * h;
-      const x = ((hash(i + 3) - s * 3) % 1 + 1) % 1 * w;
+      const x = ((((hash(i + 3) - s * 3) % 1) + 1) % 1) * w;
       ctx.lineWidth = 1 + hash(i + 5) * 2;
       ctx.beginPath();
       ctx.moveTo(x, y);
@@ -712,7 +768,33 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
   }
 }
 
-/** The ROOFTOP RUN runner exactly as the level draws it: a mint capsule with an eye and beat-cycling legs. */
+function drawCoin(ctx: CanvasRenderingContext2D, x: number, y: number, unit: number, t: number) {
+  ctx.save();
+  ctx.fillStyle = '#FFD23F';
+  ctx.shadowColor = '#FFD23F';
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.ellipse(x, y, unit * 0.45 * Math.abs(Math.cos(t * 4)) + 1, unit * 0.45, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSlashArc(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, p: number) {
+  if (p >= 1) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = `rgba(255,141,233,${1 - p})`;
+  ctx.shadowColor = '#FF8DE9';
+  ctx.shadowBlur = 18;
+  ctx.lineWidth = 6 * (1 - p) + 1;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(x, y, r * (1 + p * 0.2), -Math.PI * 0.55, -Math.PI * 0.55 + Math.PI * 1.1 * easeOutCubic(Math.min(1, p * 2.5)));
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Fallback when the sprite sheet isn't available: the mint capsule runner. */
 function drawRunner(ctx: CanvasRenderingContext2D, x: number, footY: number, h: number, beat: number, airborne: boolean) {
   const bodyH = 0.075 * h; // PLAYER_H in runner.ts
   const bodyW = 24;

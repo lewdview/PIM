@@ -54,7 +54,7 @@ import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPilla
 import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
 import '../../styles/gameplayHud.css';
 import '../../styles/gameplayHudRail.css';
-import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
+import { chooseWarpNote, collectWarpWhistle, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
 import { noteKey, saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
@@ -3315,6 +3315,7 @@ export default function Game() {
   // Secret warp hit: 'warp' leaves for the shooter level right away,
   // 'warp-clear' unlocks the runner level for when the song is cleared.
   activateWarpRef.current = (type: WarpType) => {
+    collectWarpWhistle();
     audioManager.playSfx("hidden_secret_found", 0.9);
     haptics.fusionSuccess();
     if (type === 'warp') {
