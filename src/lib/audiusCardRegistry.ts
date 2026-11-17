@@ -6,6 +6,11 @@
  *   'aud-<track id>'            standard card, from a clear of the standard chart
  *   'bombshell-aud-<track id>'  Deluxe card, from a clear of the Deluxe chart
  *
+ * Weekly editions (Bryan's call, 2026-11-16): a track returning in a later
+ * week is a separate card, so ids built from 2026-11-16 on append the week:
+ *   'aud-<track id>-<week start>' / 'bombshell-aud-<track id>-<week start>'
+ * The parser accepts both forms; weekStart is null for the original form.
+ *
  * These cards are not 365 days, so the day-based card pool can't draw them.
  * Their title, artist and art come from audius_contest_cards (plus Wren's art
  * in audius_contest_art) and are registered here before the collection is
@@ -28,21 +33,23 @@ export interface AudiusCardInfo {
 
 const registry = new Map<string, AudiusCardInfo>();
 
-const CARD_RE = /^(bombshell-)?aud-([A-Za-z0-9]{1,32})$/;
+const CARD_RE = /^(bombshell-)?aud-([A-Za-z0-9]{1,32})(?:-(\d{4}-\d{2}-\d{2}))?$/;
 
 /** Parses a contest card id, or null when it isn't one. */
-export function parseAudiusCardId(cardId: string | null | undefined): { trackId: string; deluxe: boolean } | null {
+export function parseAudiusCardId(cardId: string | null | undefined): { trackId: string; deluxe: boolean; weekStart: string | null } | null {
   const m = (cardId || '').match(CARD_RE);
-  return m ? { trackId: m[2], deluxe: !!m[1] } : null;
+  return m ? { trackId: m[2], deluxe: !!m[1], weekStart: m[3] ?? null } : null;
 }
 
 export function isAudiusCardId(cardId: string | null | undefined): boolean {
   return parseAudiusCardId(cardId) !== null;
 }
 
-/** Card id of a contest song's card: standard for 'aud-X', Deluxe for 'aud-X_deluxe'. */
-export function audiusCardIdForSong(trackId: string, deluxe: boolean): string {
-  return deluxe ? `bombshell-aud-${trackId}` : `aud-${trackId}`;
+/** Card id of a contest song's card: standard for 'aud-X', Deluxe for 'aud-X_deluxe'.
+ *  With a week, the weekly-edition form: '<base>-<week start>'. */
+export function audiusCardIdForSong(trackId: string, deluxe: boolean, weekStart?: string | null): string {
+  const base = deluxe ? `bombshell-aud-${trackId}` : `aud-${trackId}`;
+  return weekStart ? `${base}-${weekStart}` : base;
 }
 
 export function registerAudiusCards(cards: AudiusCardInfo[]) {
