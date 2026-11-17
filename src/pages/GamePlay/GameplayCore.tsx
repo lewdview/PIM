@@ -45,7 +45,7 @@ import GameplayVisualizer from './GameplayVisualizer';
 import HudMuteButton from './HudMuteButton';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine, type LyricAvoidRect } from './trackLyrics';
-import { setNoteSkin, resolveNoteSkin, drawSkinnedKey } from './noteSkins';
+import { setNoteSkin, resolveNoteSkin, drawSkinnedKey, registerClassicKey } from './noteSkins';
 import { hudArt } from './artPalette';
 
 // Fixed HUD blocks per style that Poetic Lines words fit around (Neon / Console / Beta).
@@ -13109,7 +13109,9 @@ function drawKey(
   isHold: boolean,
   swipeDirection?: Note['swipeDirection'],
   timeOffset: number = 0,
-  noteType?: NoteType
+  noteType?: NoteType,
+  /** Sprite-cache pass: skip the skin hook and the moving sheen (noteSkins stamps it live). */
+  bare = false,
 ) {
   const noteW = Number.isFinite(rawNoteW) && rawNoteW > 0 ? rawNoteW : 60;
   const noteH = Number.isFinite(rawNoteH) && rawNoteH > 0 ? rawNoteH : 40;
@@ -13124,7 +13126,7 @@ function drawKey(
   ctx.translate(centerX, centerY);
 
   // A note skin (see ./noteSkins) draws every note type itself; 'classic' falls through.
-  if (drawSkinnedKey(ctx, noteW, noteH, lc, prog, isHold, swipeDirection, noteType, timeOffset)) {
+  if (!bare && drawSkinnedKey(ctx, noteW, noteH, lc, prog, isHold, swipeDirection, noteType, timeOffset)) {
     ctx.restore();
     return;
   }
@@ -13395,7 +13397,8 @@ function drawKey(
   }
   ctx.fill();
 
-  // ── 2b. Sweeping Glass Sheen ──
+  // ── 2b. Sweeping Glass Sheen ── (left out of cached sprites; drawClassicSheen adds it live)
+  if (!bare) {
   ctx.save();
   ctx.clip();
   const now = Date.now() + timeOffset;
@@ -13414,6 +13417,7 @@ function drawKey(
   ctx.fillStyle = sheenGrad;
   ctx.fill();
   ctx.restore();
+  }
 
   // ── 2c. Top-face bevel + gloss so the tile reads as a solid block ──
   if (noteType !== 'ghost') {
@@ -13855,3 +13859,30 @@ function drawKey(
   ctx.shadowBlur = 0;
   ctx.shadowColor = "transparent";
 }
+
+/** The classic key's sweeping sheen on its own, for notes stamped from the sprite cache. */
+function drawClassicSheen(ctx: CanvasRenderingContext2D, noteW: number, noteH: number, prog: number, timeOffset: number) {
+  const now = Date.now() + timeOffset;
+  const sheenX = -noteW + noteW * 2 * ((now % 2200) / 2200);
+  const sheenGrad = ctx.createLinearGradient(sheenX, -noteH / 2, sheenX + noteW * 0.38, noteH / 2);
+  sheenGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+  sheenGrad.addColorStop(0.5, "rgba(255, 255, 255, 0.38)");
+  sheenGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.save();
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
+  ctx.beginPath();
+  ctx.roundRect(-noteW / 2, -noteH / 2, noteW, noteH, lerp(12, 24, prog));
+  ctx.fillStyle = sheenGrad;
+  ctx.fill();
+  ctx.restore();
+}
+
+// Let the sprite cache paint still piano keys (the default skin) instead of redrawing them live.
+registerClassicKey({
+  draw: (ctx, w, h, lc, prog, isHold, swipe, type, timeOffset) => {
+    drawKey(ctx, -w / 2, 0, w, h, lerp(12, 24, prog), lc, prog, isHold, swipe, timeOffset ?? 0, type, true);
+    return true;
+  },
+  sheen: drawClassicSheen,
+});
