@@ -33,7 +33,7 @@ const CUES = {
 } as const;
 const CUE_COLORS = { jump: '#ffd594', slide: '#fa9be1', slash: '#f8b1eb', block: '#8affea' };
 
-const SKIES = {
+export const SKIES = {
   1: ['#38204f', '#ad538f', '#fce4ff', '#41284f'],
   2: ['#12314a', '#246468', '#b1ffe5', '#234657'],
   3: ['#173957', '#285c89', '#b3efff', '#1f3d62'],
