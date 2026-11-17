@@ -9,6 +9,7 @@
  */
 import { supabase } from '@/services/supabaseClient';
 import {
+  audiusCardIdForSong,
   registerAudiusCards,
   unregisteredAudiusCardIds,
   type AudiusCardInfo,
@@ -68,10 +69,10 @@ export async function claimContestCard(week: string, trackId: string, kind: Cont
   });
   if (error) return { ok: false, error: 'RPC', message: error.message };
   const res = data as { success?: boolean; error?: string; card_id?: string } | null;
-  if (res?.success) return { ok: true, cardId: res.card_id || (kind === 'bombshell' ? `bombshell-aud-${trackId}` : `aud-${trackId}`) };
+  if (res?.success) return { ok: true, cardId: res.card_id || audiusCardIdForSong(trackId, kind === 'bombshell', week) };
   const code = res?.error || 'UNKNOWN';
   if (code === 'ALREADY_CLAIMED') {
-    return { ok: true, cardId: kind === 'bombshell' ? `bombshell-aud-${trackId}` : `aud-${trackId}`, alreadyOwned: true };
+    return { ok: true, cardId: audiusCardIdForSong(trackId, kind === 'bombshell', week), alreadyOwned: true };
   }
   return { ok: false, error: code, message: claimErrorMessage(code) };
 }
