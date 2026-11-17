@@ -23,7 +23,7 @@ const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/rare
 export function getBombshellCoverUrl(day: number, fileName: string): string {
   const useLocal = (typeof localStorage !== 'undefined' && 
     (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
-    (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
+    (import.meta.env.VITE_USE_LOCAL_FILES === 'true');
 
   if (useLocal) {
     return `${LOCAL_BASE}day ${day}/${fileName}`;
@@ -39,7 +39,7 @@ export function getBombshellCoverUrl(day: number, fileName: string): string {
 export function getBombshellCoverCandidates(day: number, fileName: string): string[] {
   const useLocal = (typeof localStorage !== 'undefined' && 
     (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
-    (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
+    (import.meta.env.VITE_USE_LOCAL_FILES === 'true');
   const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
   const primary = getBombshellCoverUrl(day, fileName);
@@ -367,7 +367,7 @@ export function getBombshellHiResPngUrl(day: number, fileName: string): string {
   const pngFileName = fileName.replace(/\.jpe?g$/i, '.png');
   const useLocal = (typeof localStorage !== 'undefined' && 
     (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
-    (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
+    (import.meta.env.VITE_USE_LOCAL_FILES === 'true');
 
   if (useLocal) {
     return `${LOCAL_BASE}day ${day}/hi res/${pngFileName}`;

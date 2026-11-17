@@ -159,7 +159,7 @@ function Player({ songs, onBack }: { songs: GameSong[]; onBack: () => void }) {
             {art && <img key={art} src={art} alt="" onError={hideBroken} />}
             {bombshell && (
               <button type="button" className="ml-art-toggle" onClick={() => setShowBombshell((v) => !v)}>
-                {showBombshell ? 'Cover' : 'Bombshell'}
+                {showBombshell ? 'Cover' : 'Prestige Art'}
               </button>
             )}
           </div>

@@ -31,6 +31,19 @@
  *     build without the real files. Never upload that zip.
  *   -> pim-playgama-<month>.zip
  *
+ * One portal per build, each with its own SDK and nothing of the others':
+ *
+ *   --portal=playgama    (default) Playgama Bridge, its config, purchases and banners
+ *   --portal=klyo        games.klyo.pl SDK                       -> pim-klyo-<month>.zip
+ *   --portal=crazygames  CrazyGames HTML5 SDK v3                 -> pim-crazygames-<month>.zip
+ *   --portal=gamealia    Gamealia SDK                            -> pim-gamealia-<month>.zip
+ *
+ *   --bombshell-dir=PATH  takes each day's perfect-run art from PATH (a file whose name
+ *     holds the three-digit day, e.g. th3scr1b3_007.jpg or d007.jpg) instead of the
+ *     Bombshell art on the CDN; for portals whose content rules exclude suggestive art.
+ *   --cache-dir=PATH  keeps downloaded media there, so building several portals in a
+ *     row downloads each file once.
+ *
  * Needs ffmpeg and zip on PATH.
  */
 import { execFileSync } from 'node:child_process';
@@ -62,6 +75,12 @@ if (typeof args.month === 'string' && (args.month === 'all' || args.month.includ
   }
   process.exit(0);
 }
+const PORTALS = ['playgama', 'klyo', 'crazygames', 'gamealia'];
+const portal = typeof args.portal === 'string' ? args.portal : 'playgama';
+if (!PORTALS.includes(portal)) {
+  console.error(`[build-playgama] --portal must be one of ${PORTALS.join(', ')}.`);
+  process.exit(1);
+}
 const month = args.month ? Number(args.month) : 0;
 if (args.month && !(Number.isInteger(month) && month >= 1 && month <= 12)) {
   console.error('[build-playgama] --month must be 1-12.');
@@ -72,9 +91,11 @@ const withBombshell = month > 0 && !args['no-bombshell'];
 const withAlbum = month > 0 && !args['no-album'];
 const mediaDir = typeof args['media-dir'] === 'string' ? path.resolve(args['media-dir']) : null;
 const placeholderMedia = !!args['placeholder-media'];
+const bombshellDir = typeof args['bombshell-dir'] === 'string' ? path.resolve(args['bombshell-dir']) : null;
+const cacheDir = typeof args['cache-dir'] === 'string' ? path.resolve(args['cache-dir']) : null;
 const STORAGE_BASE = (process.env.VITE_STORAGE_BASE_URL || 'https://files.th3scr1b3.art').replace(/\/?$/, '/');
 
-const zipPath = path.join(root, month ? `pim-playgama-${MONTH_NAMES[month - 1]}.zip` : 'pim-playgama.zip');
+const zipPath = path.join(root, month ? `pim-${portal}-${MONTH_NAMES[month - 1]}.zip` : `pim-${portal}.zip`);
 const MAX_ARCHIVE_BYTES = 300 * 1024 * 1024;
 
 const compressedSfx = JSON.parse(
@@ -133,14 +154,15 @@ const buildVersion = (() => {
   const git = (...a) => { try { return execFileSync('git', a, { cwd: root }).toString().trim(); } catch { return ''; } };
   const sha = git('rev-parse', '--short=7', 'HEAD') || 'nogit';
   const dirty = git('status', '--porcelain', '--untracked-files=no') ? '-dirty' : '';
-  return `${month ? `m${p2(month)}` : 'all'}-${stamp}-${sha}${dirty}${month && !withAlbum ? '-noalbum' : ''}`;
+  return `${month ? `m${p2(month)}` : 'all'}-${stamp}-${sha}${dirty}${month && !withAlbum ? '-noalbum' : ''}${portal === 'playgama' ? '' : `-${portal}`}`;
 })();
 
-console.log(`[build-playgama] vite build (VITE_PLATFORM=playgama${month ? `, month ${month}` : ''}, version ${buildVersion})`);
+console.log(`[build-playgama] vite build (portal ${portal}${month ? `, month ${month}` : ''}, version ${buildVersion})`);
 run('npx', ['vite', 'build', '--config', 'vite.config.ts'], {
   env: {
     ...process.env,
     VITE_PLATFORM: 'playgama',
+    PIM_PORTAL: portal,
     PIM_PLAYGAMA_MONTH: String(month),
     PIM_PLAYGAMA_BOMBSHELL: withBombshell ? '1' : '0',
     PIM_PLAYGAMA_ALBUM: withAlbum ? '1' : '0',
@@ -185,7 +207,7 @@ const size = fs.statSync(zipPath).size;
 const mb = (size / 1024 / 1024).toFixed(1);
 console.log(`[build-playgama] ${path.relative(root, zipPath)}: ${mb} MB, version ${buildVersion}`);
 if (size > MAX_ARCHIVE_BYTES) {
-  console.error('[build-playgama] Archive is over the 300 MB Playgama limit.');
+  console.error('[build-playgama] Archive is over the 300 MB limit.');
   process.exit(1);
 }
 
@@ -200,18 +222,41 @@ function pruneDir(dir, keep) {
 }
 
 async function fetchRemote(rel) {
+  const cached = cacheDir && path.join(cacheDir, rel);
+  if (cached && fs.existsSync(cached)) return fs.readFileSync(cached);
   const url = STORAGE_BASE + encodeURIComponent(rel).replace(/%2F/g, '/');
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
+    const data = Buffer.from(await res.arrayBuffer());
+    if (cached) {
+      fs.mkdirSync(path.dirname(cached), { recursive: true });
+      fs.writeFileSync(cached, data);
+    }
+    return data;
   } catch {
     return null;
   }
 }
 
+/** The replacement perfect-run art for a day from --bombshell-dir, or null. */
+function bombshellOverride(day) {
+  if (!bombshellDir) return null;
+  const tag = String(day).padStart(3, '0');
+  const name = fs.readdirSync(bombshellDir)
+    .filter((n) => /\.(jpe?g|png|webp)$/i.test(n) && new RegExp(`(^|[^0-9])${tag}([^0-9]|$)`).test(n))
+    .sort()[0];
+  return name ? path.join(bombshellDir, name) : null;
+}
+
 /** Puts the original file for an entry at `dest`; false if none of its paths exist. */
 async function fetchSource(entry, dest) {
+  if (entry.kind === 'bombshell' && bombshellDir) {
+    const local = bombshellOverride(entry.day);
+    if (!local) return false;
+    fs.copyFileSync(local, dest);
+    return true;
+  }
   for (const rel of [entry.remote, ...entry.aliases]) {
     if (mediaDir) {
       const local = path.join(mediaDir, rel);
@@ -339,7 +384,8 @@ async function buildMonth() {
       writePlaceholder(entry, dest);
       continue;
     }
-    const src = path.join(tmp, `src${path.extname(entry.remote) || '.bin'}`);
+    const ext = entry.kind === 'bombshell' && bombshellDir ? path.extname(bombshellOverride(entry.day) || '') : path.extname(entry.remote);
+    const src = path.join(tmp, `src${ext || '.bin'}`);
     if (!(await fetchSource(entry, src))) {
       missing.push(entry.remote);
       continue;

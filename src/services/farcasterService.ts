@@ -5,6 +5,7 @@
 
 import sdk from '@farcaster/miniapp-sdk';
 import { IS_PLAYGAMA } from '../platform';
+import { SUPABASE_URL } from './supabaseClient';
 
 export interface FarcasterUser {
   fid: number;
@@ -280,7 +281,8 @@ class FarcasterService {
     fid: number
   ): Promise<boolean> {
     try {
-      const endpoint = 'https://toemkhrfsbkfkutwcjkd.supabase.co/functions/v1/farcaster-webhook';
+      if (!SUPABASE_URL) return false; // portal build: no backend
+      const endpoint = `${SUPABASE_URL}/functions/v1/farcaster-webhook`;
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

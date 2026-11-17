@@ -22,7 +22,7 @@ export const ENDING_INFO: Record<EndingId, { title: string; condition: string; r
   clear: { title: 'Chapter Clear', condition: 'Clear every track' },
   epilogue: { title: 'Epilogue', condition: 'Clear the bonus tracks' },
   true: { title: 'True Ending', condition: 'Platinum on every track', reward: 'Unlocks listening mode' },
-  bombshell: { title: 'Bombshell Ending', condition: 'Platinum on every track and every Deluxe chart' },
+  bombshell: { title: 'Prestige Art Ending', condition: 'Platinum on every track and every Deluxe chart' },
 };
 
 export interface EndingState {

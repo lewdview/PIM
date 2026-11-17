@@ -4,7 +4,7 @@
 import { Volume2, VolumeX } from 'lucide-react';
 import { useMuted } from '@/platform/playgama/muteSetting';
 
-export default function HudMuteButton({ variant }: { variant: 'beta' | 'rail' | 'hud' }) {
+export default function HudMuteButton({ variant }: { variant: 'beta' | 'rail' | 'hud' | 'neon' }) {
   const [muted, setMuted] = useMuted();
   const label = muted ? 'Unmute sound' : 'Mute sound';
   const icon = muted ? <VolumeX size={12} aria-hidden="true" /> : <Volume2 size={12} aria-hidden="true" />;
@@ -25,7 +25,7 @@ export default function HudMuteButton({ variant }: { variant: 'beta' | 'rail' | 
   return (
     <button
       type="button"
-      className={variant === 'rail' ? 'pim-rail-btn' : 'pim-hud-btn'}
+      className={variant === 'rail' ? 'pim-rail-btn' : variant === 'neon' ? 'neon-hud-btn' : 'pim-hud-btn'}
       onClick={() => setMuted(!muted)}
       title={label}
       aria-label={label}

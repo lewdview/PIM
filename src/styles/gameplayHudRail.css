@@ -222,7 +222,7 @@
   gap: 8px;
 }
 .pim-rail-score-value {
-  font: 400 30px/0.95 var(--hud-display);
+  font: 400 30px/1.06 var(--hud-display);
   letter-spacing: 0.01em;
   color: var(--hud-text);
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
@@ -285,7 +285,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 0%;
-  background: linear-gradient(90deg, #00E5FF, #39FF14);
+  background: linear-gradient(90deg, var(--hud-cyan), var(--hud-acid));
 }
 .pim-rail-heal-banner {
   position: absolute;
@@ -300,7 +300,7 @@
   color: var(--hud-acid);
   background: rgba(0, 0, 0, 0.9);
   border: 1px solid var(--hud-acid);
-  box-shadow: 0 0 16px rgba(57, 255, 20, 0.5);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--hud-acid) 50%, transparent);
 }
 
 .pim-rail-combo {
@@ -312,7 +312,8 @@
 }
 .pim-rail-combo-value {
   display: inline-block;
-  font: 400 30px/0.95 var(--hud-display);
+  /* line-height 1.08: at 0.95 the 72px numerals spilled over COMBO / MAX MULTIPLIER */
+  font: 400 30px/1.08 var(--hud-display);
   letter-spacing: 0.01em;
   color: var(--combo-c);
   text-shadow: 0 0 16px color-mix(in srgb, var(--combo-c) 45%, transparent), 0 2px 10px rgba(0, 0, 0, 0.8);

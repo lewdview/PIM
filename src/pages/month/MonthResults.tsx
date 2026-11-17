@@ -296,7 +296,7 @@ function RunResults({ songId }: { songId: string }) {
     else if (firstClear && next?.kind === 'play') {
       out.push({ head: 'Here comes a new stage!', sub: next.isBonus ? 'BONUS STAGE UNLOCKED' : `TRACK ${next.idx + 1} UNLOCKED` });
     }
-    if (bombshellNow) out.push({ head: 'Bombshell art unlocked!', sub: 'IT PLAYS BEHIND THIS TRACK', tone: 'bombshell' });
+    if (bombshellNow) out.push({ head: 'Prestige Art unlocked!', sub: 'IT PLAYS BEHIND THIS TRACK', tone: 'bombshell' });
     return out;
   }, [passed, stage, result, firstClear, next, bombshellNow]);
   const bannerRef = useRef(banners);

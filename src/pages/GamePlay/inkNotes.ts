@@ -1,0 +1,388 @@
+// Ink notes: the Poetic GUI's own note skin. Each note is a slip of deckled paper with one
+// brush stroke laid dead across its middle and a small seal in the lane colour, so the
+// highway reads like a page being inked. The stroke is the strike line (see ./noteStrike): a
+// hairline of bare paper runs through it and two sights sit off the slip's ends. Special notes keep their meaning as red-seal stamps (REMIX, DROP, BEAT, WARP,
+// BURST), the mine is an ink blot marked AVOID, the ghost a faint pencil outline. Swipe
+// directions on taps, slide heads and hold tails get a brush chevron that sweeps toward the
+// swipe; hold heads stay plain, and hold ends get a breathing ensō circle.
+
+import type { Note, NoteType } from '../../game/types';
+import { SWIPE_ROT, SPECIAL } from './neonNotes';
+import { drawSights, drawStrike } from './noteStrike';
+
+const PAPER = '#f3ede1';
+const PAPER_EDGE = '#d9cfbd';
+const INK = '#16120e';
+const SEAL = '#c8102e';
+
+export function drawInkKey(
+  ctx: CanvasRenderingContext2D,
+  noteW: number,
+  noteH: number,
+  laneColor: string,
+  prog: number,
+  isHold: boolean,
+  swipeDirection: Note['swipeDirection'] | undefined,
+  noteType: NoteType | undefined,
+  timeOffset = 0,
+): boolean {
+  const t = (performance.now() + timeOffset) / 1000;
+  const p = Math.max(0, Math.min(1, prog));
+  const w = noteW * 0.86; // leaves room for the strike sights inside the lane
+  const h = Math.max(6, noteH * (isHold ? 0.55 : 0.66));
+
+  ctx.save();
+  try {
+    if (noteType === 'mine') { drawBlot(ctx, w, h, t); return true; }
+    if ((noteType as string) === 'ghost') { drawPencil(ctx, w, h, t); return true; }
+
+    const isWarp = noteType === 'warp' || noteType === 'warp-clear';
+    const special = noteType ? SPECIAL[noteType] : undefined;
+    const accent = isWarp ? `hsl(${(t * 200) % 360}, 90%, 55%)` : special?.color ?? laneColor;
+
+    const scale = noteType === 'accent' ? 1 + 0.06 * Math.max(0, Math.sin(t * 9.4)) : 1;
+    if (scale !== 1) ctx.scale(scale, scale);
+
+    if (noteType === 'burst') drawSplatter(ctx, w, h, t);
+    if (isWarp) drawWash(ctx, w, h, t);
+
+    drawSlip(ctx, w, h, accent, p, isHold);
+    if (noteType === 'zigzag') {
+      drawInkZigzag(ctx, w, h, t);
+      drawStrike(ctx, w * 0.9, h, accent, p, { core: SEAL, glow: false, sights: false, weight: Math.max(1, h * 0.04) });
+    } else drawStroke(ctx, w, h, noteType === 'accent' ? 1.25 : 1);
+    drawSights(ctx, w, h, accent, p, INK);
+    if (noteType === 'remix') drawWetSheen(ctx, w, h, t);
+
+    const lift = noteType === 'lift' && (!swipeDirection || swipeDirection === 'up');
+    const holdHead = !isHold && (noteType === 'hold' || noteType === 'hold-swipe');
+    if (swipeDirection && !lift && !holdHead) drawBrushChevron(ctx, w, h, swipeDirection, accent, t);
+    else if (lift) drawBrushChevron(ctx, w, h, 'up', accent, t);
+    else if (isHold) drawEnso(ctx, h, accent, t);
+
+    const label = isWarp ? (noteType === 'warp' ? 'WARP' : 'WARP ★') : special?.label;
+    if (label && !isHold && !swipeDirection) drawStamp(ctx, w, h, label, special ? SEAL : accent);
+  } finally {
+    ctx.restore();
+  }
+  return true;
+}
+
+/** Outline of the slip: straight sides, with a top and bottom edge torn slightly uneven. */
+function slipPath(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const x = -w / 2, y = -h / 2;
+  const n = Math.max(10, Math.round(w / 6));
+  const d = Math.min(0.7, h * 0.025); // how far the torn edge wanders
+  ctx.beginPath();
+  ctx.moveTo(x, y + d);
+  for (let i = 0; i <= n; i++) ctx.lineTo(x + (i / n) * w, y + d * Math.sin(i * 2.3 + 0.7));
+  ctx.lineTo(x + w, y + h - d);
+  for (let i = n; i >= 0; i--) ctx.lineTo(x + (i / n) * w, y + h - d * Math.sin(i * 1.7 + 2.1) - d * 0.4);
+  ctx.closePath();
+}
+
+/**
+ * Paper slip: warm deckled card lit from above, a few fibres in the sheet, lane colour
+ * soaking up from the bottom edge and a small seal in the top-right corner.
+ */
+function drawSlip(ctx: CanvasRenderingContext2D, w: number, h: number, accent: string, p: number, isHold: boolean) {
+  const x = -w / 2, y = -h / 2;
+  const a = isHold ? 0.82 : 1;
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 6 + 6 * p;
+  ctx.shadowOffsetY = 2;
+  const sheet = ctx.createLinearGradient(0, y, 0, y + h);
+  sheet.addColorStop(0, '#fbf7ee');
+  sheet.addColorStop(1, PAPER);
+  ctx.fillStyle = sheet;
+  slipPath(ctx, w, h);
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+
+  ctx.save();
+  ctx.clip();
+  // Lane colour soaks up from the bottom edge like ink into paper.
+  const soak = ctx.createLinearGradient(0, y + h, 0, y);
+  soak.addColorStop(0, accent);
+  soak.addColorStop(0.42, 'rgba(255,255,255,0)');
+  ctx.globalAlpha = a * 0.6;
+  ctx.fillStyle = soak;
+  ctx.fillRect(x, y, w, h);
+  // Paper fibres: short pale-brown flecks, placed by index so they hold still frame to frame.
+  ctx.globalAlpha = a * 0.16;
+  ctx.strokeStyle = '#7a6a52';
+  ctx.lineWidth = 0.7;
+  for (let i = 0; i < 9; i++) {
+    const fx = x + ((i * 0.618 + 0.11) % 1) * w;
+    const fy = y + ((i * 0.381 + 0.27) % 1) * h;
+    const ang = i * 1.3;
+    ctx.beginPath();
+    ctx.moveTo(fx, fy);
+    ctx.lineTo(fx + Math.cos(ang) * 3.5, fy + Math.sin(ang) * 1.6);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.globalAlpha = a;
+  ctx.strokeStyle = PAPER_EDGE;
+  ctx.lineWidth = 1;
+  slipPath(ctx, w, h);
+  ctx.stroke();
+
+  // Seal: a small square chop in the lane colour, tucked into the top-right corner so the
+  // middle of the slip stays clear for the stroke.
+  const s = Math.min(h * 0.34, w * 0.085);
+  if (s >= 3.5) {
+    ctx.save();
+    ctx.translate(x + w - s * 0.95, y + s * 0.95);
+    ctx.rotate(-0.08);
+    ctx.fillStyle = accent;
+    ctx.fillRect(-s / 2, -s / 2, s, s);
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+    ctx.lineWidth = Math.max(0.8, s * 0.12);
+    ctx.strokeRect(-s * 0.28, -s * 0.28, s * 0.56, s * 0.56);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/**
+ * The brush stroke, laid along the slip's centre line: a fine entry, a full belly and a
+ * dry-brush exit. A hairline of bare paper runs through its middle (the brush's "flying
+ * white"), which is the exact line to match against the track's hit line.
+ */
+function drawStroke(ctx: CanvasRenderingContext2D, w: number, h: number, weight: number) {
+  const L = -w * 0.44, R = w * 0.36;
+  const th = Math.max(2, h * 0.2 * weight); // half-thickness at the belly
+  const mid = L + (R - L) * 0.42;
+  ctx.save();
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.moveTo(L, 0);
+  ctx.quadraticCurveTo(L + (mid - L) * 0.5, -th * 1.05, mid, -th);
+  ctx.quadraticCurveTo(mid + (R - mid) * 0.6, -th * 0.9, R, -th * 0.35);
+  ctx.quadraticCurveTo(R + th * 0.7, 0, R, th * 0.35);
+  ctx.quadraticCurveTo(mid + (R - mid) * 0.6, th * 0.9, mid, th);
+  ctx.quadraticCurveTo(L + (mid - L) * 0.5, th * 1.05, L, 0);
+  ctx.closePath();
+  ctx.fill();
+  // Dry-brush streaks off the tail, fanned evenly about the centre line.
+  ctx.strokeStyle = INK;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.55;
+  ctx.lineWidth = Math.max(0.8, th * 0.16);
+  for (let i = -2; i <= 2; i++) {
+    ctx.beginPath();
+    ctx.moveTo(R - th * 0.3, i * th * 0.3);
+    ctx.lineTo(R + th * (1.5 - 0.35 * Math.abs(i)), i * th * 0.36);
+    ctx.stroke();
+  }
+  // Flying white: the bare-paper hairline through the stroke's middle.
+  ctx.globalAlpha = 0.9;
+  ctx.strokeStyle = PAPER;
+  ctx.lineWidth = Math.max(1, th * 0.2);
+  ctx.beginPath();
+  ctx.moveTo(L + th * 1.4, 0);
+  ctx.lineTo(R - th * 0.2, 0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Brush chevron in ink with a lane-colour underpaint; two strokes sweep toward the swipe. */
+function drawBrushChevron(ctx: CanvasRenderingContext2D, w: number, h: number, dir: string, accent: string, t: number) {
+  const s = Math.max(9, Math.min(h * 1.2, w * 0.34));
+  const travel = s * 0.45;
+  ctx.save();
+  ctx.rotate(SWIPE_ROT[dir] ?? 0);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'miter';
+  for (let i = 0; i < 2; i++) {
+    const k = (t * 1.6 + i / 2) % 1;
+    const y = travel * 0.5 - k * travel * 1.6;
+    const a = Math.sin(k * Math.PI) * 0.95 + 0.05;
+    // Underpaint (lane colour), then the ink stroke on top, slightly offset like a hand print.
+    ctx.globalAlpha = a * 0.85;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = Math.max(4, s * 0.42);
+    chevron(ctx, s, y + s * 0.04);
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = Math.max(3, s * 0.24);
+    chevron(ctx, s, y);
+  }
+  ctx.restore();
+}
+function chevron(ctx: CanvasRenderingContext2D, s: number, y: number) {
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.48, y + s * 0.26);
+  ctx.lineTo(0, y - s * 0.24);
+  ctx.lineTo(s * 0.48, y + s * 0.26);
+  ctx.stroke();
+}
+
+/** Hold end: an ensō (open brush circle) that slowly turns and breathes. */
+function drawEnso(ctx: CanvasRenderingContext2D, h: number, accent: string, t: number) {
+  const r = Math.max(4, h * 0.36) * (1 + 0.08 * Math.sin(t * 4));
+  ctx.save();
+  ctx.rotate(t * 1.2);
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = accent;
+  ctx.globalAlpha = 0.7;
+  ctx.lineWidth = Math.max(3, r * 0.55);
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0.2, Math.PI * 1.8);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = Math.max(2, r * 0.32);
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0.35, Math.PI * 1.75);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Red seal stamp with the label in serif caps, sitting over the stroke. */
+function drawStamp(ctx: CanvasRenderingContext2D, w: number, h: number, label: string, color: string) {
+  const size = Math.min(h * 0.5, (w * 0.62) / (label.length * 0.62));
+  if (size < 7) return;
+  ctx.save();
+  ctx.font = `700 ${size}px "Instrument Serif", Georgia, serif`;
+  const tw = ctx.measureText(label).width;
+  const bw = tw + size * 0.9, bh = size * 1.35;
+  ctx.rotate(-0.06);
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.92;
+  ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = PAPER;
+  ctx.lineWidth = Math.max(1, size * 0.08);
+  ctx.strokeRect(-bw / 2 + size * 0.14, -bh / 2 + size * 0.14, bw - size * 0.28, bh - size * 0.28);
+  ctx.fillStyle = PAPER;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, 0, size * 0.06);
+  ctx.restore();
+}
+
+/** REMIX: wet ink sheen gliding across the stroke. */
+function drawWetSheen(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+  const x = -w / 2 + ((t * 0.8) % 1) * w * 1.4 - w * 0.2;
+  ctx.save();
+  ctx.beginPath();
+  slipPath(ctx, w, h);
+  ctx.clip();
+  const g = ctx.createLinearGradient(x - w * 0.12, 0, x + w * 0.12, 0);
+  g.addColorStop(0, 'rgba(0,245,212,0)');
+  g.addColorStop(0.5, 'rgba(0,245,212,0.55)');
+  g.addColorStop(1, 'rgba(0,245,212,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(-w / 2, -h / 2, w, h);
+  ctx.restore();
+}
+
+/** WARP: watercolour bloom in shifting hues bleeding out behind the slip. */
+function drawWash(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+  ctx.save();
+  for (let i = 0; i < 3; i++) {
+    const a = t * 1.3 + (i * Math.PI * 2) / 3;
+    const g = ctx.createRadialGradient(Math.cos(a) * w * 0.2, Math.sin(a) * h * 0.4, 0, 0, 0, Math.max(w * 0.6, h));
+    g.addColorStop(0, `hsla(${(t * 200 + i * 120) % 360}, 90%, 60%, 0.45)`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-w, -h * 1.6, w * 2, h * 3.2);
+  }
+  ctx.restore();
+}
+
+/** BURST: ink splatter flicked outward, reforming each beat. */
+function drawSplatter(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+  const k = (t * 2) % 1;
+  ctx.save();
+  ctx.fillStyle = INK;
+  ctx.globalAlpha = 0.85 * (1 - k);
+  for (let i = 0; i < 12; i++) {
+    const a = i * 2.39996; // golden angle: an organic, uneven spray
+    const d = 0.55 + k * 0.6 + (i % 3) * 0.08;
+    const r = Math.max(1, h * (0.08 + (i % 4) * 0.03) * (1 - k * 0.5));
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * w * 0.5 * d, Math.sin(a) * h * 0.9 * d, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** ZIGZAG: a brushed zigzag line instead of the straight stroke. */
+function drawInkZigzag(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+  const steps = 6, amp = h * 0.24, shift = Math.floor((t * 3) % 2);
+  ctx.save();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = Math.max(2, h * 0.16);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (let i = 0; i <= steps; i++) {
+    const x = -w * 0.38 + (i / steps) * w * 0.66;
+    const y = (i + shift) % 2 ? -amp : amp;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** MINE: a spreading ink blot with a red cross and AVOID. */
+function drawBlot(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+  const pulse = 1 + 0.07 * Math.sin(t * 10);
+  const rx = w * 0.42 * pulse, ry = h * 0.62 * pulse;
+  ctx.save();
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  const n = 14;
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const wob = 1 + 0.12 * Math.sin(i * 3.7 + t * 2);
+    const x = Math.cos(a) * rx * wob, y = Math.sin(a) * ry * wob;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.shadowColor = SEAL;
+  ctx.shadowBlur = 14;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = PAPER;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.strokeStyle = SEAL;
+  ctx.lineWidth = Math.max(2.5, ry * 0.2);
+  ctx.lineCap = 'round';
+  const c = Math.min(rx, ry) * 0.45;
+  ctx.beginPath();
+  ctx.moveTo(-rx * 0.62 - c * 0.5, -c); ctx.lineTo(-rx * 0.62 + c * 0.5, c);
+  ctx.moveTo(-rx * 0.62 + c * 0.5, -c); ctx.lineTo(-rx * 0.62 - c * 0.5, c);
+  ctx.stroke();
+  const size = Math.min(ry * 0.9, rx * 0.34);
+  if (size >= 7) {
+    ctx.font = `700 ${size}px "Instrument Serif", Georgia, serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = PAPER;
+    ctx.fillText('AVOID', rx * 0.12, size * 0.05);
+  }
+  ctx.restore();
+}
+
+/** GHOST: a faint graphite outline, sketched but never inked. */
+function drawPencil(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+  ctx.save();
+  ctx.globalAlpha = 0.4 + 0.2 * Math.sin(t * 6);
+  ctx.strokeStyle = '#b9b2a6';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([3, 4]);
+  ctx.lineDashOffset = -t * 20;
+  ctx.strokeRect(-w / 2, -h / 2, w, h);
+  ctx.setLineDash([]);
+  ctx.globalAlpha *= 0.6;
+  ctx.strokeRect(-w / 2 + 2, -h / 2 + 1.5, w - 3, h - 2);
+  ctx.restore();
+}

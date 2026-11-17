@@ -27,25 +27,34 @@ export type PovMode =
 
 export type { ChartVariant };
 
-/** 'stanza' is shown to players as "Poetic GUI". */
-export type HudStyle = 'beta' | 'console' | 'stanza';
+/** 'stanza' is shown to players as "Poetic GUI"; 'neon' as "Neon Reel" (the showcase demo's look). */
+export type HudStyle = 'beta' | 'console' | 'stanza' | 'neon';
 /** How lyrics show during play: none, painted on the track, or Poetic Lines (kinetic lyrics across the sky). */
 export type LyricsMode = 'off' | 'track' | 'poetic';
 export const LYRICS_MODES: readonly LyricsMode[] = ['off', 'track', 'poetic'];
-/** Phones read lyrics best on the track; desktop and tablet get Poetic Lines. */
+/** Lyrics start on the road on every screen size. */
 export function defaultLyricsMode(): LyricsMode {
-  return typeof window !== 'undefined' && window.innerWidth < 640 ? 'track' : 'poetic';
+  return 'track';
 }
 /**
  * The lyric mode actually drawn in a song. The Poetic GUI shows the lyric line
  * itself, so it turns the other modes off.
  */
 export function activeLyricsMode(o: { hudStyle?: HudStyle; lyricsMode: LyricsMode }): LyricsMode {
-  return (o.hudStyle ?? 'stanza') === 'stanza' ? 'off' : o.lyricsMode;
+  return (o.hudStyle ?? 'neon') === 'stanza' ? 'off' : o.lyricsMode;
 }
-export const HUD_STYLES: readonly HudStyle[] = ['beta', 'console', 'stanza'];
+export const HUD_STYLES: readonly HudStyle[] = ['beta', 'console', 'stanza', 'neon'];
+/**
+ * The art notes are drawn with. 'match' follows the HUD style (see GamePlay/noteSkins.ts);
+ * 'classic' is the original piano key.
+ */
+export type NoteSkin = 'match' | 'classic' | 'neon' | 'ink' | 'rail' | 'vinyl';
+export const NOTE_SKINS: readonly NoteSkin[] = ['match', 'classic', 'neon', 'ink', 'rail', 'vinyl'];
+export function toNoteSkin(v: unknown): NoteSkin {
+  return NOTE_SKINS.includes(v as NoteSkin) ? (v as NoteSkin) : 'classic';
+}
 export function toHudStyle(v: unknown): HudStyle {
-  return HUD_STYLES.includes(v as HudStyle) ? (v as HudStyle) : 'stanza';
+  return HUD_STYLES.includes(v as HudStyle) ? (v as HudStyle) : 'neon';
 }
 
 export type GameOpts = {
@@ -67,8 +76,10 @@ export type GameOpts = {
   musicVolume: number;
   gameBackground: string;
   gameTrack: string;
-  /** In-song HUD: the original beta HUD, the console rail, or Stanza + Oracle. */
+  /** In-song HUD: the original beta HUD, the console rail, Stanza + Oracle, or Neon Reel. */
   hudStyle: HudStyle;
+  /** Note art, chosen separately from the HUD; 'match' follows hudStyle. */
+  noteSkin: NoteSkin;
   backgroundBlur: number;
   cardBack: string;
   haptics: boolean;
@@ -149,7 +160,8 @@ export const DEFAULT_OPTS: GameOpts = {
   musicVolume: 0.5,
   gameBackground: "cover_blur",
   gameTrack: "transparent",
-  hudStyle: "stanza",
+  hudStyle: "neon",
+  noteSkin: "classic",
   backgroundBlur: 10,
   cardBack: "classic",
   haptics: true,
@@ -168,7 +180,7 @@ export const DEFAULT_OPTS: GameOpts = {
   bgAnimation: true,
   healingGauge: true,
   trackLyrics: true,
-  lyricsMode: "poetic",
+  lyricsMode: "track",
 };
 
 export function getEffectiveDpr(res: RenderResolution = 'high'): number {
@@ -254,6 +266,7 @@ export function loadOpts(): GameOpts {
     gameBackground: ((b: string) => (b === 'lyric_cinema' ? 'cover_blur' : b))(dbSettings?.gameBackground ?? (localStorage.getItem("opt_gameBackground") ?? "cover_blur")),
     gameTrack: dbSettings?.gameTrack ?? (localStorage.getItem("opt_gameTrack") ?? "transparent"),
     hudStyle: toHudStyle(dbSettings?.hudStyle ?? localStorage.getItem("opt_hudStyle")),
+    noteSkin: toNoteSkin(dbSettings?.noteSkin ?? localStorage.getItem("opt_noteSkin")),
     backgroundBlur: dbSettings?.backgroundBlur ?? (parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "10") || 10),
     cardBack: dbSettings?.cardBack ?? (localStorage.getItem("opt_cardBack") ?? "classic"),
     haptics: dbSettings?.haptics ?? bool("opt_haptics", true),

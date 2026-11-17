@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { ARROW_LANE_KEYS, DEFAULT_OPTS, keyLabel, loadOpts, type GameOpts, type GfxLevel, type HudStyle, type LyricsMode, type ParticleDensity, type PovMode } from '@/lib/options';
+import { ARROW_LANE_KEYS, DEFAULT_OPTS, keyLabel, loadOpts, type GameOpts, type GfxLevel, type HudStyle, type LyricsMode, type NoteSkin, type ParticleDensity, type PovMode } from '@/lib/options';
 import { audioManager } from '@/game/audio';
 import { useVaultStore, type ProfileSettings } from '@/store/useVaultStore';
 import { DEFAULT_PROFILE_SETTINGS, persistSettings } from '@/utils/settingsStorage';
@@ -46,7 +46,11 @@ const VIEWS: { id: PovMode; name: string }[] = [
   { id: 'mobius_loop', name: 'Möbius loop' },
 ];
 const HUDS: { id: HudStyle; name: string }[] = [
-  { id: 'stanza', name: 'Poetic GUI' }, { id: 'console', name: 'Console Rail' }, { id: 'beta', name: 'Beta' },
+  { id: 'neon', name: 'Neon Reel' }, { id: 'stanza', name: 'Poetic GUI' }, { id: 'console', name: 'Console Rail' }, { id: 'beta', name: 'Beta' },
+];
+const NOTE_SKIN_ITEMS: { id: NoteSkin; name: string }[] = [
+  { id: 'match', name: 'Match HUD' }, { id: 'rail', name: 'LED Chip' }, { id: 'ink', name: 'Ink Slip' },
+  { id: 'neon', name: 'Neon Tube' }, { id: 'vinyl', name: 'Vinyl' }, { id: 'classic', name: 'Piano Key' },
 ];
 const LYRICS: { id: LyricsMode; name: string }[] = [
   { id: 'off', name: 'Off' }, { id: 'track', name: 'On the road' }, { id: 'poetic', name: 'Poetic Lines' },
@@ -180,6 +184,7 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
             <Cycle label="View" value={opts.povMode} items={VIEWS} onChange={(v) => save('povMode', v)} />
             <Toggle label="Change view each stage" {...bool('stagePovSwitch')} />
             <Cycle label="HUD" value={opts.hudStyle} items={HUDS} onChange={(v) => save('hudStyle', v)} />
+            <Cycle label="Notes" value={opts.noteSkin ?? 'classic'} items={NOTE_SKIN_ITEMS} onChange={(v) => save('noteSkin', v)} />
             {opts.hudStyle === 'stanza'
               ? <p className="mo-hint">The Poetic GUI inks each lyric line as you play.</p>
               : <Cycle label="Lyrics" value={opts.lyricsMode} items={LYRICS} onChange={(v) => save('lyricsMode', v)} />}
