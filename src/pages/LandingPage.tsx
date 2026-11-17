@@ -28,6 +28,7 @@ import TitleSpacer from '../components/TitleSpacer';
 import TokenBundleShelf from '../components/TokenBundleShelf';
 import ShopConsole from '../components/ShopConsole';
 import AudiusHomeCta from '../components/audius/AudiusHomeCta';
+import ClawHomeCta from '../components/home/ClawHomeCta';
 
 // ===== BRUTALIST TICKER =====
 const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF RETENTION — COLLECT. SELL. EARN. — DAILY LEVEL UNLOCKS — V⚡ TOKENS — MYTHIC ROLLS — LIVE PLAY — ';
@@ -689,9 +690,6 @@ export default function LandingPage() {
         </motion.p>
       </section>
 
-      {/* ===== th3scr1b3 × AUDIUS: WEEKLY TOP 5 ===== */}
-      <AudiusHomeCta />
-
       {/* ===== HERO ONBOARDING DASHBOARD ===== */}
       <section className="relative z-10 px-4 md:px-8 py-4 max-w-6xl mx-auto mb-12">
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-12 items-center">
@@ -895,6 +893,12 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ===== TWO MAIN CTAs: th3scr1b3 × AUDIUS WEEKLY TOP 5 + BONUS CLAW ===== */}
+      <div className="home-cta-pair">
+        <AudiusHomeCta />
+        <ClawHomeCta />
+      </div>
 
       {/* Hard divider */}
       <div className="h-px mx-4 md:mx-8 bg-white/10" />
