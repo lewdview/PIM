@@ -11,6 +11,7 @@ import { drawInkKey } from './inkNotes';
 import { drawRailKey } from './railNotes';
 import { drawVinylKey } from './vinylNotes';
 import { gateShadows, shadowScaleOf } from './shadowGate';
+import { getNote3DQuality, slabLateral, withSlabLateral } from './notes3d';
 
 type SkinFn = (
   ctx: CanvasRenderingContext2D,
@@ -110,7 +111,14 @@ function stillSprite(
   const m = ctx.getTransform();
   const res = Math.max(1, Math.min(3, Math.round(Math.hypot(m.a, m.b) * 2) / 2)); // device pixels per unit
   const glow = shadowScaleOf(ctx);
-  const key = `${activeId}|${noteType ?? ''}|${bw}|${bh}|${laneColor}|${p}|${res}|${glow}`;
+  // The classic key is a 3D slab: its look depends on the 3D note quality (changed by hand or
+  // by adaptive quality) and its side wall leans toward the screen centre, so which wall shows
+  // depends on where the note is. Both go in the key; the lean is snapped to quarters
+  // (at most a couple of pixels off) so a lane's notes keep sharing sprites.
+  const slab = !active && classicOn;
+  const lean = slab ? Math.round(slabLateral(ctx) * 4) / 4 : 0;
+  const slabKey = slab ? `|${getNote3DQuality()}|${lean}` : '';
+  const key = `${activeId}|${noteType ?? ''}|${bw}|${bh}|${laneColor}|${p}|${res}|${glow}${slabKey}`;
   let sprite = sprites.get(key);
   if (sprite) {
     // Refresh its place in the eviction order.
@@ -127,7 +135,8 @@ function stillSprite(
   gateShadows(sctx, glow);
   sctx.scale(res, res);
   sctx.translate(w / 2, h / 2);
-  paint(sctx, bw, bh, laneColor, p, false, undefined, noteType, 0);
+  if (slab) withSlabLateral(lean, () => paint(sctx, bw, bh, laneColor, p, false, undefined, noteType, 0));
+  else paint(sctx, bw, bh, laneColor, p, false, undefined, noteType, 0);
   sprite = { canvas, w, h };
   sprites.set(key, sprite);
   if (sprites.size > MAX_SPRITES) sprites.delete(sprites.keys().next().value as string);
