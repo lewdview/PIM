@@ -54,6 +54,35 @@ export function shade(color: string, k: number, alpha = 1): string {
 }
 
 /**
+ * Where the note sits across the screen, -1 (right edge) … +1 (left edge), read from the
+ * current transform origin (the note centre after translate()). It sets which side wall shows.
+ */
+export function slabLateral(ctx: CanvasRenderingContext2D): number {
+  try {
+    const m = ctx.getTransform();
+    const cw = ctx.canvas.width || 1;
+    return Math.max(-1, Math.min(1, (cw / 2 - m.e) / (cw / 2)));
+  } catch {
+    return 0;
+  }
+}
+
+// Set while a note is painted into an off-screen sprite, where the transform origin no longer
+// says where the note is on screen: the sprite cache passes the on-screen value instead.
+let lateralOverride: number | null = null;
+
+/** Runs `paint` with the slab's lean fixed to `lateral` (see slabLateral). */
+export function withSlabLateral<T>(lateral: number, paint: () => T): T {
+  const prev = lateralOverride;
+  lateralOverride = lateral;
+  try {
+    return paint();
+  } finally {
+    lateralOverride = prev;
+  }
+}
+
+/**
  * Screen-space extrusion vector for a note at the current transform origin.
  * The slab extends "down" toward the viewer and leans toward the screen
  * centre, so lanes left of centre show their right wall and vice versa.
@@ -67,16 +96,7 @@ export function getSlabExtrusion(
   const p = Math.max(0, Math.min(1, prog));
   // Tiles read thicker as they approach the camera.
   const depth = Math.min(noteH * 0.34, Math.max(3, noteH * (0.14 + 0.16 * p)));
-  let lateral = 0;
-  try {
-    const m = ctx.getTransform();
-    const cw = ctx.canvas.width || 1;
-    const sx = m.e; // origin is the note centre after translate()
-    lateral = (cw / 2 - sx) / (cw / 2); // -1 (right edge) … +1 (left edge)
-  } catch {
-    lateral = 0;
-  }
-  lateral = Math.max(-1, Math.min(1, lateral));
+  const lateral = lateralOverride ?? slabLateral(ctx);
   const dx = lateral * Math.min(noteW * 0.09, depth * 0.55);
   return { dx, dy: depth, depth };
 }
