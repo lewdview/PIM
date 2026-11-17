@@ -274,7 +274,12 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
           {levelId === 'runner' && <p className="max-w-md text-base text-violet-100">{RUNNER_COURSES[stage].brief}</p>}
           <p className="max-w-md text-sm text-zinc-300 font-mono">
             {game.hint}
-            {levelId === 'runner' && <span className="mt-1 block text-zinc-400 sm:hidden">Tap high to jump or low to slide.</span>}
+            {levelId === 'runner' && (
+              <span className="mt-1 block text-zinc-300">
+                <span className="hidden sm:inline">Press jump again in midair to double jump.</span>
+                <span className="sm:hidden">Tap high to jump, again in midair to double jump, or low to slide.</span>
+              </span>
+            )}
           </p>
           <button
             id={levelId === 'runner' ? 'runner-start' : undefined}

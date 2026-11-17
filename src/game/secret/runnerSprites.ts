@@ -1,7 +1,7 @@
 import atlasUrl from './assets/runner.webp';
 
 const CELL = 224;
-const ROW = { run: 0, jump: 1, slide: 2, attack: 3, damage: 4, death: 5, resurrect: 6, taunt: 7, block: 8 };
+const ROW = { run: 0, jump: 1, slide: 2, attack: 3, damage: 4, death: 5, resurrect: 6, taunt: 7, block: 8, doubleJump: 9 };
 const REVIVE_BASELINES = [621, 621, 634, 621, 621, 643, 684, 711, 719, 719];
 
 export type RunnerPose = keyof typeof ROW;
@@ -36,7 +36,7 @@ export function drawRunnerSprite(
   const baseline = pose === 'resurrect' ? REVIVE_BASELINES[frame] : 663;
   ctx.drawImage(
     image,
-    (frame % 5) * CELL, (ROW[pose] * 2 + Math.floor(frame / 5)) * CELL, CELL, CELL,
+    frame * CELL, ROW[pose] * CELL, CELL, CELL,
     x - size * 0.46, feet - (baseline / 720) * size, size, size,
   );
   return true;

@@ -14,6 +14,7 @@ import { drawRunnerSprite, type RunnerPose } from './runnerSprites';
 const JUMP_H = 0.2;            // apex height, in screen heights
 const GRAVITY = 8 * JUMP_H;    // airtime of exactly one beat
 const JUMP_V = GRAVITY / 2;
+const DOUBLE_JUMP_V = JUMP_V * 0.82;
 const PLATFORM_H = 0.12;
 const PLAYER_H = 0.12;
 const DUCK_H = 0.088;
@@ -53,6 +54,7 @@ export class RunnerLevel implements SecretGame {
   private duckUntil = -1;
   private hurtUntil = -1;
   private jumpAt = -Infinity;
+  private doubleJumpAt = -Infinity;
   private swingAt = -Infinity;
   private blockAt = -Infinity;
   private tauntAt = -Infinity;
@@ -93,17 +95,29 @@ export class RunnerLevel implements SecretGame {
     return s >= 0 && Math.abs(this.y - s) < 0.002 && this.vy === 0;
   }
 
+  private canDoubleJump() {
+    return this.jumpAt > -Infinity && this.doubleJumpAt === -Infinity;
+  }
+
+  private resetJump() {
+    this.jumpAt = -Infinity;
+    this.doubleJumpAt = -Infinity;
+  }
+
   input(a: SecretInput, beat: number) {
     if (this.done || this.lives === 0 || beat < 0) return;
     let kind = a.kind;
     if (a.kind === 'pointer') kind = a.y < a.h * 0.55 ? 'jump' : 'duck';
-    if ((kind === 'jump' || kind === 'fire') && this.grounded(beat)) {
-      this.vy = JUMP_V;
-      this.jumpAt = beat;
+    if (kind === 'jump' || kind === 'fire') {
+      const onGround = this.grounded(beat);
+      if (!onGround && !this.canDoubleJump()) return;
+      this.vy = onGround ? JUMP_V : DOUBLE_JUMP_V;
       this.duckUntil = -1;
       this.tauntAt = -Infinity;
       this.blockAt = -Infinity;
-      if (offBeat(beat) < ON_BEAT) {
+      if (onGround) this.jumpAt = beat;
+      else this.doubleJumpAt = beat;
+      if (onGround && offBeat(beat) < ON_BEAT) {
         this.score += 50;
         this.popups.push({ text: 'ON BEAT +50', at: beat, y: this.y });
       }
@@ -167,6 +181,7 @@ export class RunnerLevel implements SecretGame {
       if (this.vy <= 0 && this.y <= top && prevY >= top - 0.01) {
         this.y = top;
         this.vy = 0;
+        this.resetJump();
       }
     }
     if (this.y < -0.15) {
@@ -175,6 +190,7 @@ export class RunnerLevel implements SecretGame {
       const pit = this.pitAt(beat);
       this.y = 0.06;
       this.vy = 0.2;
+      this.resetJump();
       if (pit) pit.done = true;
     }
 
@@ -252,6 +268,7 @@ export class RunnerLevel implements SecretGame {
     if (beat - this.blockAt < BLOCK_BEATS) return ['block', actionFrame(beat - this.blockAt, BLOCK_BEATS)];
     if (this.ducking(beat)) return ['slide', Math.min(9, 3 + Math.floor((beat - this.duckUntil + 0.8) * 7 / 0.8))];
     if (beat - this.swingAt < SWING_BEATS) return ['attack', actionFrame(beat - this.swingAt, SWING_BEATS)];
+    if (this.doubleJumpAt > -Infinity) return ['doubleJump', Math.max(2, actionFrame(beat - this.doubleJumpAt, 0.94))];
     if (this.vy !== 0) return ['jump', Math.max(2, actionFrame(beat - this.jumpAt, 1))];
     if (beat - this.tauntAt < TAUNT_BEATS) return ['taunt', actionFrame(beat - this.tauntAt, TAUNT_BEATS)];
     return ['run', Math.floor(beat % 1 * 10)];
@@ -264,7 +281,7 @@ export class RunnerLevel implements SecretGame {
     return {
       stage: this.stage, beat, pose, frame, lives: this.lives, score: this.score, won: this.won, whistle: this.foundWhistle,
       coordinates: 'Canvas pixels from the top left. Player y is at the feet.',
-      player: { x: w * 0.22, y: h * (0.78 - this.y), grounded: this.grounded(courseBeat) },
+      player: { x: w * 0.22, y: h * (0.78 - this.y), grounded: this.grounded(courseBeat), canDoubleJump: this.canDoubleJump() },
       obstacles: this.obstacles.filter(o => !o.done && o.beat + o.len >= courseBeat - 1 && o.beat <= courseBeat + w * 0.78 / beatPx)
         .map(({ kind, beat, len }) => ({ kind, beat, len, x: w * 0.22 + (beat - courseBeat) * beatPx })),
     };
@@ -428,7 +445,7 @@ export class RunnerLevel implements SecretGame {
   }
 
   private drawLaser(ctx: CanvasRenderingContext2D, x: number, groundY: number, h: number, pulse: number, color: string) {
-    const top = groundY - h * 0.46;
+    const top = groundY - h * 0.50;
     ctx.save();
     ctx.fillStyle = color;
     ctx.shadowColor = color;
