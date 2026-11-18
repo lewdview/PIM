@@ -1,0 +1,103 @@
+/* Homepage call to action: Bonus claw. Mirrors audiusHomeCta.css in a warm palette. */
+
+.chc { position: relative; z-index: 10; height: 100%; }
+.chc-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  padding: 20px 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 85% 30%, rgba(255, 56, 0, 0.35), transparent 60%),
+    linear-gradient(135deg, #1a0602 0%, #3a0f04 60%, #0f0301 100%);
+  border: 3px solid #fff6e0;
+  box-shadow: 0 0 0 3px #000, 7px 7px 0 3px #ff3800;
+}
+.chc-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 184, 0, 0.09) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(0deg, rgba(255, 184, 0, 0.09) 0 1px, transparent 1px 28px);
+  pointer-events: none;
+}
+.chc-inner > * { position: relative; }
+.chc-brand {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px;
+  font-family: 'Press Start 2P', 'JetBrains Mono', monospace;
+  font-size: clamp(8px, 2.3vw, 11px);
+  color: #fff;
+  background: #000;
+  border: 2px solid #ffb800;
+}
+.chc-claw {
+  display: inline-grid;
+  grid-template: repeat(7, 1fr) / repeat(7, 1fr);
+  width: 14px;
+  aspect-ratio: 1;
+  animation: chc-drop 2.4s steps(4) infinite;
+}
+.chc-claw i { background: #ffb800; }
+@keyframes chc-drop {
+  0%, 100% { transform: translateY(-2px); }
+  50% { transform: translateY(2px); }
+}
+.chc-title {
+  margin: 12px 0 6px;
+  font-family: 'Press Start 2P', 'JetBrains Mono', monospace;
+  font-size: clamp(18px, 4.6vw, 34px);
+  line-height: 1.25;
+  color: #fff;
+  text-shadow: 4px 4px 0 #000, 0 0 18px rgba(255, 56, 0, 0.9);
+}
+.chc-text {
+  margin: 0 0 14px;
+  max-width: 34rem;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 246, 224, 0.82);
+}
+.chc-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.chc-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ffd23f;
+}
+
+@media (max-width: 720px) {
+  .chc-inner { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chc-claw { animation: none; }
+}
+
+/* ── The pair: Audius Weekly Top 5 + Bonus claw, side by side on wide screens. ── */
+.home-cta-pair {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  max-width: 72rem;
+  margin: 0 auto 3rem;
+  padding: 0 1rem;
+}
+@media (min-width: 1024px) {
+  .home-cta-pair { grid-template-columns: 1fr 1fr; align-items: stretch; }
+  /* Half width: stack the Audius banner's copy over its art strip. */
+  .home-cta-pair .ahc-inner { flex-direction: column; align-items: stretch; }
+  .home-cta-pair .ahc-art { justify-content: space-between; }
+  .home-cta-pair .ahc-tile { width: auto; flex: 1 1 0; }
+  .home-cta-pair .ahc-copy { flex: 0 0 auto; }
+}
+.home-cta-pair .ahc { max-width: none; margin: 0; padding: 0; height: 100%; }
+.home-cta-pair .ahc-inner { height: 100%; }
