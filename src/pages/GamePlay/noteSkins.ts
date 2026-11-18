@@ -11,6 +11,7 @@ import { drawInkKey } from './inkNotes';
 import { drawRailKey } from './railNotes';
 import { drawVinylKey } from './vinylNotes';
 import { gateShadows, shadowScaleOf } from './shadowGate';
+import { getNote3DQuality, slabLateral, withSlabLateral } from './notes3d';
 
 type SkinFn = (
   ctx: CanvasRenderingContext2D,
@@ -51,11 +52,34 @@ export function resolveNoteSkin(skin: NoteSkin | null | undefined, hudStyle: Hud
 let active: SkinFn | null = null;
 let activeId: DrawnNoteSkin | null = null;
 
+// The classic piano key lives in GameplayCore.drawKey. It registers itself here so its still
+// notes can use the sprite cache too (it is the default skin, and drawn live it is the most
+// expensive one: several blurred shadows, gradients and a clip per note, every frame). Its
+// sweeping glass sheen is the one moving part, so that is drawn live over the stamped sprite.
+type ClassicKey = {
+  /** Draws the key without its sheen, centred on the origin. */
+  draw: SkinFn;
+  /** Draws just the moving sheen over a still key, centred on the origin. */
+  sheen: (ctx: CanvasRenderingContext2D, noteW: number, noteH: number, prog: number, timeOffset: number) => void;
+};
+let classic: ClassicKey | null = null;
+let classicOn = false;
+
+export function registerClassicKey(k: ClassicKey) {
+  classic = k;
+}
+
 /** GameplayCore calls this whenever the note skin or HUD style changes (null on unmount). */
 export function setNoteSkin(skin: DrawnNoteSkin | null) {
   active = (skin && SKINS[skin]) || null;
-  activeId = active ? skin : null;
+  classicOn = skin === 'classic';
+  activeId = active || classicOn ? skin : null;
   sprites.clear();
+}
+
+/** The function a still sprite is painted with: the active skin, or the classic key. */
+function painter(): SkinFn | null {
+  return active ?? (classicOn && classic ? classic.draw : null);
 }
 
 // ── Sprite cache ──
@@ -77,7 +101,8 @@ const MOVING_TYPES: ReadonlySet<string> = new Set(['mine', 'ghost', 'warp', 'war
 function stillSprite(
   ctx: CanvasRenderingContext2D, noteW: number, noteH: number, laneColor: string, prog: number, noteType: NoteType | undefined,
 ): { sprite: Sprite; bw: number; bh: number } | null {
-  if (!active || typeof document === 'undefined') return null;
+  const paint = painter();
+  if (!paint || typeof document === 'undefined') return null;
   // Sizes are snapped so that neighbouring notes share a sprite; it is stretched the last
   // few pixels when stamped.
   const bw = Math.max(48, Math.ceil(noteW / 24) * 24);
@@ -86,7 +111,14 @@ function stillSprite(
   const m = ctx.getTransform();
   const res = Math.max(1, Math.min(3, Math.round(Math.hypot(m.a, m.b) * 2) / 2)); // device pixels per unit
   const glow = shadowScaleOf(ctx);
-  const key = `${activeId}|${noteType ?? ''}|${bw}|${bh}|${laneColor}|${p}|${res}|${glow}`;
+  // The classic key is a 3D slab: its look depends on the 3D note quality (changed by hand or
+  // by adaptive quality) and its side wall leans toward the screen centre, so which wall shows
+  // depends on where the note is. Both go in the key; the lean is snapped to quarters
+  // (at most a couple of pixels off) so a lane's notes keep sharing sprites.
+  const slab = !active && classicOn;
+  const lean = slab ? Math.round(slabLateral(ctx) * 4) / 4 : 0;
+  const slabKey = slab ? `|${getNote3DQuality()}|${lean}` : '';
+  const key = `${activeId}|${noteType ?? ''}|${bw}|${bh}|${laneColor}|${p}|${res}|${glow}${slabKey}`;
   let sprite = sprites.get(key);
   if (sprite) {
     // Refresh its place in the eviction order.
@@ -103,7 +135,8 @@ function stillSprite(
   gateShadows(sctx, glow);
   sctx.scale(res, res);
   sctx.translate(w / 2, h / 2);
-  active(sctx, bw, bh, laneColor, p, false, undefined, noteType, 0);
+  if (slab) withSlabLateral(lean, () => paint(sctx, bw, bh, laneColor, p, false, undefined, noteType, 0));
+  else paint(sctx, bw, bh, laneColor, p, false, undefined, noteType, 0);
   sprite = { canvas, w, h };
   sprites.set(key, sprite);
   if (sprites.size > MAX_SPRITES) sprites.delete(sprites.keys().next().value as string);
@@ -112,16 +145,21 @@ function stillSprite(
 
 /** Draws the note with the active skin. False when the original renderer should draw it. */
 export const drawSkinnedKey: SkinFn = (ctx, noteW, noteH, laneColor, prog, isHold, swipeDirection, noteType, timeOffset) => {
-  if (!active) return false;
-  const still = !isHold && !swipeDirection && (noteType === undefined || !MOVING_TYPES.has(noteType));
+  const useClassic = !active && classicOn && !!classic;
+  if (!active && !useClassic) return false;
+  // The classic BREAK note pulses its aura, so it is drawn live like the other moving types.
+  const still = !isHold && !swipeDirection && (noteType === undefined || !MOVING_TYPES.has(noteType))
+    && !(useClassic && noteType === 'break');
   if (still && noteW > 0 && noteH > 0) {
     const hit = stillSprite(ctx, noteW, noteH, laneColor, prog, noteType);
     if (hit) {
       const kx = noteW / hit.bw, ky = noteH / hit.bh;
       const w = hit.sprite.w * kx, h = hit.sprite.h * ky;
       ctx.drawImage(hit.sprite.canvas, -w / 2, -h / 2, w, h);
+      if (useClassic) classic!.sheen(ctx, noteW, noteH, prog, timeOffset ?? 0);
       return true;
     }
   }
-  return active(ctx, noteW, noteH, laneColor, prog, isHold, swipeDirection, noteType, timeOffset);
+  // Moving classic notes fall through to drawKey's own renderer.
+  return active ? active(ctx, noteW, noteH, laneColor, prog, isHold, swipeDirection, noteType, timeOffset) : false;
 };
