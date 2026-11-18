@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams, useSearch } from 'wouter';
-import { AudioLines, Shield, Sword } from 'lucide-react';
+import { ArrowDown, ArrowUp, AudioLines, Gamepad2, Pause, Shield, Sword } from 'lucide-react';
 import { BeatClock, SECRET_TRACKS } from '../game/secret/chiptune';
 import { ShooterLevel } from '../game/secret/shooter';
 import { RunnerLevel, SKIES } from '../game/secret/runner';
@@ -27,15 +27,22 @@ import { markSecretLevelCleared, type SecretLevelId } from '../game/secret/warp'
 import { findRunnerWhistle, readRunnerProgress, runnerArcadePath, runnerMapPath } from '../game/secret/runnerProgress';
 import { warpResumePath } from '../game/secret/warpResume';
 import type { SecretGame, SecretInput } from '../game/secret/types';
+import { drawRunnerHud } from '../game/secret/runnerHud';
+import { useRunnerGamepad } from '../game/secret/useRunnerGamepad';
+import './SecretRunner.css';
 
-type Phase = 'intro' | 'playing' | 'over';
+type Phase = 'intro' | 'playing' | 'paused' | 'over';
 type LevelResult = { won: boolean; score: number; newWhistle: RunnerWhistleId | null };
 
 const COUNT_IN = 4; // beats of countdown before the level starts
 const RUNNER_ACTIONS = [
-  { kind: 'taunt', key: 'T', label: 'Taunt', icon: AudioLines },
-  { kind: 'block', key: 'C', label: 'Block', icon: Shield },
-  { kind: 'attack', key: 'X', label: 'Slash', icon: Sword },
+  { kind: 'taunt', key: 'T', label: 'Taunt', icon: AudioLines, pad: 'taunt' },
+  { kind: 'block', key: 'C', label: 'Block', icon: Shield, pad: 'block' },
+  { kind: 'attack', key: 'X', label: 'Slash', icon: Sword, pad: 'attack' },
+] as const;
+const TOUCH_MOVEMENT = [
+  { kind: 'jump', label: 'Jump', icon: ArrowUp },
+  { kind: 'duck', label: 'Slide', icon: ArrowDown },
 ] as const;
 
 const STICK = 0.5; // stick deflection that counts as a press
@@ -94,19 +101,28 @@ export default function SecretLevel() {
   const stage = parseRunnerStage(query.get('stage')) ?? 1;
   const progress = levelId === 'runner' ? readRunnerProgress() : null;
   if (progress && !progress.available.includes(stage)) {
-    return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-[#100b27] px-6 text-center text-white font-mono">
-        <h1 className="text-3xl font-black">BEAT RUNNER</h1>
-        <p className="text-sm text-purple-200">
-          {progress.hasEntry ? 'Clear the previous course or open a shortcut with a Warp Whistle.' : 'Hit a warp note during a song to earn the Warp Whistle.'}
-        </p>
-        <Link href={progress.hasEntry ? runnerMapPath(stage) : '/warp'} className="mt-2 rounded-full bg-fuchsia-500 px-6 py-3 font-bold">
-          {progress.hasEntry ? 'WORLD MAP' : 'WARP ZONE'}
-        </Link>
-      </div>
-    );
+    return <RunnerGate hasEntry={progress.hasEntry} stage={stage} />;
   }
   return <SecretLevelGame key={`${levelId}:${stage}`} levelId={levelId} stage={stage} query={query} />;
+}
+
+function RunnerGate({ hasEntry, stage }: { hasEntry: boolean; stage: RunnerStage }) {
+  const [, setLocation] = useLocation();
+  const backTo = hasEntry ? runnerMapPath(stage) : PLAYGAMA_MONTH > 0 ? `/chapter/${PLAYGAMA_MONTH}` : '/warp';
+  const pad = useRunnerGamepad(true, pressed => {
+    if (pressed.includes('back') || pressed.includes('confirm')) setLocation(backTo);
+  });
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-[#100b27] px-6 text-center text-white font-mono">
+      <h1 className="text-3xl font-black">BEAT RUNNER</h1>
+      <p className="text-sm text-purple-200">
+        {hasEntry ? 'Clear the previous course or open a shortcut with a Warp Whistle.' : 'Hit a warp note during a song to earn the Warp Whistle.'}
+      </p>
+      <Link href={backTo} className="mt-2 rounded-full bg-fuchsia-500 px-6 py-3 font-bold">
+        {hasEntry ? 'WORLD MAP' : PLAYGAMA_MONTH > 0 ? 'CHAPTER' : 'WARP ZONE'} {pad && <kbd className="runner-pad-key">{pad.back}</kbd>}
+      </Link>
+    </div>
+  );
 }
 
 type DebugWindow = Window & { render_game_to_text?: () => string; advanceTime?: (ms: number) => void };
@@ -126,6 +142,8 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
   const stepBeat = useRef(-COUNT_IN);
   const drawnBeat = useRef(-COUNT_IN);
   const rafRef = useRef(0);
+  const processedWhistle = useRef(false);
+  const newWhistle = useRef<RunnerWhistleId | null>(null);
   const [phase, setPhase] = useState<Phase>('intro');
   const [result, setResult] = useState<LevelResult | null>(null);
   const nextCourse = RUNNER_STAGES[RUNNER_STAGES.indexOf(stage) + 1];
@@ -138,7 +156,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
   const outroAtRef = useRef<number | null>(null);
   const [introOpts] = useState<IntroOptions>(() => ({
     reduced,
-    header: levelId === 'runner' && !via ? ['BEAT RUNNER', `LEVEL 0${stage}`] : undefined,
+    header: levelId === 'runner' && (!via || via === 'arcade') ? ['BEAT RUNNER', `LEVEL 0${stage}`] : undefined,
     runnerSprite: drawRunnerSprite,
     sky: levelId === 'runner' ? SKIES[stage] : undefined,
   }));
@@ -149,7 +167,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
     gameRef.current?.input(a, stepRunner ? stepBeat.current : clock.beat() - COUNT_IN);
   }, [stepRunner]);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (controller = false) => {
     if (clockRef.current) return;
     // Before the card is up, the first press only fast-forwards the intro
     if (phase === 'intro' && !introReady) {
@@ -161,15 +179,27 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
     gameRef.current = makeLevel(levelId, stage, result?.won === false);
     stepBeat.current = -COUNT_IN;
     drawnBeat.current = -COUNT_IN;
+    processedWhistle.current = false;
+    newWhistle.current = null;
     setResult(null);
     const clock = new BeatClock(SECRET_TRACKS[levelId]);
     clockRef.current = clock;
-    if (!stepRunner) await clock.start();
+    if (!stepRunner) await clock.start(controller);
     if (clockRef.current === clock) {
       sendGameplayMessage('gameplay_started');
       setPhase('playing');
     }
   }, [levelId, result, stage, stepRunner, phase, introReady]);
+
+  const togglePause = useCallback(() => {
+    if (phase === 'playing') {
+      clockRef.current?.pause();
+      setPhase('paused');
+    } else if (phase === 'paused') {
+      clockRef.current?.resume();
+      setPhase('playing');
+    }
+  }, [phase]);
 
   // Intro loop: tunnel → flash → title slam → level diorama, then the START card
   useEffect(() => {
@@ -211,18 +241,17 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
       return () => { if (debug.render_game_to_text === snapshot) delete debug.render_game_to_text; };
     }
     let last = performance.now();
-    let processedWhistle = false;
-    let newWhistle: RunnerWhistleId | null = null;
     const drawFrame = (beat: number, dt: number) => {
       drawnBeat.current = beat;
       if (beat >= 0) game.update(beat, dt);
-      if (game instanceof RunnerLevel && game.foundWhistle && !processedWhistle) {
-        processedWhistle = true;
-        if (findRunnerWhistle(game.foundWhistle)) newWhistle = game.foundWhistle;
+      if (game instanceof RunnerLevel && game.foundWhistle && !processedWhistle.current) {
+        processedWhistle.current = true;
+        if (findRunnerWhistle(game.foundWhistle)) newWhistle.current = game.foundWhistle;
       }
       const { w, h } = canvasFrame(canvas, ctx);
       game.draw(ctx, w, h, beat);
-      drawHud(ctx, w, h, game, beat);
+      if (game instanceof RunnerLevel) drawRunnerHud(ctx, w, h, game, beat);
+      else drawHud(ctx, w, h, game, beat);
 
       // Leaving the intro: the card collapses into the tunnel, then the level irises open
       const outroAt = outroAtRef.current;
@@ -243,7 +272,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
         sendGameplayMessage('gameplay_stopped');
         clockRef.current = null;
         if (game.won) markSecretLevelCleared(levelId === 'runner' ? RUNNER_COURSES[stage].clearId : levelId, game.score);
-        setResult({ won: game.won, score: game.score, newWhistle });
+        setResult({ won: game.won, score: game.score, newWhistle: newWhistle.current });
         setPhase('over');
       }
     };
@@ -277,6 +306,13 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
       const k = e.key;
+      if (levelId === 'runner' && (k.toLowerCase() === 'p' || (k === 'Escape' && !document.fullscreenElement))) {
+        if (phase === 'playing' || phase === 'paused') {
+          e.preventDefault();
+          togglePause();
+        }
+        return;
+      }
       if (k.toLowerCase() === 'f' && levelId === 'runner') {
         const toggle = document.fullscreenElement
           ? document.exitFullscreen()
@@ -298,17 +334,22 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
         void start();
         return;
       }
-      if (phase === 'playing') send({ kind: a } as SecretInput);
+      if (phase === 'playing') {
+        if (e.isTrusted) void clockRef.current?.unlockSound();
+        send({ kind: a } as SecretInput);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [levelId, phase, send, start]);
+  }, [levelId, phase, send, start, togglePause]);
 
   // Gamepad: see readPad for the in-level buttons. On the menus Ⓐ or Start starts and
   // continues, Ⓧ goes to the next course, Ⓨ retries, Ⓑ or Select leaves.
   const leaveRef = useRef<() => void>(() => {});
   const nextRef = useRef<() => void>(() => {});
   useEffect(() => {
+    // Beat Runner reads the controller through useRunnerGamepad below.
+    if (levelId === 'runner') return;
     let raf = 0;
     let prev = new Set<PadAction>();
     let connected = false;
@@ -351,7 +392,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
   }, []);
 
   const onPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (phase !== 'playing') return;
+    if (phase !== 'playing' || (levelId === 'runner' && e.button !== 0)) return;
     const r = e.currentTarget.getBoundingClientRect();
     send({ kind: 'pointer', x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height });
   };
@@ -380,8 +421,51 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
   };
   nextRef.current = () => { if (result?.won && nextCourse) nextStage(); };
 
+  const pad = useRunnerGamepad(levelId === 'runner', pressed => {
+    const confirm = pressed.includes('confirm');
+    const back = pressed.includes('back');
+    const menu = pressed.includes('menu');
+    if (phase === 'intro') {
+      if (back) leave();
+      else if (confirm || menu) void start(true);
+    } else if (phase === 'paused') {
+      if (back) leave();
+      else if (confirm || menu) togglePause();
+    } else if (phase === 'over') {
+      if (back) leave();
+      else if (pressed.includes('attack')) void start(true);
+      else if (confirm || menu) {
+        if (result?.won && nextCourse) nextStage();
+        else if (result?.won) leave();
+        else void start(true);
+      }
+    } else if (menu) togglePause();
+    else if (confirm || pressed.includes('up')) send({ kind: 'jump' });
+    else if (back || pressed.includes('down')) send({ kind: 'duck' });
+    else if (pressed.includes('block')) send({ kind: 'block' });
+    else if (pressed.includes('attack')) send({ kind: 'attack' });
+    else if (pressed.includes('taunt')) send({ kind: 'taunt' });
+  });
+
+  const actionPress = (kind: 'jump' | 'duck' | 'attack' | 'block' | 'taunt') => ({
+    onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      send({ kind });
+    },
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+      if (event.detail === 0) send({ kind }); // Keyboard and assistive technology activation.
+    },
+  });
+
   return (
-    <div className="fixed inset-0 bg-black text-white select-none" style={{ touchAction: 'none' }}>
+    <div
+      className="fixed inset-0 bg-black text-white select-none"
+      style={{ touchAction: 'none' }}
+      onPointerDownCapture={(event) => {
+        if (event.isTrusted && phase === 'playing') void clockRef.current?.unlockSound();
+      }}
+    >
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full"
@@ -396,7 +480,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
         >
           {/* The title is drawn on the canvas; this keeps it readable for screen readers */}
           <h1 className="sr-only">
-            {levelId === 'runner' && !via ? `Beat Runner level ${stage}` : 'Warp zone, secret level found'}: {game.title}
+            {levelId === 'runner' && (!via || via === 'arcade') ? `Beat Runner level ${stage}` : 'Warp zone, secret level found'}: {game.title}
           </h1>
           <div
             className="flex flex-col items-center gap-3 transition-all duration-500 ease-out"
@@ -421,7 +505,12 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
                 )}
               </p>
             </div>
-            {padConnected && <p className="max-w-md text-xs text-fuchsia-200 font-mono">{game.padHint}</p>}
+            {levelId === 'runner' ? pad && (
+              <p className="runner-pad-legend">
+                <Gamepad2 size={17} aria-hidden />
+                {pad.confirm} jump · {pad.back} slide · {pad.attack} slash · {pad.block} block · {pad.taunt} taunt · {pad.menu} pause
+              </p>
+            ) : padConnected && <p className="max-w-md text-xs text-fuchsia-200 font-mono">{game.padHint}</p>}
             <button
               id={levelId === 'runner' ? 'runner-start' : undefined}
               onClick={() => void start()}
@@ -436,7 +525,9 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
             <button onClick={leave} className="text-xs text-zinc-300 font-mono underline">
               {resumePath || songResults ? 'back to the song' : levelId === 'runner' ? 'back to world map' : 'skip'}
             </button>
-            {padConnected && <div className="text-xs text-zinc-400 font-mono">Ⓐ start · Ⓑ back</div>}
+            {levelId === 'runner'
+              ? pad && <div className="text-xs text-zinc-400 font-mono">{pad.confirm} start · {pad.back} back</div>
+              : padConnected && <div className="text-xs text-zinc-400 font-mono">Ⓐ start · Ⓑ back</div>}
           </div>
           {!introReady && (
             <div className="absolute bottom-4 right-4 text-[10px] tracking-[0.3em] text-zinc-400 font-mono">TAP TO SKIP ▸▸</div>
@@ -450,29 +541,53 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
       )}
 
       {phase === 'playing' && levelId === 'runner' && (
-        <div className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] flex gap-1.5 sm:gap-2">
-          {RUNNER_ACTIONS.map(({ kind, key, label, icon: Icon }) => (
-            <button
-              type="button"
-              key={kind}
-              onClick={(event) => {
-                send({ kind });
-                if (event.detail > 0) event.currentTarget.blur();
-              }}
-              aria-keyshortcuts={key}
-              className={`flex min-h-12 items-center justify-center gap-1.5 rounded-xl border px-2.5 font-mono text-xs font-black uppercase active:brightness-150 sm:px-4 ${kind === 'block' ? 'border-cyan-200/65 bg-[#103142]/90 text-cyan-50' : 'border-fuchsia-300/65 bg-[#28123b]/90 text-fuchsia-50'}`}
-            >
-              <Icon size={14} aria-hidden />
-              {label} <kbd className="hidden text-white/60 sm:inline">{key}</kbd>
+        <>
+          <button className="runner-pause" type="button" onClick={togglePause} aria-label="Pause" aria-keyshortcuts="P Escape">
+            <Pause size={18} aria-hidden />
+          </button>
+          <div className="runner-controls">
+            <div className="runner-controls-movement">
+              {TOUCH_MOVEMENT.map(({ kind, label, icon: Icon }) => (
+                <button type="button" key={kind} className="runner-control" {...actionPress(kind)}>
+                  <Icon size={16} aria-hidden /> {label}
+                </button>
+              ))}
+            </div>
+            <div className="runner-controls-actions">
+              {RUNNER_ACTIONS.map(({ kind, key, label, icon: Icon, pad: padKey }) => (
+                <button
+                  type="button"
+                  key={kind}
+                  aria-keyshortcuts={key}
+                  className={`runner-control runner-control--${kind}`}
+                  {...actionPress(kind)}
+                >
+                  <Icon size={16} aria-hidden /> {label} <kbd className="runner-control-key">{pad?.[padKey] ?? key}</kbd>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {phase === 'paused' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-[#0b0916]/85 px-6 text-center">
+          <h2 className="runner-screen-title">Paused</h2>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button onClick={togglePause} className="rounded-full bg-fuchsia-500 px-6 py-3 font-mono font-black">
+              Resume {pad && <kbd className="runner-pad-key">{pad.confirm}</kbd>}
             </button>
-          ))}
+            <button onClick={leave} className="rounded-full border border-fuchsia-400 px-6 py-3 font-mono font-bold">
+              {songResults ? 'Back to the song' : 'World Map'} {pad && <kbd className="runner-pad-key">{pad.back}</kbd>}
+            </button>
+          </div>
         </div>
       )}
 
       {phase === 'over' && result && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center bg-black/80">
           <div className="text-xs tracking-[0.4em] font-mono text-fuchsia-300">{game.title}</div>
-          <h2 className="text-4xl sm:text-5xl font-black font-mono" style={{ color: result.won ? '#7CFFCB' : '#FF3B6B' }}>
+          <h2 className={levelId === 'runner' ? 'runner-screen-title' : 'text-4xl sm:text-5xl font-black font-mono'} style={{ color: result.won ? '#7CFFCB' : '#FF3B6B' }}>
             {result.won ? 'LEVEL CLEAR' : 'SIGNAL LOST'}
           </h2>
           <div className="text-2xl font-mono">{result.score.toLocaleString()}</div>
@@ -483,10 +598,12 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
               className="px-6 py-3 rounded-full border border-fuchsia-400 font-black font-mono tracking-widest"
             >
               RETRY
+              {pad && <kbd className="runner-pad-key">{result.won ? pad.attack : `${pad.confirm} / ${pad.attack}`}</kbd>}
             </button>
             {levelId === 'runner' && nextCourse && result.won && (
               <button onClick={nextStage} className="px-6 py-3 rounded-full bg-fuchsia-500 hover:bg-fuchsia-400 font-black font-mono tracking-widest">
                 NEXT LEVEL
+                {pad && <kbd className="runner-pad-key">{pad.confirm}</kbd>}
               </button>
             )}
             <button
@@ -494,11 +611,12 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
               className={`px-6 py-3 rounded-full font-black font-mono tracking-widest ${levelId === 'runner' && nextCourse && result.won ? 'border border-fuchsia-400' : 'bg-fuchsia-500 hover:bg-fuchsia-400'}`}
             >
               {resumePath ? 'RESUME SONG' : songResults || levelId === 'shooter' ? 'CONTINUE' : 'WORLD MAP'}
+              {pad && <kbd className="runner-pad-key">{result.won && !nextCourse ? `${pad.confirm} / ${pad.back}` : pad.back}</kbd>}
             </button>
           </div>
-          {padConnected && (
+          {levelId !== 'runner' && padConnected && (
             <div className="text-xs text-zinc-400 font-mono">
-              Ⓨ retry{levelId === 'runner' && nextCourse && result.won ? ' · Ⓧ next level' : ''} · Ⓐ continue
+              Ⓨ retry · Ⓐ continue
             </div>
           )}
           {levelId === 'runner' && songResults && (

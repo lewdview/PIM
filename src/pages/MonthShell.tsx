@@ -52,6 +52,7 @@ const ChapterStory = lazyScreen(() => import('./campaign/ChapterStory'));
 const GamePlay = lazyScreen(() => import('./GamePlay'));
 const MonthResults = lazyScreen(() => import('./month/MonthResults'));
 const SecretLevel = lazyScreen(() => import('./SecretLevel'));
+const RunnerWorldMap = lazyScreen(() => import('./RunnerWorldMap'));
 const MonthEnding = lazyScreen(() => import('./month/MonthEnding'));
 const MonthListen = lazyScreen(() => import('./month/MonthListen'));
 const MonthStoryScene = lazyScreen(() => import('./month/MonthStoryScene'));
@@ -67,7 +68,7 @@ function TutorialDone() {
   return <Redirect to={HOME} replace />;
 }
 
-function MuteButton({ inPlay }: { inPlay: boolean }) {
+function MuteButton({ inPlay, runner }: { inPlay: boolean; runner: boolean }) {
   const [muted, setMuted] = useMuted();
   return (
     <button
@@ -76,6 +77,7 @@ function MuteButton({ inPlay }: { inPlay: boolean }) {
       aria-label={muted ? 'Unmute sound' : 'Mute sound'}
       aria-pressed={muted}
       data-play={inPlay || undefined}
+      data-runner={runner || undefined}
       onClick={() => setMuted(!muted)}
     >
       {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
@@ -137,12 +139,14 @@ export default function MonthShell() {
           }
           .pg-mute:hover { border-color: rgba(255, 255, 255, 0.45); }
           .pg-mute[data-play] { top: 30px; width: 34px; height: 34px; }
+          /* Beat Runner keeps pause and lives top right: the mute button sits below them. */
+          .pg-mute[data-runner] { top: 62px; right: calc(14px + var(--pg-ad-right, 0px)); width: 36px; height: 36px; }
           .pg-options-layer { position: fixed; inset: 0; z-index: 10000; }
         `}</style>
         <BackgroundMusic />
         <GamepadCursor />
         {/* In a song the HUD carries its own mute button, next to fullscreen. */}
-        {!location.startsWith('/play/') && <MuteButton inPlay={location.startsWith('/secret/')} />}
+        {!location.startsWith('/play/') && <MuteButton inPlay={location.startsWith('/secret/')} runner={location.startsWith('/secret/runner')} />}
         <main className="flex-1 flex flex-col relative">
           <ErrorBoundary sectionName="PAGE_ROUTER">
             <Suspense
@@ -157,6 +161,7 @@ export default function MonthShell() {
                 <Route path="/play/:songId" component={GamePlay} />
                 <Route path="/results/:songId" component={MonthResults} />
                 <Route path="/secret/:level" component={SecretLevel} />
+                <Route path="/warp/runner" component={RunnerWorldMap} />
                 <Route path="/ending/:id" component={MonthEnding} />
                 <Route path="/story/:id" component={MonthStoryScene} />
                 <Route path="/listen" component={MonthListen} />

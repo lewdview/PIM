@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones, BookOpen, Share2, Cpu, Layers } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones, BookOpen, Share2, Cpu, Layers, Footprints } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -38,6 +38,8 @@ import { hideBroken } from './hideBroken';
 import { ArcadeBackdrop, SlamTitle, StageWipe } from './arcade';
 import MonthOptions from '@/pages/month/MonthOptions';
 import MonthAbout from '@/pages/month/MonthAbout';
+import { hasWarpWhistle } from '@/game/secret/warp';
+import { runnerMapPath } from '@/game/secret/runnerProgress';
 import MonthSong from '@/pages/month/MonthSong';
 import MonthEndings from '@/pages/month/MonthEndings';
 import MonthAlbum from '@/pages/month/album/MonthAlbum';
@@ -594,6 +596,12 @@ export default function ChapterStory() {
             {story && (
               <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('story'); }}>
                 <BookOpen size={14} /> Story
+              </button>
+            )}
+            {/* Beat Runner stays a secret until the first warp note is caught. */}
+            {PLAYGAMA_MONTH > 0 && hasWarpWhistle() && (
+              <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setLocation(runnerMapPath()); }}>
+                <Footprints size={14} /> Beat Runner
               </button>
             )}
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('endings'); }}>

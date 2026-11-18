@@ -69,8 +69,15 @@
 /* ===== BASE STYLES ===== */
 *, *::before, *::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+}
+
+/* Layered so Tailwind's p-* / m-* utilities can override it. Unlayered, this
+   reset outranked every spacing utility in the app. */
+@layer base {
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html {
