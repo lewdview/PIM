@@ -10,6 +10,7 @@ import { copyText, shareKinds, shareThroughPortal, type ShareKind } from '@/plat
 import { canvasBlob, saveCard } from '@/platform/playgama/shareCard';
 import type { AchievementState } from '@/platform/playgama/achievements';
 import '@/styles/monthPanels.css';
+import { t } from '@/i18n';
 
 const PORTAL: Record<ShareKind, { label: string; icon: typeof Share2 }> = {
   share: { label: 'Share', icon: Share2 },
@@ -48,7 +49,7 @@ export default function MonthShare({ eyebrow, title, text, copyLabel, fileName, 
       setPreview(url);
       // Portals take the card as a data URL; a JPEG keeps it small.
       setDataUrl(canvas.toDataURL('image/jpeg', 0.85));
-    }).catch(() => setStatus('The card could not be drawn here. You can still copy the text.'));
+    }).catch(() => setStatus(t('The card could not be drawn here. You can still copy the text.')));
     return () => {
       alive = false;
       if (url) URL.revokeObjectURL(url);
@@ -60,19 +61,19 @@ export default function MonthShare({ eyebrow, title, text, copyLabel, fileName, 
   const copy = async () => {
     const ok = await copyText(text);
     setCopied(ok);
-    setStatus(ok ? 'Copied. Paste it anywhere.' : 'Copy is blocked here. Select the text below and copy it yourself.');
+    setStatus(t(ok ? 'Copied. Paste it anywhere.' : 'Copy is blocked here. Select the text below and copy it yourself.'));
     if (ok) setTimeout(() => setCopied(false), 2000);
   };
   const save = async () => {
     if (!blob) return;
     const r = await saveCard(blob, fileName, text);
-    setStatus(r === 'shared' ? 'Sent.' : r === 'downloaded'
+    setStatus(t(r === 'shared' ? 'Sent.' : r === 'downloaded'
       ? 'Saved. If nothing downloaded, long-press or right-click the card to save it.'
-      : 'Long-press or right-click the card to save it.');
+      : 'Long-press or right-click the card to save it.'));
   };
   const portal = async (kind: ShareKind) => {
     const ok = await shareThroughPortal(kind, text, dataUrl);
-    if (ok) setStatus('Shared.');
+    if (ok) setStatus(t('Shared.'));
   };
 
   return (
@@ -83,14 +84,14 @@ export default function MonthShare({ eyebrow, title, text, copyLabel, fileName, 
             <div className="cs-eyebrow">{eyebrow}</div>
             <h2 className="cs-display">{title}</h2>
           </div>
-          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose} aria-label="Close"><X size={16} /></button>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose} aria-label={t('Close')}><X size={16} /></button>
         </div>
 
         {trophies && (
           <div className="mo-tabs" role="tablist">
-            <button type="button" role="tab" aria-selected={tab === 'share'} onClick={() => setTab('share')}>Share</button>
+            <button type="button" role="tab" aria-selected={tab === 'share'} onClick={() => setTab('share')}>{t('Share')}</button>
             <button type="button" role="tab" aria-selected={tab === 'trophies'} onClick={() => setTab('trophies')}>
-              Trophies {trophies.filter((t) => t.earned).length}/{trophies.length}
+              {t('Trophies')} {trophies.filter((tr) => tr.earned).length}/{trophies.length}
             </button>
           </div>
         )}
@@ -98,22 +99,22 @@ export default function MonthShare({ eyebrow, title, text, copyLabel, fileName, 
         {tab === 'share' ? (
           <div className="msh-body">
             <div className="msh-preview">
-              {preview ? <img src={preview} alt="Your share card" /> : <div className="msh-wait" aria-hidden="true" />}
+              {preview ? <img src={preview} alt={t('Your share card')} /> : <div className="msh-wait" aria-hidden="true" />}
             </div>
             <div className="msh-side">
-              <pre className="msh-text" aria-label="Text to share">{text}</pre>
+              <pre className="msh-text" aria-label={t('Text to share')}>{text}</pre>
               <div className="msh-actions">
                 <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={copy}>
                   {copied ? <Check size={14} /> : <Copy size={14} />} {copyLabel}
                 </button>
                 <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" disabled={!blob} onClick={save}>
-                  {canShareFiles ? <Share2 size={14} /> : <Download size={14} />} {canShareFiles ? 'Send the card' : 'Save the card'}
+                  {canShareFiles ? <Share2 size={14} /> : <Download size={14} />} {t(canShareFiles ? 'Send the card' : 'Save the card')}
                 </button>
                 {kinds.map((k) => {
                   const { label, icon: Icon } = PORTAL[k];
                   return (
                     <button key={k} type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => void portal(k)}>
-                      <Icon size={14} /> {label}
+                      <Icon size={14} /> {t(label)}
                     </button>
                   );
                 })}
@@ -123,12 +124,12 @@ export default function MonthShare({ eyebrow, title, text, copyLabel, fileName, 
           </div>
         ) : (
           <ol className="msh-trophies">
-            {trophies?.map((t) => (
-              <li key={t.id} data-earned={t.earned || undefined}>
-                <span className="msh-trophy-icon">{t.earned ? <Trophy size={16} /> : <Lock size={14} />}</span>
+            {trophies?.map((tr) => (
+              <li key={tr.id} data-earned={tr.earned || undefined}>
+                <span className="msh-trophy-icon">{tr.earned ? <Trophy size={16} /> : <Lock size={14} />}</span>
                 <span className="msh-trophy-text">
-                  <b>{t.name}</b>
-                  <small>{t.description}</small>
+                  <b>{t(tr.name)}</b>
+                  <small>{t(tr.description)}</small>
                 </span>
               </li>
             ))}

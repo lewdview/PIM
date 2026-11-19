@@ -21,6 +21,7 @@ import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/monthBoard.css';
 import '@/styles/monthAlbum.css';
+import { t, tn } from '@/i18n';
 
 const sfx = (v = 0.3) => audioManager.playSfx('tap_nav', v);
 
@@ -112,17 +113,19 @@ export default function MonthAlbum({ songs: given, onClose, onPlay, from }: {
     const finishedPack = state.receipts[`ff:${selId}`] !== undefined;
     const platPack = state.receipts[`pl:${selId}`] !== undefined;
     const route = bonusLocked
-      ? 'Unlock this bonus entry to add its cards to packs.'
+      ? t('Unlock this bonus entry to add its cards to packs.')
       : !finishedPack
-        ? `Finish ${song?.title ?? 'this entry'} for a pack with its Common card.`
-        : `Its other cards come from any pack${platPack ? '' : ', including the pack for its first Standard platinum'}, or craft them with shards.`;
+        ? t('Finish {title} for a pack with its Common card.', { title: song?.title ?? t('this entry') })
+        : platPack
+          ? t('Its other cards come from any pack, or craft them with shards.')
+          : t('Its other cards come from any pack, including the pack for its first Standard platinum, or craft them with shards.');
     return (
-      <aside className="al-detail" aria-label={`${song?.title} card`}>
+      <aside className="al-detail" aria-label={t('{title} card', { title: song?.title ?? '' })}>
         <div className="al-detail-top">
           <AlbumCard song={song} num={entryLabel(songs, regularCount, selId)} rarity={best(selId)} missing={!ownsAnyVisible(selId)} className="al-card--detail" />
           <div className="al-detail-text">
             <b>{song?.title}</b>
-            <small>Entry {entryLabel(songs, regularCount, selId)}{song ? ` · Day ${song.day}` : ''}</small>
+            <small>{t('Entry {n}', { n: entryLabel(songs, regularCount, selId) })}{song ? ` · ${t('Day {n}', { n: song.day })}` : ''}</small>
             <ul className="al-variants">
               {([0, 1, 2] as Rarity[]).map((r) => {
                 const n = state.got[selId]?.[r] ?? 0;
@@ -130,16 +133,16 @@ export default function MonthAlbum({ songs: given, onClose, onPlay, from }: {
                 const check = canCraft(state, selId, r, pool);
                 return (
                   <li key={r} data-owned={owned || undefined}>
-                    <span className="al-v-name" data-r={r}>{RARITY_GLYPH[r]} {RARITY_NAME[r]}</span>
+                    <span className="al-v-name" data-r={r}>{RARITY_GLYPH[r]} {t(RARITY_NAME[r])}</span>
                     {owned ? (
-                      <span className="al-v-state">Owned{n > 1 ? ` · ${n - 1} extra became shards` : ''}</span>
+                      <span className="al-v-state">{t('Owned')}{n > 1 ? ` · ${t('{n} extra became shards', { n: n - 1 })}` : ''}</span>
                     ) : hidden.has(`${selId}:${r}`) ? (
-                      <span className="al-v-state">In an unopened pack</span>
+                      <span className="al-v-state">{t('In an unopened pack')}</span>
                     ) : (
                       <button type="button" className="btn-3d" data-size="sm" data-tone={check === 'ok' ? 'gold' : 'quiet'} disabled={check !== 'ok'}
                         onClick={() => { sfx(0.4); craftCard(selId, r, pool); }}
-                        title={check === 'locked' ? 'Unlock the entry first' : check === 'shards' ? `Needs ${CRAFT_COST[r]} shards` : undefined}>
-                        <Hammer size={13} /> Craft · {CRAFT_COST[r]}
+                        title={check === 'locked' ? t('Unlock the entry first') : check === 'shards' ? t('Needs {n} shards', { n: CRAFT_COST[r] }) : undefined}>
+                        <Hammer size={13} /> {t('Craft')} · {CRAFT_COST[r]}
                       </button>
                     )}
                   </li>
@@ -151,7 +154,7 @@ export default function MonthAlbum({ songs: given, onClose, onPlay, from }: {
         <p className="al-route">{route}</p>
         {onPlay && !bonusLocked && (
           <button type="button" className="btn-3d" data-size="sm" data-tone="acid" onClick={() => { sfx(); onPlay(selId); }}>
-            <Play size={14} fill="currentColor" /> Go to entry
+            <Play size={14} fill="currentColor" /> {t('Go to entry')}
           </button>
         )}
       </aside>
@@ -159,36 +162,36 @@ export default function MonthAlbum({ songs: given, onClose, onPlay, from }: {
   })();
 
   return (
-    <div className="mb-lb al-wrap" role="dialog" aria-modal="true" aria-label="Chapter album" onClick={onClose}>
+    <div className="mb-lb al-wrap" role="dialog" aria-modal="true" aria-label={t('Chapter album')} onClick={onClose}>
       <div className="mb-lb-card al-panel" onClick={(e) => e.stopPropagation()}>
         <div className="mb-lb-head al-head">
           <div>
-            <div className="cs-eyebrow">Chapter album</div>
-            <h2 className="cs-display">Cards</h2>
+            <div className="cs-eyebrow">{t('Chapter album')}</div>
+            <h2 className="cs-display">{t('Cards')}</h2>
           </div>
-          <div className="al-stats" aria-label="Album progress">
-            <span><b>{comp.regularOwned}/{regularCount}</b> entries</span>
-            <span><b>{comp.regularVariants}/{regularCount * 3}</b> variants</span>
-            {pool.bonus.length > 0 && <span><b>{comp.bonusOwned}/{pool.bonus.length}</b> bonus</span>}
+          <div className="al-stats" aria-label={t('Album progress')}>
+            <span><b>{comp.regularOwned}/{regularCount}</b> {t('entries')}</span>
+            <span><b>{comp.regularVariants}/{regularCount * 3}</b> {t('variants')}</span>
+            {pool.bonus.length > 0 && <span><b>{comp.bonusOwned}/{pool.bonus.length}</b> {t('bonus')}</span>}
             <span className="al-titles">
-              {listened && <em title="Finished every regular entry">Chapter Listener</em>}
-              {comp.collector && <em title="Own a card of every regular entry">Chapter Collector</em>}
-              {comp.complete && <em title="Own all three rarities of every regular entry">Complete Collection</em>}
+              {listened && <em title={t('Finished every regular entry')}>{t('Chapter Listener')}</em>}
+              {comp.collector && <em title={t('Own a card of every regular entry')}>{t('Chapter Collector')}</em>}
+              {comp.complete && <em title={t('Own all three rarities of every regular entry')}>{t('Complete Collection')}</em>}
             </span>
           </div>
-          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose} aria-label="Close"><X size={16} /></button>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose} aria-label={t('Close')}><X size={16} /></button>
         </div>
 
         {!state.noticeSeen && (
           <div className="al-notice" role="note">
-            <span>Packs start now. Finish any entry, even one you finished before, to earn its first pack.</span>
-            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => dismissNotice()}>Got it</button>
+            <span>{t('Packs start now. Finish any entry, even one you finished before, to earn its first pack.')}</span>
+            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => dismissNotice()}>{t('Got it')}</button>
           </div>
         )}
         {albumSaveFailed() && (
           <div className="al-notice" role="alert" data-tone="warn">
-            <span>Progress could not be saved.</span>
-            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { retryAlbumSave(); setRev((r) => r + 1); }}>Retry</button>
+            <span>{t('Progress could not be saved.')}</span>
+            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { retryAlbumSave(); setRev((r) => r + 1); }}>{t('Retry')}</button>
           </div>
         )}
 
@@ -197,15 +200,15 @@ export default function MonthAlbum({ songs: given, onClose, onPlay, from }: {
             <div className="al-tabs-row">
               {pool.bonus.length > 0 && (
                 <div className="mo-tabs al-tabs" role="tablist">
-                  <button type="button" role="tab" aria-selected={section === 'regular'} onClick={() => { sfx(0.15); setSection('regular'); setPage(0); }}>Tracks</button>
-                  <button type="button" role="tab" aria-selected={section === 'bonus'} onClick={() => { sfx(0.15); setSection('bonus'); setPage(0); }}>Bonus</button>
+                  <button type="button" role="tab" aria-selected={section === 'regular'} onClick={() => { sfx(0.15); setSection('regular'); setPage(0); }}>{t('Tracks')}</button>
+                  <button type="button" role="tab" aria-selected={section === 'bonus'} onClick={() => { sfx(0.15); setSection('bonus'); setPage(0); }}>{t('Bonus')}</button>
                 </div>
               )}
               {pages > 1 && (
                 <div className="al-pager">
-                  <button type="button" className="mb-week-arrow" aria-label="Previous page" disabled={pg === 0} onClick={() => setPage(pg - 1)}><ChevronLeft size={18} /></button>
+                  <button type="button" className="mb-week-arrow" aria-label={t('Previous page')} disabled={pg === 0} onClick={() => setPage(pg - 1)}><ChevronLeft size={18} /></button>
                   <span>{pg + 1}/{pages}</span>
-                  <button type="button" className="mb-week-arrow" aria-label="Next page" disabled={pg >= pages - 1} onClick={() => setPage(pg + 1)}><ChevronRight size={18} /></button>
+                  <button type="button" className="mb-week-arrow" aria-label={t('Next page')} disabled={pg >= pages - 1} onClick={() => setPage(pg + 1)}><ChevronRight size={18} /></button>
                 </div>
               )}
             </div>
@@ -219,7 +222,7 @@ export default function MonthAlbum({ songs: given, onClose, onPlay, from }: {
                       onClick={() => { sfx(0.15); setSel(selId === id ? null : id); }}>
                       <AlbumCard song={byId.get(id)} num={entryLabel(songs, regularCount, id)} rarity={best(id)} missing={!owned}
                         isNew={[0, 1, 2].some((r) => freshAtOpen.has(`${id}:${r}`) && has(id, r))} />
-                      <span className="al-pips" aria-label={`${[0, 1, 2].filter((r) => has(id, r)).length} of 3 rarities`}>
+                      <span className="al-pips" aria-label={t('{n} of 3 rarities', { n: [0, 1, 2].filter((r) => has(id, r)).length })}>
                         {([0, 1, 2] as Rarity[]).map((r) => <i key={r} data-r={r} data-on={has(id, r) || undefined}>{RARITY_GLYPH[r]}</i>)}
                       </span>
                     </button>
@@ -232,19 +235,19 @@ export default function MonthAlbum({ songs: given, onClose, onPlay, from }: {
         </div>
 
         <footer className="al-foot">
-          <span className="al-counter" title="Duplicates turn into shards: Common 1, Uncommon 3, Rare 9. Craft a missing card: Common 6, Uncommon 12, Rare 30.">
-            <b>{state.shards}</b> shards
+          <span className="al-counter" title={t('Duplicates turn into shards: Common 1, Uncommon 3, Rare 9. Craft a missing card: Common 6, Uncommon 12, Rare 30.')}>
+            <b>{state.shards}</b> {t('shards')}
           </span>
-          <span className="al-counter" title="Each replay of a finished entry earns a stamp; three stamps make a pack.">
-            <b>{state.stamps}/{STAMPS_PER_PACK}</b> replay stamps
+          <span className="al-counter" title={t('Each replay of a finished entry earns a stamp; three stamps make a pack.')}>
+            <b>{state.stamps}/{STAMPS_PER_PACK}</b> {t('replay stamps')}
           </span>
-          <span className="al-counter" title="No more than 10 packs in a row without a Rare.">
-            Rare within <b>{untilRare}</b> pack{untilRare === 1 ? '' : 's'}
+          <span className="al-counter" title={t('No more than 10 packs in a row without a Rare.')}>
+            {t('Rare within')} <b>{untilRare}</b> {tn(untilRare, 'pack', 'packs')}
           </span>
-          <span className="al-save cs-muted">Saved in this browser. Clearing site data can remove it. Chapter cards don't sync to the main PIM vault.</span>
+          <span className="al-save cs-muted">{t("Saved in this browser. Clearing site data can remove it. Chapter cards don't sync to the main PIM vault.")}</span>
           {unopened > 0 && (
             <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={() => { sfx(); setRevealing(true); }}>
-              <Package size={14} /> Open pack{unopened > 1 ? `s (${unopened})` : ''}
+              <Package size={14} /> {unopened > 1 ? t('Open packs ({n})', { n: unopened }) : t('Open pack')}
             </button>
           )}
         </footer>

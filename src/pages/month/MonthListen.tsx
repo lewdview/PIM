@@ -16,6 +16,7 @@ import { hideBroken } from '@/pages/campaign/hideBroken';
 import { bombshellArtFor } from './startRun';
 import '@/styles/campaignArcade.css';
 import '@/styles/monthListen.css';
+import { t } from '@/i18n';
 
 const HOME = `/chapter/${PLAYGAMA_MONTH}`;
 const meta = CHAPTERS.find((c) => c.month === PLAYGAMA_MONTH) ?? CHAPTERS[0];
@@ -148,8 +149,8 @@ function Player({ songs, onBack }: { songs: GameSong[]; onBack: () => void }) {
       <header className="ml-head">
         <button type="button" className="cs-chip-btn" onClick={onBack}><ArrowLeft size={16} /> {meta.name}</button>
         <div className="ca-hud">
-          <span className="ca-chip" data-tone="hot">Listening mode</span>
-          <span className="ca-chip">{songs.length} tracks</span>
+          <span className="ca-chip" data-tone="hot">{t('Listening mode')}</span>
+          <span className="ca-chip">{t('{n} tracks', { n: songs.length })}</span>
         </div>
       </header>
 
@@ -159,26 +160,26 @@ function Player({ songs, onBack }: { songs: GameSong[]; onBack: () => void }) {
             {art && <img key={art} src={art} alt="" onError={hideBroken} />}
             {bombshell && (
               <button type="button" className="ml-art-toggle" onClick={() => setShowBombshell((v) => !v)}>
-                {showBombshell ? 'Cover' : 'Prestige Art'}
+                {t(showBombshell ? 'Cover' : 'Prestige Art')}
               </button>
             )}
           </div>
           <div className="ml-meta">
-            <div className="cs-eyebrow">Day {song.day}{act ? ` · Act ${act.act} · ${act.word}` : ''}</div>
+            <div className="cs-eyebrow">{t('Day {n}', { n: song.day })}{act ? ` · ${t('Act {n}', { n: act.act })} · ${act.word}` : ''}</div>
             <h1 className="cs-display ml-title">{song.title}</h1>
           </div>
           <div className="ml-controls">
-            <button type="button" className="ml-btn" onClick={() => go(-1)} aria-label="Previous track"><SkipBack size={20} /></button>
-            <button type="button" className="ml-btn ml-play" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}>
+            <button type="button" className="ml-btn" onClick={() => go(-1)} aria-label={t('Previous track')}><SkipBack size={20} /></button>
+            <button type="button" className="ml-btn ml-play" onClick={toggle} aria-label={t(playing ? 'Pause' : 'Play')}>
               {playing ? <Pause size={26} /> : <Play size={26} fill="currentColor" />}
             </button>
-            <button type="button" className="ml-btn" onClick={() => go(1)} aria-label="Next track"><SkipForward size={20} /></button>
+            <button type="button" className="ml-btn" onClick={() => go(1)} aria-label={t('Next track')}><SkipForward size={20} /></button>
           </div>
           <div className="ml-seek">
             <span>{clock(time)}</span>
             <input
               type="range" min={0} max={total || 1} step={0.5} value={Math.min(time, total || 1)}
-              aria-label="Seek"
+              aria-label={t('Seek')}
               onChange={(e) => { const a = audioRef.current; if (a) { a.currentTime = Number(e.target.value); setTime(a.currentTime); } }}
             />
             <span>{clock(total)}</span>
@@ -203,12 +204,12 @@ function Player({ songs, onBack }: { songs: GameSong[]; onBack: () => void }) {
           ) : (
             <div className="ml-nolyrics">
               {hook?.hook && <p className="ml-hook">{hook.hasLyrics ? `“${hook.hook}”` : hook.hook}</p>}
-              <p className="cs-muted">No synced lyrics for this track yet.</p>
+              <p className="cs-muted">{t('No synced lyrics for this track yet.')}</p>
             </div>
           )}
         </section>
 
-        <ol ref={listRef} className="ml-list" aria-label="Tracks">
+        <ol ref={listRef} className="ml-list" aria-label={t('Tracks')}>
           {songs.map((s, i) => (
             <li key={s.id}>
               <button type="button" data-idx={i} data-on={i === idx || undefined} onClick={() => pick(i)}>

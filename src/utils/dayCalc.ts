@@ -1,4 +1,5 @@
 // Day calculation logic — Day 1 = January 1, 2026
+import { lang } from '@/i18n';
 const EPOCH = new Date('2026-01-01T00:00:00');
 
 const MONTHS = [
@@ -45,7 +46,7 @@ export function getDateFromDay(day: number): Date {
 
 export function formatDate(day: number): string {
   const date = getDateFromDay(day);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(lang() === 'pl' ? 'pl-PL' : 'en-US', { month: 'short', day: 'numeric' });
 }
 
 export function getTimeUntilNextDay(): { hours: number; minutes: number; seconds: number } {

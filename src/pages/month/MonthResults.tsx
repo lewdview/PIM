@@ -48,6 +48,7 @@ import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/campaignResults.css';
 import '@/styles/monthResults.css';
+import { t } from '@/i18n';
 
 const HOME = `/chapter/${PLAYGAMA_MONTH}`;
 
@@ -184,14 +185,14 @@ function RunResults({ songId }: { songId: string }) {
     return albumRun.packs.map((id) => byId.get(id)?.source).filter(Boolean).map((src) => PACK_SOURCE_LABEL[src!]);
   }, [albumRun]);
   const albumLine = !albumRun ? null
-    : albumRun.withheld ? `No cards this time: packs need you to play at least ${Math.round(MIN_PARTICIPATION * 100)}% of the notes.`
-    : albumRun.packs.length ? <><b>{albumRun.packs.length === 1 ? 'Pack earned' : `${albumRun.packs.length} packs earned`}</b> · {runPackSources.join(' + ')}{albumRun.stamp ? ` · stamp ${albumRun.stamps}/${STAMPS_PER_PACK}` : ''}</>
-    : albumRun.stamp ? <><b>Replay stamp</b> · {albumRun.stamps}/{STAMPS_PER_PACK} toward a pack</>
-    : packsWaiting ? <>{packsWaiting} saved pack{packsWaiting > 1 ? 's' : ''} to open</>
+    : albumRun.withheld ? t('No cards this time: packs need you to play at least {pct}% of the notes.', { pct: Math.round(MIN_PARTICIPATION * 100) })
+    : albumRun.packs.length ? <><b>{albumRun.packs.length === 1 ? t('Pack earned') : t('{n} packs earned', { n: albumRun.packs.length })}</b> · {runPackSources.map((l) => t(l)).join(' + ')}{albumRun.stamp ? ` · ${t('stamp {n}/{total}', { n: albumRun.stamps, total: STAMPS_PER_PACK })}` : ''}</>
+    : albumRun.stamp ? <><b>{t('Replay stamp')}</b> · {t('{n}/{total} toward a pack', { n: albumRun.stamps, total: STAMPS_PER_PACK })}</>
+    : packsWaiting ? <>{packsWaiting > 1 ? t('{n} saved packs to open', { n: packsWaiting }) : t('1 saved pack to open')}</>
     : null;
   const openPackBtn = packsWaiting > 0 ? (
     <button type="button" className="btn-3d mr-open-pack" data-size="sm" data-tone="gold" onClick={() => { audioManager.playSfx('tap_nav', 0.3); setRevealing(true); }}>
-      <Package size={14} /> Open pack{packsWaiting > 1 ? `s (${packsWaiting})` : ''}
+      <Package size={14} /> {packsWaiting > 1 ? t('Open packs ({n})', { n: packsWaiting }) : t('Open pack')}
     </button>
   ) : null;
   useEffect(() => {
@@ -290,13 +291,13 @@ function RunResults({ songId }: { songId: string }) {
     const bonusJustOpened = !!result?.firstPlatinum && !isBonus && progress.bonus.length > 0
       && progress.platinums === meta.platNeeded;
     if (firstClear && !isBonus && progress.complete && progress.cleared === progress.regular.length && stage.idx === progress.regular.length - 1) {
-      out.push({ head: 'Chapter clear!', sub: `${meta.name} · ALL ${progress.regular.length} STAGES` });
+      out.push({ head: t('Chapter clear!'), sub: `${meta.name} · ${t('ALL {n} STAGES', { n: progress.regular.length })}` });
     }
-    if (bonusJustOpened) out.push({ head: 'Bonus stages unlocked!', sub: `${progress.bonus.length} BONUS SONGS OPEN` });
+    if (bonusJustOpened) out.push({ head: t('Bonus stages unlocked!'), sub: t('{n} BONUS SONGS OPEN', { n: progress.bonus.length }) });
     else if (firstClear && next?.kind === 'play') {
-      out.push({ head: 'Here comes a new stage!', sub: next.isBonus ? 'BONUS STAGE UNLOCKED' : `TRACK ${next.idx + 1} UNLOCKED` });
+      out.push({ head: t('Here comes a new stage!'), sub: next.isBonus ? t('BONUS STAGE UNLOCKED') : t('TRACK {n} UNLOCKED', { n: next.idx + 1 }) });
     }
-    if (bombshellNow) out.push({ head: 'Prestige Art unlocked!', sub: 'IT PLAYS BEHIND THIS TRACK', tone: 'bombshell' });
+    if (bombshellNow) out.push({ head: t('Prestige Art unlocked!'), sub: t('IT PLAYS BEHIND THIS TRACK'), tone: 'bombshell' });
     return out;
   }, [passed, stage, result, firstClear, next, bombshellNow]);
   const bannerRef = useRef(banners);
@@ -492,7 +493,7 @@ function RunResults({ songId }: { songId: string }) {
   const shareRun = (): RunSummary => ({
     monthName: meta.name,
     color: meta.dc,
-    title: song?.title ?? 'Transmission',
+    title: song?.title ?? t('Transmission'),
     day: song?.day ?? null,
     coverArt: song?.coverArt ?? result.coverUrl ?? null,
     score: result.score,
@@ -508,16 +509,16 @@ function RunResults({ songId }: { songId: string }) {
 
   const stageLabel = stage
     ? stage.isBonus
-      ? `Bonus ${stage.idx - stage.progress.regular.length + 1}/${stage.progress.bonus.length}`
-      : `Stage ${stage.idx + 1}/${stage.progress.regular.length}`
-    : 'Stage';
+      ? t('Bonus {n}/{total}', { n: stage.idx - stage.progress.regular.length + 1, total: stage.progress.bonus.length })
+      : t('Stage {n}/{total}', { n: stage.idx + 1, total: stage.progress.regular.length })
+    : t('Stage');
   // The chart level this run actually played (Relaxed and the first run play easier charts).
   const level = levelForMode(runMode, stage?.level ?? 1);
   const coverUrl = song?.coverArt ?? result.coverUrl ?? null;
 
   const on = (s: number) => (step >= s ? ' is-on' : '');
   const locked = (s: number) => (step > s ? ' is-locked' : '');
-  const titleWords = passed ? (ranked ? ['Stage', 'Clear!'] : ['Song', 'Finished!']) : ['K.O.'];
+  const titleWords = (passed ? (ranked ? ['Stage', 'Clear!'] : ['Song', 'Finished!']) : ['K.O.']).map((w) => t(w));
   let li = 0;
 
   return (
@@ -540,20 +541,20 @@ function RunResults({ songId }: { songId: string }) {
 
       <p className="cr-sr" role="status">
         {passed
-          ? `Stage clear. Score ${result.score.toLocaleString()}, accuracy ${Math.round(accuracy)} percent, ${medal ? `${medal.toLowerCase()} medal` : 'cleared'}.`
-          : `Stage failed. Score ${result.score.toLocaleString()}, accuracy ${Math.round(accuracy)} percent.`}
+          ? t('Stage clear. Score {score}, accuracy {acc} percent, {medal}.', { score: result.score.toLocaleString(), acc: Math.round(accuracy), medal: medal ? t('{medal} medal', { medal: t(medal.toLowerCase()) }) : t('cleared') })
+          : t('Stage failed. Score {score}, accuracy {acc} percent.', { score: result.score.toLocaleString(), acc: Math.round(accuracy) })}
       </p>
 
-      <nav className="cr-hud" aria-label="Chapter">
+      <nav className="cr-hud" aria-label={t('Chapter')}>
         <button type="button" className="cs-chip-btn" onClick={() => go(HOME)}>
           <ArrowLeft size={16} /> {meta.name}
         </button>
         <div className="cr-hud-right">
           <span className="cr-chip">{stageLabel}</span>
           {deluxe
-            ? <span className="cr-chip" data-tone="hot">Deluxe</span>
-            : <span className="cr-chip" data-tone="hot">Lv {level} · {levelToTier(level)}</span>}
-          {!ranked && <span className="cr-chip">{MODE_LABEL[runMode]}</span>}
+            ? <span className="cr-chip" data-tone="hot">{t('Deluxe')}</span>
+            : <span className="cr-chip" data-tone="hot">{t('Lv {n}', { n: level })} · {t(levelToTier(level))}</span>}
+          {!ranked && <span className="cr-chip">{t(MODE_LABEL[runMode])}</span>}
         </div>
       </nav>
 
@@ -569,9 +570,9 @@ function RunResults({ songId }: { songId: string }) {
       <div className={`cr-subtitle cr-in${on(S.title)}`}>
         {passed
           ? ranked
-            ? (fullCombo ? 'Full combo · flawless transmission' : 'Transmission decoded')
-            : `Entry finished · ${MODE_LABEL[runMode]}${assisted ? ' · assist used' : ''}`
-          : 'Signal lost · transmission not decoded'}
+            ? t(fullCombo ? 'Full combo · flawless transmission' : 'Transmission decoded')
+            : `${t('Entry finished')} · ${t(MODE_LABEL[runMode])}${assisted ? ` · ${t('assist used')}` : ''}`
+          : t('Signal lost · transmission not decoded')}
       </div>
 
       <section className="cr-hero">
@@ -581,11 +582,11 @@ function RunResults({ songId }: { songId: string }) {
               {coverUrl && <img src={coverUrl} alt="" onError={hideBroken} />}
             </div>
             <div className="cr-portrait-shine" />
-            {!passed && <div className="cr-tape">Fail</div>}
+            {!passed && <div className="cr-tape">{t('Fail')}</div>}
           </div>
           <div className="cr-plate">
-            <span>Day {song?.day ?? '—'}</span>
-            <b>{song?.title ?? 'Transmission'}</b>
+            <span>{t('Day {n}', { n: song?.day ?? '—' })}</span>
+            <b>{song?.title ?? t('Transmission')}</b>
           </div>
 
           {passed && (
@@ -593,7 +594,7 @@ function RunResults({ songId }: { songId: string }) {
               <div className="cr-stamp-rays" />
               <div className="cr-stamp-disc">
                 <span className="cr-stamp-rank">{rank}</span>
-                <span className="cr-stamp-name">{medal ? medal : ranked ? 'Clear' : 'Finished'}</span>
+                <span className="cr-stamp-name">{medal ? t(medal) : t(ranked ? 'Clear' : 'Finished')}</span>
               </div>
               {step >= S.stamp && <Sparks />}
             </div>
@@ -601,29 +602,29 @@ function RunResults({ songId }: { songId: string }) {
         </div>
 
         <div className="cr-board">
-          <div className="cr-board-tab">{passed ? 'Result' : 'Damage report'}</div>
-          <TallyRow className={on(S.score) + locked(S.score)} label="Score"
+          <div className="cr-board-tab">{t(passed ? 'Result' : 'Damage report')}</div>
+          <TallyRow className={on(S.score) + locked(S.score)} label={t('Score')}
             to={result.score} run={step >= S.score} done={skipped || step > S.score} ms={900}
             fmt={(v) => Math.round(v).toLocaleString()} />
-          <TallyRow className={on(S.acc) + locked(S.acc)} label="Accuracy"
+          <TallyRow className={on(S.acc) + locked(S.acc)} label={t('Accuracy')}
             to={accuracy} run={step >= S.acc} done={skipped || step > S.acc} ms={520}
             fmt={(v) => `${v.toFixed(1)}%`} />
-          <TallyRow className={on(S.combo) + locked(S.combo)} label="Max combo"
+          <TallyRow className={on(S.combo) + locked(S.combo)} label={t('Max combo')}
             to={result.maxCombo} run={step >= S.combo} done={skipped || step > S.combo} ms={420}
             fmt={(v) => `${Math.round(v)}x`} />
           <div className={`cr-judge cr-in${on(S.judge)}`}>
             <span data-j="pp">P+ {result.perfectPlus ?? 0}</span>
             <span data-j="p">P {result.perfects ?? 0}</span>
             <span data-j="g">G {result.goods ?? 0}</span>
-            <span data-j="m">Miss {result.misses ?? 0}</span>
+            <span data-j="m">{t('Miss')} {result.misses ?? 0}</span>
           </div>
 
           {passed && (
             <div className={`cr-record cr-in${on(S.record)}`}>
-              {assisted ? <span className="mr-assist">Assist used · try Standard for ranked medals</span>
-                : newRecord ? <b className="cr-rainbow">New record!!</b>
-                : firstClear ? <b className="cr-rainbow">First clear!</b>
-                : best > result.score ? <span>Best {best.toLocaleString()}</span>
+              {assisted ? <span className="mr-assist">{t('Assist used · try Standard for ranked medals')}</span>
+                : newRecord ? <b className="cr-rainbow">{t('New record!!')}</b>
+                : firstClear ? <b className="cr-rainbow">{t('First clear!')}</b>
+                : best > result.score ? <span>{t('Best {n}', { n: best.toLocaleString() })}</span>
                 : null}
             </div>
           )}
@@ -643,25 +644,25 @@ function RunResults({ songId }: { songId: string }) {
         </div>
       )}
 
-      <section className={`cr-actions cr-in${on(S.actions)}`} aria-label="What's next">
+      <section className={`cr-actions cr-in${on(S.actions)}`} aria-label={t("What's next")}>
         {!passed && (
           <div className="cr-card" data-tone="lose">
-            <div className="cr-card-tab">Continue?</div>
+            <div className="cr-card-tab">{t('Continue?')}</div>
             <div className="cr-continue">
               {count > 0
                 ? <span key={count} className="cr-count">{count}</span>
-                : <span className="cr-gameover">Game over</span>}
+                : <span className="cr-gameover">{t('Game over')}</span>}
             </div>
-            <p className="cs-hook">The next track opens once you finish this one. Retry, or finish it in Relaxed (no fail, no medal).</p>
+            <p className="cs-hook">{t('The next track opens once you finish this one. Retry, or finish it in Relaxed (no fail, no medal).')}</p>
             {song && stage && (
               <div className="cs-detail-actions">
                 <button type="button" className="btn-3d" onClick={() => launch(song, stage.idx, stage.level, deluxe, deluxe ? undefined : runMode, 'results_retry')}>
-                  <RotateCcw size={16} /> Retry stage
+                  <RotateCcw size={16} /> {t('Retry stage')}
                 </button>
                 {!deluxe && runMode === 'standard' && (
                   <button type="button" className="btn-3d" data-tone="quiet" onClick={() => { setChosenMode('relaxed'); launch(song, stage.idx, stage.level, false, 'relaxed', 'results_relaxed'); }}
-                    title="Easier chart, wider timing, no fail. No medal for this run.">
-                    <Play size={16} /> Continue in Relaxed
+                    title={t('Easier chart, wider timing, no fail. No medal for this run.')}>
+                    <Play size={16} /> {t('Continue in Relaxed')}
                   </button>
                 )}
               </div>
@@ -671,22 +672,22 @@ function RunResults({ songId }: { songId: string }) {
 
         {passed && (
           <div className="cr-card">
-            <div className="cr-card-tab">{firstClear ? 'Unlocked' : 'Up next'}</div>
-            {!next && <p className="cs-hook">Checking the next stage…</p>}
+            <div className="cr-card-tab">{t(firstClear ? 'Unlocked' : 'Up next')}</div>
+            {!next && <p className="cs-hook">{t('Checking the next stage…')}</p>}
             {next?.kind === 'play' && (
               <>
                 <NextTrack song={next.song} level={levelForMode(nextMode, next.level)} isBonus={next.isBonus} goal={next.goal} />
                 <div className="cs-detail-actions">
                   <button type="button" className="btn-3d mr-next-btn" onClick={() => launch(next.song, next.idx, next.level, false, nextMode, 'results_next')}>
-                    <Play size={16} fill="currentColor" /> {next.goal ? 'Play again' : packsWaiting > 0 ? 'Play next · save pack' : 'Next entry'}
+                    <Play size={16} fill="currentColor" /> {t(next.goal ? 'Play again' : packsWaiting > 0 ? 'Play next · save pack' : 'Next entry')}
                     <span className="mr-next-title">· {next.song.title}</span>
                   </button>
-                  <span className="mr-mode" role="radiogroup" aria-label="Mode for the next song">
+                  <span className="mr-mode" role="radiogroup" aria-label={t('Mode for the next song')}>
                     {(['relaxed', 'standard'] as const).map((m) => (
                       <button key={m} type="button" role="radio" aria-checked={nextMode === m} data-on={nextMode === m || undefined}
                         onClick={() => pickNextMode(m)}
-                        title={m === 'relaxed' ? 'Easier chart, wider timing, no fail. No medals or leaderboard.' : 'The full chart, with medals and the leaderboard.'}>
-                        {MODE_LABEL[m]}{result?.chapterFirstFinish && recommendedMode() === m ? ' ★' : ''}
+                        title={t(m === 'relaxed' ? 'Easier chart, wider timing, no fail. No medals or leaderboard.' : 'The full chart, with medals and the leaderboard.')}>
+                        {t(MODE_LABEL[m])}{result?.chapterFirstFinish && recommendedMode() === m ? ' ★' : ''}
                       </button>
                     ))}
                   </span>
@@ -697,19 +698,18 @@ function RunResults({ songId }: { songId: string }) {
             {next?.kind === 'bonus-gate' && (
               <>
                 <div className="cs-lock-note">
-                  <Lock size={14} style={{ verticalAlign: '-2px' }} /> All tracks cleared. The bonus songs open at {next.need} platinum
-                  medals ({next.have} so far), or unlock one now.
+                  <Lock size={14} style={{ verticalAlign: '-2px' }} /> {t('All tracks cleared. The bonus songs open at {need} platinum medals ({have} so far), or unlock one now.', { need: next.need, have: next.have })}
                 </div>
                 {(canUnlockWithAd() || canBuyBundle()) && (
                   <div className="cs-detail-actions">
                     {canUnlockWithAd() && (
                       <button type="button" className="btn-3d" data-tone="quiet" disabled={unlocking} onClick={() => unlockByAd(next.song)}>
-                        <Film size={16} /> Watch an ad
+                        <Film size={16} /> {t('Watch an ad')}
                       </button>
                     )}
                     {canBuyBundle() && (
                       <button type="button" className="btn-3d" data-tone="gold" disabled={unlocking} onClick={buyBundle}>
-                        <Gift size={16} /> All {stage?.progress.bonus.length ?? 5} bonus{bundlePrice ? ` · ${bundlePrice}` : ''}
+                        <Gift size={16} /> {t('All {n} bonus', { n: stage?.progress.bonus.length ?? 5 })}{bundlePrice ? ` · ${bundlePrice}` : ''}
                       </button>
                     )}
                   </div>
@@ -717,21 +717,21 @@ function RunResults({ songId }: { songId: string }) {
               </>
             )}
             {next?.kind === 'chapter-complete' && (
-              <p className="cs-hook">Every track in {meta.name.toLowerCase()} is cleared. Chase platinum medals to raise your chapter total.</p>
+              <p className="cs-hook">{t('Every track in {month} is cleared. Chase platinum medals to raise your chapter total.', { month: meta.name.toLowerCase() })}</p>
             )}
-            {next?.kind === 'done' && <p className="cs-hook">That's the last open track for now.</p>}
+            {next?.kind === 'done' && <p className="cs-hook">{t("That's the last open track for now.")}</p>}
             {albumLine ? (
               <div className="mr-album" role="status">
                 <Package size={14} aria-hidden="true" />
                 <span className="mr-album-text">{albumLine}</span>
-                {albumSaveFailed() && <button type="button" className="mr-album-retry" onClick={() => retryAlbumSave()}>Not saved · Retry</button>}
+                {albumSaveFailed() && <button type="button" className="mr-album-retry" onClick={() => retryAlbumSave()}>{t('Not saved · Retry')}</button>}
                 {next?.kind !== 'play' && openPackBtn}
               </div>
             ) : stage && (
               <div className="cs-muted mr-progress" style={{ fontSize: 12, marginTop: 8 }}>
-                {meta.name.charAt(0) + meta.name.slice(1).toLowerCase()} {stage.progress.cleared}/{stage.progress.regular.length} finished
-                {stage.progress.bonus.length > 0 && <> · bonus {stage.progress.bonus.filter((b) => hasClearedSong(b)).length}/{stage.progress.bonus.length}</>}
-                {' · '}ranked total {monthTotal(stage.songs).toLocaleString()}
+                {meta.name.charAt(0) + meta.name.slice(1).toLowerCase()} {stage.progress.cleared}/{stage.progress.regular.length} {t('finished')}
+                {stage.progress.bonus.length > 0 && <> · {t('bonus')} {stage.progress.bonus.filter((b) => hasClearedSong(b)).length}/{stage.progress.bonus.length}</>}
+                {' · '}{t('ranked total {n}', { n: monthTotal(stage.songs).toLocaleString() })}
               </div>
             )}
           </div>
@@ -741,31 +741,31 @@ function RunResults({ songId }: { songId: string }) {
       <div className={`cr-foot cr-in${on(S.actions)}`}>
         {passed && song && stage && (
           <button type="button" className="btn-3d" data-tone="quiet" onClick={() => launch(song, stage.idx, stage.level, deluxe, deluxe ? undefined : nextMode, 'results_retry')}>
-            <RotateCcw size={16} /> {deluxe ? 'Replay Deluxe' : 'Replay'}
+            <RotateCcw size={16} /> {t(deluxe ? 'Replay Deluxe' : 'Replay')}
           </button>
         )}
         {passed && (
-          <button type="button" className="btn-3d" data-tone="quiet" aria-label="Share" onClick={() => { audioManager.playSfx('tap_nav', 0.15); setSharing(true); }}>
-            <Share2 size={16} /> <span className="mr-share-label">Share</span>
+          <button type="button" className="btn-3d" data-tone="quiet" aria-label={t('Share')} onClick={() => { audioManager.playSfx('tap_nav', 0.15); setSharing(true); }}>
+            <Share2 size={16} /> <span className="mr-share-label">{t('Share')}</span>
           </button>
         )}
         <button type="button" className="btn-3d" data-tone="ghost" onClick={() => go(HOME)}>
-          Choose entry
+          {t('Choose entry')}
         </button>
       </div>
 
       {step >= FINAL && trophies.length > 0 && !endingSoon && (
         <div className="mr-trophy" role="status">
-          <Trophy size={16} /> {trophies.length === 1 ? `Trophy · ${trophies[0].name}` : `${trophies.length} trophies · ${trophies.map((t) => t.name).join(', ')}`}
+          <Trophy size={16} /> {trophies.length === 1 ? `${t('Trophy')} · ${t(trophies[0].name)}` : `${t('{n} trophies', { n: trophies.length })} · ${trophies.map((tr) => t(tr.name)).join(', ')}`}
         </div>
       )}
 
       {sharing && (
         <MonthShare
-          eyebrow={deluxe ? 'Deluxe run' : stageLabel}
-          title="Share this run"
+          eyebrow={deluxe ? t('Deluxe run') : stageLabel}
+          title={t('Share this run')}
           text={runText(shareRun())}
-          copyLabel="Copy result"
+          copyLabel={t('Copy result')}
           fileName={shareFileName(`${song?.title ?? 'run'}${deluxe ? '-deluxe' : ''}`)}
           draw={() => drawRunCard(shareRun())}
           onClose={() => setSharing(false)}
@@ -778,19 +778,19 @@ function RunResults({ songId }: { songId: string }) {
           regularCount={stage.progress.regular.length}
           from="results"
           onClose={() => setRevealing(false)}
-          primary={next?.kind === 'play' ? { label: next.goal ? 'Play again' : 'Next entry', onClick: () => { setRevealing(false); launch(next.song, next.idx, next.level, false, nextMode, 'results_next_after_pack'); } } : undefined}
+          primary={next?.kind === 'play' ? { label: t(next.goal ? 'Play again' : 'Next entry'), onClick: () => { setRevealing(false); launch(next.song, next.idx, next.level, false, nextMode, 'results_next_after_pack'); } } : undefined}
         />
       )}
 
       {endingSoon && (
         <div className="mr-ending" role="status">
-          <span>Ending unlocked · {ENDING_INFO[endingSoon].title}</span>
-          <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={() => watchEnding(endingSoon)}>Watch now</button>
+          <span>{t('Ending unlocked')} · {ENDING_INFO[endingSoon].title}</span>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={() => watchEnding(endingSoon)}>{t('Watch now')}</button>
         </div>
       )}
 
       {step > 0 && step < FINAL && (
-        <button type="button" className="cr-skip" onClick={skip}>Tap to skip ▸▸</button>
+        <button type="button" className="cr-skip" onClick={skip}>{t('Tap to skip')} ▸▸</button>
       )}
     </div>
   );
@@ -854,7 +854,7 @@ function NextTrack({ song, level, isBonus, goal }: { song: GameSong; level: numb
         <span className="cr-vs">VS</span>
       </div>
       <div style={{ minWidth: 0 }}>
-        <div className="cs-eyebrow">Day {song.day} · {isBonus ? 'Bonus · ' : ''}Lv {level}</div>
+        <div className="cs-eyebrow">{t('Day {n}', { n: song.day })} · {isBonus ? `${t('Bonus')} · ` : ''}{t('Lv {n}', { n: level })}</div>
         <div className="cr-next-title">{song.title}</div>
         {goal && <div className="cs-muted mr-goal">{goal}</div>}
       </div>

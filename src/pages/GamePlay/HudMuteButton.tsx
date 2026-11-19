@@ -3,10 +3,11 @@
 
 import { Volume2, VolumeX } from 'lucide-react';
 import { useMuted } from '@/platform/playgama/muteSetting';
+import { t } from '@/i18n';
 
 export default function HudMuteButton({ variant }: { variant: 'beta' | 'rail' | 'hud' | 'neon' }) {
   const [muted, setMuted] = useMuted();
-  const label = muted ? 'Unmute sound' : 'Mute sound';
+  const label = t(muted ? 'Unmute sound' : 'Mute sound');
   const icon = muted ? <VolumeX size={12} aria-hidden="true" /> : <Volume2 size={12} aria-hidden="true" />;
   if (variant === 'beta') {
     return (

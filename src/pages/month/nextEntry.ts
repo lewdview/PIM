@@ -6,6 +6,7 @@ import type { GameSong } from '@/game/api';
 import { getMedalForSong } from '@/game/progress';
 import { hasClearedSong, isStageUnlocked, type ChapterProgress } from '@/game/chapterStory';
 import { bestFor, hasFirstFinish, lastEntry } from '@/platform/playgama/runMode';
+import { t } from '@/i18n';
 
 /** First regular entry a new player's Play starts (chapter configuration). */
 export const OPENER_IDX = 0;
@@ -38,7 +39,7 @@ export function replayGoal(p: ChapterProgress, after: number): EntryPick {
   for (const i of order) {
     const s = p.regular[i];
     if (!MEDAL_RANK[getMedalForSong(s.id)]) {
-      return { song: s, idx: i, goal: bestFor('relaxed', s.id) ? 'Finish it in Standard to earn a medal' : 'Earn a medal on it' };
+      return { song: s, idx: i, goal: t(bestFor('relaxed', s.id) ? 'Finish it in Standard to earn a medal' : 'Earn a medal on it') };
     }
   }
   // Lowest medal below platinum.
@@ -49,10 +50,10 @@ export function replayGoal(p: ChapterProgress, after: number): EntryPick {
   }
   if (pick !== -1) {
     const medal = getMedalForSong(p.regular[pick].id).toLowerCase();
-    return { song: p.regular[pick], idx: pick, goal: `Go for platinum (best so far: ${medal})` };
+    return { song: p.regular[pick], idx: pick, goal: t('Go for platinum (best so far: {medal})', { medal: t(medal) }) };
   }
   const i = order[0];
-  return { song: p.regular[i], idx: i, goal: 'Every track is platinum. Beat your best score' };
+  return { song: p.regular[i], idx: i, goal: t('Every track is platinum. Beat your best score') };
 }
 
 /** What the result screen's Next Entry offers after the entry at `idx`. */

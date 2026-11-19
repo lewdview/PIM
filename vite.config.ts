@@ -52,6 +52,8 @@ const PORTAL_SDK: Record<Portal, string> = {
 // ahead of the game script.
 const SLIDESHOW_GLOB = "'../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}'";
 const GOOGLE_FONTS_IMPORT = /@import url\('https:\/\/fonts\.googleapis\.com\/[^']*'\);/;
+// latin-ext carries the Polish letters (ą ć ę ł ń ó ś ź ż); its unicode-range means
+// the browser only fetches it when a Polish screen needs one.
 const BUNDLED_FONTS = [
   ...[300, 400, 500, 600, 700].map((w) => `@fontsource/space-grotesk/latin-${w}.css`),
   "@fontsource/jetbrains-mono/latin-400.css",
@@ -60,7 +62,7 @@ const BUNDLED_FONTS = [
   "@fontsource/press-start-2p/latin-400.css",
   "@fontsource/instrument-serif/latin-400.css",
   "@fontsource/instrument-serif/latin-400-italic.css",
-].map((f) => `@import '${f}';`).join("\n");
+].flatMap((f) => [f, f.replace("/latin-", "/latin-ext-")]).map((f) => `@import '${f}';`).join("\n");
 // Portal build: the game runs as a guest. Portals allow no backend or login of the game's
 // own, so the Supabase library and the sign-in store are swapped for inert stand-ins
 // (src/platform/klyo) and never reach the package.

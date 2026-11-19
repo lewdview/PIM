@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 // Campaign story layer: what each month's chapter "says". The act structure
 // (day ranges, moods, themes) and the lyric beats come from
 // scripts/build_chapter_stories.mjs via chapter_stories.json, built from the
@@ -164,8 +165,8 @@ export function highlightRuns(line: string, words: string[]): { text: string; hi
 }
 
 export const MOOD_LABEL: Record<string, string> = {
-  bright: 'Bright',
-  rising: 'Rising',
-  restless: 'Restless',
-  heavy: 'Heavy',
+  bright: t('Bright'),
+  rising: t('Rising'),
+  restless: t('Restless'),
+  heavy: t('Heavy'),
 };

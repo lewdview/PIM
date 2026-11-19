@@ -60,6 +60,7 @@ import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/campaignArcade.css';
 import '@/styles/monthBoard.css';
+import { t } from '@/i18n';
 
 const MEDAL_COLOR: Record<string, string> = {
   PLATINUM: '#39FF14', GOLD: '#E5B800', SILVER: '#A0AABB', BRONZE: '#C97A3A',
@@ -96,9 +97,9 @@ const WEEK_LEN = 7;
 function weekPages(regular: GameSong[], bonus: GameSong[]): WeekPage[] {
   const pages: WeekPage[] = [];
   for (let start = 0; start < regular.length; start += WEEK_LEN) {
-    pages.push({ label: `Week ${pages.length + 1}`, start, end: Math.min(regular.length, start + WEEK_LEN) });
+    pages.push({ label: t('Week {n}', { n: pages.length + 1 }), start, end: Math.min(regular.length, start + WEEK_LEN) });
   }
-  if (bonus.length) pages.push({ label: 'Bonus', start: regular.length, end: regular.length + bonus.length, bonus: true });
+  if (bonus.length) pages.push({ label: t('Bonus'), start: regular.length, end: regular.length + bonus.length, bonus: true });
   return pages;
 }
 
@@ -258,17 +259,17 @@ export default function ChapterStory() {
       for (const act of acts) {
         const inAct = progress.regular.filter((s) => s.day >= act.fromDay && s.day <= act.toDay);
         if (!inAct.length) continue;
-        out.push({ key: act.act, label: `Act ${act.act}`, act, songs: inAct, startIdx: songs.indexOf(inAct[0]), bonus: false });
+        out.push({ key: act.act, label: t('Act {n}', { n: act.act }), act, songs: inAct, startIdx: songs.indexOf(inAct[0]), bonus: false });
       }
       // Tracks the acts don't cover (bonus split moved, catalog changed) still get shown.
       const covered = new Set(out.flatMap((g) => g.songs));
       const rest = progress.regular.filter((s) => !covered.has(s));
-      if (rest.length) out.push({ key: 'more', label: 'Interlude', songs: rest, startIdx: songs.indexOf(rest[0]), bonus: false });
+      if (rest.length) out.push({ key: 'more', label: t('Interlude'), songs: rest, startIdx: songs.indexOf(rest[0]), bonus: false });
     } else if (progress.regular.length) {
-      out.push({ key: 'all', label: 'Tracks', songs: progress.regular, startIdx: 0, bonus: false });
+      out.push({ key: 'all', label: t('Tracks'), songs: progress.regular, startIdx: 0, bonus: false });
     }
     if (progress.bonus.length) {
-      out.push({ key: 'bonus', label: 'Epilogue', act: story?.epilogue ?? undefined, songs: progress.bonus, startIdx: progress.regular.length, bonus: true });
+      out.push({ key: 'bonus', label: t('Epilogue'), act: story?.epilogue ?? undefined, songs: progress.bonus, startIdx: progress.regular.length, bonus: true });
     }
     return out;
   }, [songs, progress, story]);
@@ -293,10 +294,10 @@ export default function ChapterStory() {
       isBonus,
     );
     let lockReason = '';
-    if (timeLocked) lockReason = `Releases ${formatDate(selected.day)}.`;
-    else if (bonusLocked && MONTH_BUILD) lockReason = `Bonus song. Earn ${meta.platNeeded} platinum medals in this chapter to open the bonus songs (you have ${progress.platinums}), or unlock it now.`;
+    if (timeLocked) lockReason = t('Releases {date}.', { date: formatDate(selected.day) });
+    else if (bonusLocked && MONTH_BUILD) lockReason = t('Bonus song. Earn {need} platinum medals in this chapter to open the bonus songs (you have {have}), or unlock it now.', { need: meta.platNeeded, have: progress.platinums });
     else if (bonusLocked) lockReason = `Bonus stages open at ${meta.platNeeded} platinum medals in this chapter (you have ${progress.platinums}).`;
-    else if (progLocked) lockReason = 'Clear the previous track to continue the story.';
+    else if (progLocked) lockReason = t('Clear the previous track to continue the story.');
     else if (cardLocked) lockReason = 'Replaying a cleared track needs its card. Find it in packs or the vault.';
     const bombshell = bombshellArtFor(selected);
     return {
@@ -537,7 +538,7 @@ export default function ChapterStory() {
   const chStyle = { ['--ch' as string]: meta.dc };
 
   if (!songs || !progress) {
-    return <div className="cs-page" style={chStyle}><div className="cs-empty">Loading chapter…</div></div>;
+    return <div className="cs-page" style={chStyle}><div className="cs-empty">{t('Loading chapter…')}</div></div>;
   }
 
   const prologueSong = story ? songs.find((s) => s.day === story.prologue.day) : undefined;
@@ -549,7 +550,7 @@ export default function ChapterStory() {
     const endings = endingStates(songs, progress);
     const leaderboard = (lbKind === 'in_game' || lbKind === 'native_popup') && (
       <button type="button" className="btn-3d mb-lb-btn" data-size="sm" data-tone="quiet" onClick={openLeaderboard}>
-        <Trophy size={14} /> Leaderboard
+        <Trophy size={14} /> {t('Leaderboard')}
       </button>
     );
     const group = groups.find((g) => selectedIdx >= g.startIdx && selectedIdx < g.startIdx + g.songs.length);
@@ -563,39 +564,39 @@ export default function ChapterStory() {
           <ArcadeBackdrop />
           <div className="mb-title">
             <div className="ca-hud">
-              <span className="ca-chip" data-tone="hot">Chapter {pad(meta.month)}</span>
+              <span className="ca-chip" data-tone="hot">{t('Chapter {n}', { n: pad(meta.month) })}</span>
               <span className="ca-chip">{meta.sub}</span>
             </div>
             <SlamTitle text={meta.name} className="ca-title--ch" delay={250} />
           </div>
           <div className="mb-progress">
             <div className="cs-stats ca-stats">
-              <span><b>{progress.cleared}/{progress.regular.length}</b> cleared</span>
-              <span><b>✦ {progress.platinums}/{meta.platNeeded}</b> platinum for bonus</span>
-              <span><b>{meta.diff.toLowerCase()}</b></span>
+              <span><b>{progress.cleared}/{progress.regular.length}</b> {t('cleared')}</span>
+              <span><b>✦ {progress.platinums}/{meta.platNeeded}</b> {t('platinum for bonus')}</span>
+              <span><b>{t(meta.diff.toLowerCase())}</b></span>
             </div>
-            <div className="cs-bar" aria-label={`${pct}% cleared`}><span style={{ width: `${pct}%` }} /></div>
+            <div className="cs-bar" aria-label={t('{pct}% cleared', { pct })}><span style={{ width: `${pct}%` }} /></div>
           </div>
           <div className="mb-head-actions">
             {bonusGated && canBuyBundle() && (
               <button type="button" className="btn-3d" data-size="sm" data-tone="gold" disabled={unlocking} onClick={buyBundle}>
-                <Gift size={14} /> Unlock {progress.bonus.length} bonus songs{bundlePrice ? ` · ${bundlePrice}` : ''}
+                <Gift size={14} /> {t('Unlock {n} bonus songs', { n: progress.bonus.length })}{bundlePrice ? ` · ${bundlePrice}` : ''}
               </button>
             )}
             {leaderboard}
             {endings.find((e) => e.id === 'true')?.earned && (
               <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={() => { sfx(); setLocation('/listen'); }}>
-                <Headphones size={14} /> Listen
+                <Headphones size={14} /> {t('Listen')}
               </button>
             )}
             {ALBUM_ON && (
               <button type="button" className="btn-3d" data-size="sm" data-tone={packCount ? 'gold' : 'quiet'} onClick={() => { sfx(); setPanel(packCount ? 'packs' : 'album'); }}>
-                <Layers size={14} /> {packCount ? `Open pack${packCount > 1 ? `s (${packCount})` : ''}` : 'Album'}
+                <Layers size={14} /> {packCount ? (packCount > 1 ? t('Open packs ({n})', { n: packCount }) : t('Open pack')) : t('Album')}
               </button>
             )}
             {story && (
               <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('story'); }}>
-                <BookOpen size={14} /> Story
+                <BookOpen size={14} /> {t('Story')}
               </button>
             )}
             {/* Beat Runner stays a secret until the first warp note is caught. */}
@@ -605,22 +606,22 @@ export default function ChapterStory() {
               </button>
             )}
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('endings'); }}>
-              <Flag size={14} /> Endings{endings.some((e) => e.earned && !e.seen) && <span className="mb-ending-dot" aria-label="New ending" />}
+              <Flag size={14} /> {t('Endings')}{endings.some((e) => e.earned && !e.seen) && <span className="mb-ending-dot" aria-label={t('New ending')} />}
             </button>
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('share'); }}>
-              <Share2 size={14} /> Share
+              <Share2 size={14} /> {t('Share')}
             </button>
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('options'); }}>
-              <Settings size={14} /> Options
+              <Settings size={14} /> {t('Options')}
             </button>
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('about'); }}>
-              <Info size={14} /> Who is th3scr1b3?
+              <Info size={14} /> {t('Who is th3scr1b3?')}
             </button>
           </div>
         </header>
 
         <div className="mb-main">
-          <section className="mb-week" aria-label="Tracks by week">
+          <section className="mb-week" aria-label={t('Tracks by week')}>
             {backdrops.prev && (
               <div key={`bg-${backdrops.prev}`} className="mb-week-backdrop" data-under aria-hidden="true"
                 style={{ backgroundImage: `url("${backdrops.prev}")` }} />
@@ -629,8 +630,8 @@ export default function ChapterStory() {
               <div key={`bg-${backdrops.cur}`} className="mb-week-backdrop" aria-hidden="true"
                 style={{ backgroundImage: `url("${backdrops.cur}")` }} />
             )}
-            <nav className="mb-week-nav" aria-label="Weeks">
-              <button type="button" className="mb-week-arrow" aria-label="Previous week" disabled={weekIdx === 0}
+            <nav className="mb-week-nav" aria-label={t('Weeks')}>
+              <button type="button" className="mb-week-arrow" aria-label={t('Previous week')} disabled={weekIdx === 0}
                 onClick={() => goWeek(weekIdx - 1)}><ChevronLeft size={18} /></button>
               <div className="mb-week-tabs" role="tablist">
                 {weeks.map((w, i) => {
@@ -639,13 +640,13 @@ export default function ChapterStory() {
                     <button key={w.label} type="button" role="tab" className="mb-week-tab" aria-selected={i === weekIdx}
                       data-bonus={w.bonus || undefined} data-done={done === w.end - w.start || undefined}
                       onClick={() => goWeek(i)}>
-                      <b>{w.bonus ? '★' : `W${i + 1}`}</b>
+                      <b>{w.bonus ? '★' : t('W{n}', { n: i + 1 })}</b>
                       <small>{done}/{w.end - w.start}</small>
                     </button>
                   );
                 })}
               </div>
-              <button type="button" className="mb-week-arrow" aria-label="Next week" disabled={weekIdx === weeks.length - 1}
+              <button type="button" className="mb-week-arrow" aria-label={t('Next week')} disabled={weekIdx === weeks.length - 1}
                 onClick={() => goWeek(weekIdx + 1)}><ChevronRight size={18} /></button>
             </nav>
             {weeks[weekIdx] && (
@@ -656,7 +657,7 @@ export default function ChapterStory() {
                     {formatDate(songs[weeks[weekIdx].start].day)} – {formatDate(songs[weeks[weekIdx].end - 1].day)}
                   </span>
                 )}
-                <span className="mb-week-keys cs-muted">Q / E to switch weeks</span>
+                <span className="mb-week-keys cs-muted">{t('Q / E to switch weeks')}</span>
               </div>
             )}
             <div className="mb-week-stage" data-dir={weekDir}>
@@ -689,7 +690,7 @@ export default function ChapterStory() {
                         className="mb-tile mb-tile--tutorial"
                         data-state={tutorialDone ? 'cleared' : 'open'}
                         data-selected={selectedIdx === TUTORIAL_IDX}
-                        aria-label={`Practice, optional, ${tutorialDone ? 'done' : 'open'}`}
+                        aria-label={t(tutorialDone ? 'Practice, optional, done' : 'Practice, optional, open')}
                         aria-pressed={selectedIdx === TUTORIAL_IDX}
                         onClick={() => select(TUTORIAL_IDX)}
                         onDoubleClick={() => { if (selectedIdx === TUTORIAL_IDX) handlePlay(); }}
@@ -697,8 +698,8 @@ export default function ChapterStory() {
                         <span className="mb-tile-ico"><Cpu size={34} /></span>
                         {selectedIdx === TUTORIAL_IDX && <span className="ca-cursor mb-tile-cursor" aria-hidden="true">▶</span>}
                         <span className="mb-tile-n">0</span>
-                        <span className="mb-tile-title">Practice</span>
-                        {tutorialDone && <span className="mb-tile-medal" style={{ background: '#39ff14' }} title="Done" />}
+                        <span className="mb-tile-title">{t('Practice')}</span>
+                        {tutorialDone && <span className="mb-tile-medal" style={{ background: '#39ff14' }} title={t('Done')} />}
                       </button>
                     </li>
                   )}
@@ -715,7 +716,7 @@ export default function ChapterStory() {
                           data-state={state}
                           data-selected={idx === selectedIdx}
                           data-bonus={isBonus || undefined}
-                          aria-label={`${s.title}, ${isBonus ? 'bonus' : `track ${idx + 1}`}, ${state}`}
+                          aria-label={`${s.title}, ${isBonus ? t('bonus') : t('track {n}', { n: idx + 1 })}, ${t(state)}`}
                           aria-pressed={idx === selectedIdx}
                           onClick={() => select(idx)}
                           onDoubleClick={() => { if (idx === selectedIdx) handlePlay(); }}
@@ -738,39 +739,39 @@ export default function ChapterStory() {
           </section>
 
           {selectedIdx === TUTORIAL_IDX && (
-            <section key={PG_TUTORIAL_ID} className="mb-detail ca-panel" aria-label="Tutorial">
+            <section key={PG_TUTORIAL_ID} className="mb-detail ca-panel" aria-label={t('Tutorial')}>
               <div className="mb-detail-top">
                 <span className="mb-cover mb-cover--tutorial" aria-hidden="true"><Cpu size={56} /></span>
                 <div className="mb-detail-name">
-                  <div className="cs-eyebrow">Optional practice · {tutorialDone ? 'done' : 'any time'}</div>
-                  <h2 className="cs-display">Practice</h2>
+                  <div className="cs-eyebrow">{t('Optional practice')} · {t(tutorialDone ? 'done' : 'any time')}</div>
+                  <h2 className="cs-display">{t('Practice')}</h2>
                   <p className="cs-hook mb-hook">
-                    Every note type (taps, holds, swipes and slides) over a little computer music. The songs teach the basics as you play, so this is extra.
+                    {t('Every note type (taps, holds, swipes and slides) over a little computer music. The songs teach the basics as you play, so this is extra.')}
                   </p>
                 </div>
               </div>
               <div className="mb-note">
-                <span className="cs-muted">No score and no medal here. Miss three notes and it rewinds so you can try again.</span>
+                <span className="cs-muted">{t('No score and no medal here. Miss three notes and it rewinds so you can try again.')}</span>
               </div>
               <div className="mb-actions">
-                <button type="button" className="btn-3d mb-play" onClick={() => handlePlay()} aria-label="Play the practice run">
+                <button type="button" className="btn-3d mb-play" onClick={() => handlePlay()} aria-label={t('Play the practice run')}>
                   <Play size={16} fill="currentColor" />
-                  {tutorialDone ? 'Replay' : 'Play'}
+                  {t(tutorialDone ? 'Replay' : 'Play')}
                 </button>
               </div>
             </section>
           )}
           {selected && status && (
-            <section key={selected.id} className="mb-detail ca-panel" aria-label="Selected track">
+            <section key={selected.id} className="mb-detail ca-panel" aria-label={t('Selected track')}>
               <div className="mb-detail-top">
-                <button type="button" className="mb-cover-btn" onClick={() => { sfx(); setPanel('song'); }} aria-label={`Open ${selected.title}`}>
+                <button type="button" className="mb-cover-btn" onClick={() => { sfx(); setPanel('song'); }} aria-label={t('Open {title}', { title: selected.title })}>
                   {selected.coverArt ? <img className="mb-cover" src={selected.coverArt} alt="" onError={hideBroken} /> : <span className="mb-cover" />}
                 </button>
                 <div className="mb-detail-name">
                   <div className="cs-eyebrow">
-                    {status.isBonus ? 'Bonus' : `Track ${selectedIdx + 1}/${progress.regular.length}`}
-                    {group?.act?.act && <> · Act {group.act.act} · {group.act.word}</>}
-                    {' · '}day {selected.day}
+                    {status.isBonus ? t('Bonus') : t('Track {n}/{total}', { n: selectedIdx + 1, total: progress.regular.length })}
+                    {group?.act?.act && <> · {t('Act {n}', { n: group.act.act })} · {group.act.word}</>}
+                    {' · '}{t('day {n}', { n: selected.day })}
                   </div>
                   <h2 className="cs-display">{selected.title}</h2>
                   {tr && (
@@ -782,73 +783,73 @@ export default function ChapterStory() {
               </div>
               <div className="cs-detail-grid">
                 {runMode === 'intro'
-                  ? <div><small>First run</small><b>Lv {levelForMode('intro', status.level)}</b></div>
+                  ? <div><small>{t('First run')}</small><b>{t('Lv {n}', { n: levelForMode('intro', status.level) })}</b></div>
                   : (
                     <div className="mb-mode">
-                      <small>Mode · lv {levelForMode(runMode, status.level)}</small>
-                      <span className="mb-mode-switch" role="radiogroup" aria-label="Mode">
+                      <small>{t('Mode · lv {n}', { n: levelForMode(runMode, status.level) })}</small>
+                      <span className="mb-mode-switch" role="radiogroup" aria-label={t('Mode')}>
                         {(['relaxed', 'standard'] as const).map((m) => (
                           <button key={m} type="button" role="radio" aria-checked={runMode === m} data-on={runMode === m || undefined}
                             onClick={() => pickMode(m)}
-                            title={m === 'relaxed' ? 'Easier chart, wider timing, no fail. No medals or leaderboard.' : 'The full chart. Medals and leaderboard.'}>
-                            {MODE_LABEL[m]}
+                            title={t(m === 'relaxed' ? 'Easier chart, wider timing, no fail. No medals or leaderboard.' : 'The full chart. Medals and leaderboard.')}>
+                            {t(MODE_LABEL[m])}
                           </button>
                         ))}
                       </span>
                     </div>
                   )}
                 <div>
-                  <small>{!status.score && status.relaxedBest ? 'Best · relaxed' : 'Best'}</small>
+                  <small>{t(!status.score && status.relaxedBest ? 'Best · relaxed' : 'Best')}</small>
                   <b>{status.score ? status.score.toLocaleString() : status.relaxedBest ? status.relaxedBest.toLocaleString() : '—'}</b>
                 </div>
-                <div><small>Medal</small><b style={{ color: MEDAL_COLOR[status.medal] ?? undefined }}>{status.medal && status.medal !== 'NONE' ? status.medal.toLowerCase() : '—'}</b></div>
+                <div><small>{t('Medal')}</small><b style={{ color: MEDAL_COLOR[status.medal] ?? undefined }}>{status.medal && status.medal !== 'NONE' ? t(status.medal.toLowerCase()) : '—'}</b></div>
               </div>
               <div className="mb-note">
                 {status.lockReason
                   ? <span className="cs-lock-note">{status.lockReason}</span>
                   : runMode === 'intro'
-                    ? <span className="cs-muted mb-mode-note">First song: gentle chart, wider timing, no fail, control tips.</span>
+                    ? <span className="cs-muted mb-mode-note">{t('First song: gentle chart, wider timing, no fail, control tips.')}</span>
                   : runMode === 'relaxed'
-                    ? <span className="cs-muted mb-mode-note">Relaxed: easier chart, no fail. Medals and the leaderboard need Standard.</span>
+                    ? <span className="cs-muted mb-mode-note">{t('Relaxed: easier chart, no fail. Medals and the leaderboard need Standard.')}</span>
                   : status.bombshell
-                    ? <span className="cs-muted">{status.bombshellUnlocked ? 'Prestige Art unlocked. It plays behind this track.' : 'Get a platinum medal to unlock this track’s Prestige Art.'}</span>
+                    ? <span className="cs-muted">{t(status.bombshellUnlocked ? 'Prestige Art unlocked. It plays behind this track.' : 'Get a platinum medal to unlock this track’s Prestige Art.')}</span>
                     : null}
               </div>
               <div className="mb-actions">
                 {status.bonusLocked && canUnlockWithAd() && (
                   <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" disabled={unlocking} onClick={unlockByAd}>
-                    <Film size={14} /> Watch ad
+                    <Film size={14} /> {t('Watch ad')}
                   </button>
                 )}
                 {status.bonusLocked && bonusGated && canBuyBundle() && (
                   <button type="button" className="btn-3d" data-size="sm" data-tone="gold" disabled={unlocking} onClick={buyBundle}>
-                    All 5 bonus{bundlePrice ? ` · ${bundlePrice}` : ''}
+                    {t('All 5 bonus')}{bundlePrice ? ` · ${bundlePrice}` : ''}
                   </button>
                 )}
                 <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('song'); }}>
-                  <Info size={14} /><span className="mb-btn-label"> Song page</span>
+                  <Info size={14} /><span className="mb-btn-label"> {t('Song page')}</span>
                 </button>
                 {!status.bonusLocked && (
-                  <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={togglePreview} aria-label={previewing ? 'Stop preview' : 'Preview'}>
-                    {previewing ? <Pause size={14} /> : <Play size={14} />}<span className="mb-btn-label"> {previewing ? 'Stop' : 'Preview'}</span>
+                  <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={togglePreview} aria-label={t(previewing ? 'Stop preview' : 'Preview')}>
+                    {previewing ? <Pause size={14} /> : <Play size={14} />}<span className="mb-btn-label"> {t(previewing ? 'Stop' : 'Preview')}</span>
                   </button>
                 )}
                 {runMode !== 'intro' && !status.locked && (
                   <button type="button" className="btn-3d mb-mode-btn" data-size="sm" data-tone="quiet"
                     onClick={() => pickMode(runMode === 'relaxed' ? 'standard' : 'relaxed')}
-                    aria-label={`Mode: ${MODE_LABEL[runMode]}. Switch to ${runMode === 'relaxed' ? 'Standard' : 'Relaxed'}`}>
-                    {MODE_LABEL[runMode]}
+                    aria-label={t('Mode: {mode}. Switch to {other}', { mode: t(MODE_LABEL[runMode]), other: t(runMode === 'relaxed' ? 'Standard' : 'Relaxed') })}>
+                    {t(MODE_LABEL[runMode])}
                   </button>
                 )}
                 {status.cleared && !status.locked && (
                   <button type="button" className="btn-3d mb-deluxe" data-size="sm" data-tone="gold" onClick={() => handlePlay(true)}
-                    title="Chart Master Deluxe: denser, harder chart with every note type">
-                    <Sparkles size={14} /> Deluxe
+                    title={t('Chart Master Deluxe: denser, harder chart with every note type')}>
+                    <Sparkles size={14} /> {t('Deluxe')}
                   </button>
                 )}
-                <button type="button" className="btn-3d mb-play" disabled={status.locked} onClick={() => handlePlay()} aria-label={status.locked ? `Locked: ${status.lockReason}` : `Play ${selected.title}`}>
+                <button type="button" className="btn-3d mb-play" disabled={status.locked} onClick={() => handlePlay()} aria-label={status.locked ? t('Locked: {reason}', { reason: status.lockReason }) : t('Play {title}', { title: selected.title })}>
                   {status.locked ? <Lock size={16} /> : <Play size={16} fill="currentColor" />}
-                  {status.locked ? 'Locked' : status.cleared ? 'Replay' : 'Play'}
+                  {t(status.locked ? 'Locked' : status.cleared ? 'Replay' : 'Play')}
                 </button>
               </div>
             </section>
@@ -890,10 +891,10 @@ export default function ChapterStory() {
           const summary = monthSummary(songs, progress);
           return (
             <MonthShare
-              eyebrow="Your month so far"
-              title={`Share ${meta.name.toLowerCase()}`}
+              eyebrow={t('Your month so far')}
+              title={t('Share {month}', { month: meta.name.toLowerCase() })}
               text={progressText(summary)}
-              copyLabel="Copy my month"
+              copyLabel={t('Copy my month')}
               fileName={shareFileName('progress')}
               draw={() => drawProgressCard(summary)}
               trophies={achievementStates(songs, progress)}
@@ -930,30 +931,30 @@ export default function ChapterStory() {
         )}
 
         {lbOpen && (
-          <div className="mb-lb" role="dialog" aria-modal="true" aria-label={`${meta.name} leaderboard`} onClick={() => setLbOpen(false)}>
+          <div className="mb-lb" role="dialog" aria-modal="true" aria-label={t('{month} leaderboard', { month: meta.name })} onClick={() => setLbOpen(false)}>
             <div className="mb-lb-card" onClick={(e) => e.stopPropagation()}>
               <div className="mb-lb-head">
                 <div>
-                  <div className="cs-eyebrow">Total of your best scores</div>
-                  <h2 className="cs-display">{meta.name} leaderboard</h2>
+                  <div className="cs-eyebrow">{t('Total of your best scores')}</div>
+                  <h2 className="cs-display">{t('{month} leaderboard', { month: meta.name })}</h2>
                 </div>
-                <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => setLbOpen(false)} aria-label="Close leaderboard"><X size={16} /></button>
+                <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => setLbOpen(false)} aria-label={t('Close leaderboard')}><X size={16} /></button>
               </div>
-              {lbRows === null ? <div className="cs-muted">Loading…</div>
-                : lbRows.length === 0 ? <div className="cs-muted">No scores yet. Clear a track to post yours.</div>
+              {lbRows === null ? <div className="cs-muted">{t('Loading…')}</div>
+                : lbRows.length === 0 ? <div className="cs-muted">{t('No scores yet. Clear a track to post yours.')}</div>
                 : (
                   <ol className="mb-lb-rows">
                     {lbRows.slice(0, 10).map((r) => (
                       <li key={r.id ?? r.rank}>
                         <span className="mb-lb-rank">{r.rank}</span>
                         {r.photo ? <img src={r.photo} alt="" onError={hideBroken} /> : <span className="mb-lb-ph" />}
-                        <span className="mb-lb-name">{r.name || 'Player'}</span>
+                        <span className="mb-lb-name">{r.name || t('Player')}</span>
                         <b>{Number(r.score).toLocaleString()}</b>
                       </li>
                     ))}
                   </ol>
                 )}
-              <div className="cs-muted" style={{ fontSize: 12 }}>Your total: {monthTotal(songs).toLocaleString()}</div>
+              <div className="cs-muted" style={{ fontSize: 12 }}>{t('Your total: {n}', { n: monthTotal(songs).toLocaleString() })}</div>
             </div>
           </div>
         )}

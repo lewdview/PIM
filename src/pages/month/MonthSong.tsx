@@ -14,6 +14,7 @@ import { Highlighted } from '@/pages/campaign/storyParts';
 import { hideBroken } from '@/pages/campaign/hideBroken';
 import { deluxeRunId } from './startRun';
 import '@/styles/monthPanels.css';
+import { t } from '@/i18n';
 
 const MEDAL_COLOR: Record<string, string> = {
   PLATINUM: '#39FF14', GOLD: '#E5B800', SILVER: '#A0AABB', BRONZE: '#C97A3A',
@@ -51,15 +52,15 @@ interface Props {
   onClose: () => void;
 }
 
-const medalText = (m: string) => (m && m !== 'NONE' ? m.toLowerCase() : '—');
+const medalText = (m: string) => (m && m !== 'NONE' ? t(m.toLowerCase()) : '—');
 
 /** Where the track sits in its act's story, if it is one of the act's three beats. */
 function storyBeat(day: number, act: Props['act']): string | null {
   if (!act) return null;
-  const name = act.act ? `Act ${act.act}` : 'the epilogue';
-  if (act.open?.day === day) return `Opens ${name}.`;
-  if (act.turn?.day === day) return `The turn of ${name}: the mood ${act.turn.dir === 'lifts' ? 'lifts' : 'drops'} here.`;
-  if (act.close?.day === day) return `Closes ${name}.`;
+  const name = act.act ? t('Act {n}', { n: act.act }) : t('the epilogue');
+  if (act.open?.day === day) return t('Opens {name}.', { name });
+  if (act.turn?.day === day) return t(act.turn.dir === 'lifts' ? 'The turn of {name}: the mood lifts here.' : 'The turn of {name}: the mood drops here.', { name });
+  if (act.close?.day === day) return t('Closes {name}.', { name });
   return null;
 }
 
@@ -88,13 +89,13 @@ export default function MonthSong(p: Props) {
   return (
     <div className="mb-lb" role="dialog" aria-modal="true" aria-label={song.title} onClick={p.onClose}>
       <div className="mb-lb-card ms-card" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="ms-nav" data-side="prev" aria-label="Previous track" disabled={!p.hasPrev} onClick={p.onPrev}>
+        <button type="button" className="ms-nav" data-side="prev" aria-label={t('Previous track')} disabled={!p.hasPrev} onClick={p.onPrev}>
           <ChevronLeft size={22} />
         </button>
-        <button type="button" className="ms-nav" data-side="next" aria-label="Next track" disabled={!p.hasNext} onClick={p.onNext}>
+        <button type="button" className="ms-nav" data-side="next" aria-label={t('Next track')} disabled={!p.hasNext} onClick={p.onNext}>
           <ChevronRight size={22} />
         </button>
-        <button type="button" className="btn-3d ms-close" data-size="sm" data-tone="quiet" onClick={p.onClose} aria-label="Close">
+        <button type="button" className="btn-3d ms-close" data-size="sm" data-tone="quiet" onClick={p.onClose} aria-label={t('Close')}>
           <X size={16} />
         </button>
 
@@ -105,23 +106,23 @@ export default function MonthSong(p: Props) {
             {status.bombshell && (
               status.bombshellUnlocked ? (
                 <button type="button" className="ms-art-toggle" onClick={() => setShowBombshell((v) => !v)}>
-                  {showBombshell ? 'Show cover' : 'Show Prestige Art'}
+                  {t(showBombshell ? 'Show cover' : 'Show Prestige Art')}
                 </button>
               ) : (
-                <figcaption className="ms-art-hint">Platinum unlocks this track's Prestige Art</figcaption>
+                <figcaption className="ms-art-hint">{t("Platinum unlocks this track's Prestige Art")}</figcaption>
               )
             )}
           </figure>
 
           <div className="ms-info">
             <div className="cs-eyebrow">
-              {status.isBonus ? 'Bonus' : `Track ${p.idx + 1}/${p.regularCount}`} · day {song.day} · {formatDate(song.day)}
+              {status.isBonus ? t('Bonus') : t('Track {n}/{total}', { n: p.idx + 1, total: p.regularCount })} · {t('day {n}', { n: song.day })} · {formatDate(song.day)}
             </div>
             <h2 className="cs-display ms-title">{song.title}</h2>
             {act && (
               <p className="ms-act">
-                <b>{act.act ? `Act ${act.act}` : 'Epilogue'} · {act.word}</b>
-                {MOOD_LABEL[act.mood] && <> · {MOOD_LABEL[act.mood]}</>}
+                <b>{act.act ? t('Act {n}', { n: act.act }) : t('Epilogue')} · {act.word}</b>
+                {MOOD_LABEL[act.mood] && <> · {t(MOOD_LABEL[act.mood])}</>}
                 {beat && <> · {beat}</>}
               </p>
             )}
@@ -131,17 +132,17 @@ export default function MonthSong(p: Props) {
               </blockquote>
             )}
             {!!p.track?.themes.length && (
-              <ul className="ms-themes" aria-label="Themes">
-                {p.track.themes.map((t) => <li key={t}>{t}</li>)}
+              <ul className="ms-themes" aria-label={t('Themes')}>
+                {p.track.themes.map((th) => <li key={th}>{th}</li>)}
               </ul>
             )}
 
             <dl className="ms-records">
-              <div><dt>Level · {levelToTier(status.level).toLowerCase()}</dt><dd>{status.level}</dd></div>
-              <div><dt>Best</dt><dd>{status.score ? status.score.toLocaleString() : '—'}</dd></div>
-              <div><dt>Medal</dt><dd style={{ color: MEDAL_COLOR[status.medal] }}>{medalText(status.medal)}</dd></div>
-              <div data-deluxe><dt>Deluxe best</dt><dd>{deluxeBest ? deluxeBest.toLocaleString() : '—'}</dd></div>
-              <div data-deluxe><dt>Deluxe medal</dt><dd style={{ color: MEDAL_COLOR[deluxeMedal] }}>{medalText(deluxeMedal)}</dd></div>
+              <div><dt>{t('Level')} · {t(levelToTier(status.level).toLowerCase())}</dt><dd>{status.level}</dd></div>
+              <div><dt>{t('Best')}</dt><dd>{status.score ? status.score.toLocaleString() : '—'}</dd></div>
+              <div><dt>{t('Medal')}</dt><dd style={{ color: MEDAL_COLOR[status.medal] }}>{medalText(status.medal)}</dd></div>
+              <div data-deluxe><dt>{t('Deluxe best')}</dt><dd>{deluxeBest ? deluxeBest.toLocaleString() : '—'}</dd></div>
+              <div data-deluxe><dt>{t('Deluxe medal')}</dt><dd style={{ color: MEDAL_COLOR[deluxeMedal] }}>{medalText(deluxeMedal)}</dd></div>
             </dl>
 
             {status.lockReason && <p className="cs-lock-note ms-lock">{status.lockReason}</p>}
@@ -149,18 +150,18 @@ export default function MonthSong(p: Props) {
             <div className="mb-actions ms-actions">
               {!status.locked && (
                 <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={p.onPreview}>
-                  {p.previewing ? <Pause size={14} /> : <Play size={14} />} {p.previewing ? 'Stop' : 'Preview'}
+                  {p.previewing ? <Pause size={14} /> : <Play size={14} />} {t(p.previewing ? 'Stop' : 'Preview')}
                 </button>
               )}
               {status.cleared && !status.locked && (
                 <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={() => p.onPlay(true)}
-                  title="Chart Master Deluxe: denser, harder chart with every note type">
-                  <Sparkles size={14} /> Deluxe
+                  title={t('Chart Master Deluxe: denser, harder chart with every note type')}>
+                  <Sparkles size={14} /> {t('Deluxe')}
                 </button>
               )}
               <button type="button" className="btn-3d mb-play" disabled={status.locked} onClick={() => p.onPlay()}>
                 {status.locked ? <Lock size={16} /> : <Play size={16} fill="currentColor" />}
-                {status.locked ? 'Locked' : status.cleared ? 'Replay' : 'Play'}
+                {t(status.locked ? 'Locked' : status.cleared ? 'Replay' : 'Play')}
               </button>
             </div>
           </div>

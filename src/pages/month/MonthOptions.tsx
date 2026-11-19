@@ -15,6 +15,7 @@ import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/monthBoard.css';
 import '@/styles/monthPanels.css';
+import { t, readLangSetting, setLangSetting, type LangSetting } from '@/i18n';
 
 type Tab = 'audio' | 'timing' | 'display' | 'gfx' | 'play';
 const TABS: { id: Tab; label: string }[] = [
@@ -58,6 +59,10 @@ const LYRICS: { id: LyricsMode; name: string }[] = [
 const GFX: { id: GfxLevel; name: string }[] = [
   { id: 'low', name: 'Low' }, { id: 'medium', name: 'Medium' }, { id: 'high', name: 'High' }, { id: 'ultra', name: 'Ultra' },
 ];
+// Language names are written in their own language, so they never change.
+const LANG_ITEMS: { id: LangSetting; name: string }[] = [
+  { id: 'auto', name: 'Device language' }, { id: 'en', name: 'English' }, { id: 'pl', name: 'Polski' },
+];
 const PARTICLES: { id: ParticleDensity; name: string }[] = [
   { id: 'minimal', name: 'Minimal' }, { id: 'half', name: 'Half' }, { id: 'full', name: 'Full' },
 ];
@@ -68,7 +73,7 @@ type BoolKey = 'sfxEnabled' | 'bgMusic' | 'autoLatencyAdjust' | 'autoQuality' | 
 function Toggle({ label, hint, on, onChange }: { label: string; hint?: string; on: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="mo-row">
-      <span className="mo-label">{label}{hint && <small>{hint}</small>}</span>
+      <span className="mo-label">{t(label)}{hint && <small>{t(hint)}</small>}</span>
       <button type="button" role="switch" aria-checked={on} className="mo-switch" onClick={() => onChange(!on)}>
         <span />
       </button>
@@ -81,7 +86,7 @@ function Slider({ label, value, min, max, step, format, onChange }: {
 }) {
   return (
     <label className="mo-row">
-      <span className="mo-label">{label}<small>{format(value)}</small></span>
+      <span className="mo-label">{t(label)}<small>{format(value)}</small></span>
       <input className="mo-range" type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))} />
     </label>
@@ -95,11 +100,11 @@ function Cycle<T extends string>({ label, value, items, onChange }: {
   const step = (d: number) => onChange(items[(i + d + items.length) % items.length].id);
   return (
     <div className="mo-row">
-      <span className="mo-label">{label}</span>
+      <span className="mo-label">{t(label)}</span>
       <span className="mo-cycle">
-        <button type="button" aria-label={`Previous ${label.toLowerCase()}`} onClick={() => step(-1)}><ChevronLeft size={16} /></button>
-        <b>{items[i].name}</b>
-        <button type="button" aria-label={`Next ${label.toLowerCase()}`} onClick={() => step(1)}><ChevronRight size={16} /></button>
+        <button type="button" aria-label={t('Previous: {setting}', { setting: t(label) })} onClick={() => step(-1)}><ChevronLeft size={16} /></button>
+        <b>{t(items[i].name)}</b>
+        <button type="button" aria-label={t('Next: {setting}', { setting: t(label) })} onClick={() => step(1)}><ChevronRight size={16} /></button>
       </span>
     </div>
   );
@@ -119,6 +124,7 @@ function saveProfileSetting(key: string, value: unknown) {
 export default function MonthOptions({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>('audio');
   const [opts, setOpts] = useState<GameOpts>(() => loadOpts());
+  const [langSetting, setLangSettingState] = useState<LangSetting>(readLangSetting);
 
   const save = <K extends keyof GameOpts>(key: K, value: GameOpts[K]) => {
     try {
@@ -153,15 +159,15 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="mb-lb" role="dialog" aria-modal="true" aria-label="Options" onClick={onClose}>
+    <div className="mb-lb" role="dialog" aria-modal="true" aria-label={t('Options')} onClick={onClose}>
       <div className="mb-lb-card mo-card" onClick={(e) => e.stopPropagation()}>
         <div className="mb-lb-head">
-          <h2 className="cs-display">Options</h2>
-          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose} aria-label="Close options"><X size={16} /></button>
+          <h2 className="cs-display">{t('Options')}</h2>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose} aria-label={t('Close options')}><X size={16} /></button>
         </div>
         <div className="mo-tabs" role="tablist">
-          {TABS.map((t) => (
-            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>{t.label}</button>
+          {TABS.map((tb) => (
+            <button key={tb.id} type="button" role="tab" aria-selected={tab === tb.id} onClick={() => setTab(tb.id)}>{t(tb.label)}</button>
           ))}
         </div>
         <div className="mo-body" role="tabpanel">
@@ -177,16 +183,17 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
           {tab === 'timing' && <>
             <Slider label="Audio offset" value={opts.audioOffset} min={-150} max={150} step={5}
               format={(v) => `${v > 0 ? '+' : ''}${v} ms`} onChange={(v) => save('audioOffset', v)} />
-            <p className="mo-hint">Move it left if notes reach the bar before you hear the beat, right if the beat comes first.</p>
+            <p className="mo-hint">{t('Move it left if notes reach the bar before you hear the beat, right if the beat comes first.')}</p>
             <Toggle label="Auto timing fix" hint="Adjusts the offset while you play" {...bool('autoLatencyAdjust')} />
           </>}
           {tab === 'display' && <>
+            <Cycle label="Language" value={langSetting} items={LANG_ITEMS} onChange={(v) => { setLangSettingState(v); setLangSetting(v); }} />
             <Cycle label="View" value={opts.povMode} items={VIEWS} onChange={(v) => save('povMode', v)} />
             <Toggle label="Change view each stage" {...bool('stagePovSwitch')} />
             <Cycle label="HUD" value={opts.hudStyle} items={HUDS} onChange={(v) => save('hudStyle', v)} />
             <Cycle label="Notes" value={opts.noteSkin ?? 'classic'} items={NOTE_SKIN_ITEMS} onChange={(v) => save('noteSkin', v)} />
             {opts.hudStyle === 'stanza'
-              ? <p className="mo-hint">The Poetic GUI inks each lyric line as you play.</p>
+              ? <p className="mo-hint">{t('The Poetic GUI inks each lyric line as you play.')}</p>
               : <Cycle label="Lyrics" value={opts.lyricsMode} items={LYRICS} onChange={(v) => save('lyricsMode', v)} />}
             <Toggle label="Moving background" {...bool('bgAnimation')} />
           </>}
@@ -201,12 +208,12 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
             <Toggle label="Combo counter" {...bool('comboDisplay')} />
             <Toggle label="Vibration" hint="On phones that support it" {...bool('haptics')} />
             <Toggle label="Arrow keys play lanes" hint="← ↓ → alongside the letter keys" on={arrowLanes} onChange={setArrowLanes} />
-            <p className="mo-hint">Lane keys are {opts.laneKeys.map((k) => keyLabel(k)).join(' · ')}{arrowLanes ? ' or ← · ↓ · →' : ''}, and the arrow keys steer slide notes. On touch screens, tap the lanes.</p>
+            <p className="mo-hint">{t('Lane keys are {keys}, and the arrow keys steer slide notes. On touch screens, tap the lanes.', { keys: opts.laneKeys.map((k) => keyLabel(k)).join(' · ') + (arrowLanes ? ` ${t('or')} ← · ↓ · →` : '') })}</p>
           </>}
         </div>
         <div className="mo-foot">
-          <span className="mo-version">Build {BUILD_VERSION}</span>
-          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={reset}>Reset to defaults</button>
+          <span className="mo-version">{t('Build')} {BUILD_VERSION}</span>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={reset}>{t('Reset to defaults')}</button>
         </div>
       </div>
     </div>

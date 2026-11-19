@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { PLAYGAMA_MONTH } from '@/platform/playgama/month';
 import { RotateCcw, Heart, Shield, Zap, Volume2, ArrowUp, ArrowRight, CheckCircle2, AlertTriangle, Play } from 'lucide-react';
+import { t } from '@/i18n';
 
 export type TutorialStepType = 'tap' | 'hold' | 'swipe' | 'hold-swipe' | 'slide' | 'remix' | 'lift';
 
@@ -106,7 +107,7 @@ export default function TutorialOverlay({
                 [{stepIndex + 1}/{totalSteps}]
               </span>
               <span className="font-mono text-xs font-black uppercase text-white tracking-wider">
-                {meta.title}
+                {t(meta.title)}
               </span>
             </div>
 
@@ -114,7 +115,7 @@ export default function TutorialOverlay({
             <div className="flex items-center gap-3">
               {/* Hits Progress Pips */}
               <div className="flex items-center gap-1 font-mono text-[9px] font-bold text-zinc-400">
-                <span className="text-[8px] tracking-wider uppercase text-emerald-400">HITS:</span>
+                <span className="text-[8px] tracking-wider uppercase text-emerald-400">{t('HITS:')}</span>
                 {Array.from({ length: requiredSuccesses }).map((_, i) => {
                   const isHit = i < successCount;
                   return (
@@ -133,7 +134,7 @@ export default function TutorialOverlay({
 
               {/* Chances Pips Display */}
               <div className="flex items-center gap-1 font-mono text-[9px] font-bold text-zinc-400">
-                <span className="text-[8px] tracking-wider uppercase text-pink-400">LIVES:</span>
+                <span className="text-[8px] tracking-wider uppercase text-pink-400">{t('LIVES:')}</span>
                 {Array.from({ length: maxChances }).map((_, i) => {
                   const isActive = i < chancesLeft;
                   return (
@@ -153,7 +154,7 @@ export default function TutorialOverlay({
           </div>
 
           <p className="font-mono text-[10px] text-zinc-300 leading-snug">
-            {meta.subtitle}
+            {t(meta.subtitle)}
           </p>
 
           {/* Dynamic Hit Feedback Flash */}
@@ -167,8 +168,8 @@ export default function TutorialOverlay({
               >
                 <CheckCircle2 size={12} />
                 {successCount >= requiredSuccesses
-                  ? `OBJECTIVE CLEARED! (${successCount}/${requiredSuccesses} COMPLETE)`
-                  : `HIT ${successCount}/${requiredSuccesses} CONFIRMED! [${requiredSuccesses - successCount} MORE TO CLEAR]`}
+                  ? t('OBJECTIVE CLEARED! ({n}/{of} COMPLETE)', { n: successCount, of: requiredSuccesses })
+                  : t('HIT {n}/{of} CONFIRMED! [{left} MORE TO CLEAR]', { n: successCount, of: requiredSuccesses, left: requiredSuccesses - successCount })}
               </motion.div>
             )}
             {lastHitResult === 'miss' && (
@@ -179,7 +180,7 @@ export default function TutorialOverlay({
                 className="mt-2 py-1 px-2 bg-[#FF1493]/20 border border-[#FF1493] text-[#FF1493] font-mono text-[9.5px] font-black tracking-widest uppercase flex items-center gap-1.5 rounded-sm"
               >
                 <AlertTriangle size={12} />
-                ATTEMPT MISSED — {chancesLeft > 0 ? `${chancesLeft} CHANCE${chancesLeft > 1 ? 'S' : ''} REMAINING` : 'TRIGGERING REWIND...'}
+                {t('ATTEMPT MISSED')} · {chancesLeft > 0 ? t(chancesLeft > 1 ? '{n} CHANCES REMAINING' : '{n} CHANCE REMAINING', { n: chancesLeft }) : t('TRIGGERING REWIND...')}
               </motion.div>
             )}
           </AnimatePresence>
@@ -201,12 +202,12 @@ export default function TutorialOverlay({
             >
               <div className="flex items-center gap-2 mb-2 font-mono text-[9px] text-[#FFD700] tracking-[0.3em] font-black uppercase">
                 <Heart size={12} className="text-[#FFD700] fill-[#FFD700]" />
-                // SURVIVABILITY ENGINE //
+                {t('// SURVIVABILITY ENGINE //')}
               </div>
 
               <h2 className="font-mono text-2xl font-black text-white uppercase tracking-tight mb-4">
-                THE HEALTH CONCEPT <br />
-                <span className="text-[#FFD700]">& HEALING FREQUENCIES</span>
+                {t('THE HEALTH CONCEPT')} <br />
+                <span className="text-[#FFD700]">{t('& HEALING FREQUENCIES')}</span>
               </h2>
 
               <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed border-t border-b border-white/10 py-4 mb-5">
@@ -215,8 +216,8 @@ export default function TutorialOverlay({
                     3
                   </div>
                   <div>
-                    <span className="text-white font-bold block">3-MISS HEALTH LIMIT:</span>
-                    Failing 3 notes drains all health and triggers emergency continue.
+                    <span className="text-white font-bold block">{t('3-MISS HEALTH LIMIT:')}</span>
+                    {t('Failing 3 notes drains all health and triggers emergency continue.')}
                   </div>
                 </div>
 
@@ -225,8 +226,8 @@ export default function TutorialOverlay({
                     <Volume2 size={12} />
                   </div>
                   <div>
-                    <span className="text-white font-bold block">AUDIO PUNISHMENT:</span>
-                    Each miss mutes that lane's slice of the mix (bass, mids or treble).
+                    <span className="text-white font-bold block">{t('AUDIO PUNISHMENT:')}</span>
+                    {t("Each miss mutes that lane's slice of the mix (bass, mids or treble).")}
                   </div>
                 </div>
 
@@ -235,8 +236,8 @@ export default function TutorialOverlay({
                     <Zap size={12} />
                   </div>
                   <div>
-                    <span className="text-[#FFD700] font-black block">HEALING FREQUENCY RECHARGE:</span>
-                    Sustaining <strong className="text-white">HOLD ribbons</strong> continuously charges your Healing Gauge (~28%/sec). Fully filling the meter <strong className="text-[#39FF14]">restores a lost miss and re-opens muted audio lanes!</strong>
+                    <span className="text-[#FFD700] font-black block">{t('HEALING FREQUENCY RECHARGE:')}</span>
+                    {t('Sustaining')} <strong className="text-white">{t('HOLD ribbons')}</strong> {t('continuously charges your Healing Gauge (~28%/sec). Fully filling the meter')} <strong className="text-[#39FF14]">{t('restores a lost miss and re-opens muted audio lanes!')}</strong>
                   </div>
                 </div>
 
@@ -245,8 +246,8 @@ export default function TutorialOverlay({
                     <AlertTriangle size={12} />
                   </div>
                   <div>
-                    <span className="text-red-400 font-bold block">PREMATURE RELEASE HAZARD:</span>
-                    Releasing a hold note before the ribbon tail ends counts as an instant miss!
+                    <span className="text-red-400 font-bold block">{t('PREMATURE RELEASE HAZARD:')}</span>
+                    {t('Releasing a hold note before the ribbon tail ends counts as an instant miss!')}
                   </div>
                 </div>
               </div>
@@ -256,7 +257,7 @@ export default function TutorialOverlay({
                 className="w-full py-4 bg-gradient-to-r from-[#FFD700] to-amber-500 text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:scale-[1.02] active:scale-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2"
               >
                 <Play size={14} fill="currentColor" />
-                ENGAGE HOLD NOTE TRAINING
+                {t('ENGAGE HOLD NOTE TRAINING')}
               </button>
             </motion.div>
           </div>
@@ -278,35 +279,35 @@ export default function TutorialOverlay({
             >
               <div className="flex items-center gap-2 mb-2 font-mono text-[9px] text-[#FF1493] tracking-[0.3em] font-black uppercase">
                 <RotateCcw size={12} className="text-[#FF1493] animate-spin" />
-                // TIME-REVERSAL SYSTEM //
+                {t('// TIME-REVERSAL SYSTEM //')}
               </div>
 
               <h2 className="font-mono text-2xl font-black text-white uppercase tracking-tight mb-4">
-                THE REWIND TECHNIQUE <br />
-                <span className="text-[#FF1493]">EMERGENCY RECOVERY</span>
+                {t('THE REWIND TECHNIQUE')} <br />
+                <span className="text-[#FF1493]">{t('EMERGENCY RECOVERY')}</span>
               </h2>
 
               <div className="space-y-3.5 font-mono text-[11px] text-zinc-300 leading-relaxed border-t border-b border-white/10 py-4 mb-5">
                 <div className="bg-[#FF1493]/10 border border-[#FF1493]/40 p-2.5 rounded text-white text-[10px]">
-                  ⚡ <strong className="text-[#FF1493]">3 MISSES.</strong> The song rewinds so you can try again.
+                  ⚡ <strong className="text-[#FF1493]">{t('3 MISSES.')}</strong> {t('The song rewinds so you can try again.')}
                 </div>
 
                 <p>
-                  In PIM, 3 misses trigger a <strong className="text-white">Rewind</strong> instead of a game over.
+                  {t('In PIM, 3 misses trigger a')} <strong className="text-white">{t('Rewind')}</strong> {t('instead of a game over.')}
                 </p>
 
                 <div className="space-y-2 text-[10px] text-zinc-400">
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#00E5FF]" />
-                    <span><strong>Highway Rolls Back 2.5 Seconds:</strong> The track scrolls in reverse.</span>
+                    <span><strong>{t('Highway Rolls Back 2.5 Seconds:')}</strong> {t('The track scrolls in reverse.')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14]" />
-                    <span><strong>Notes Restored:</strong> Miss flags in the rewind window are cleared.</span>
+                    <span><strong>{t('Notes Restored:')}</strong> {t('Miss flags in the rewind window are cleared.')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#FFD700]" />
-                    <span><strong>Chances Reset:</strong> You get 3 more tries at the pattern.</span>
+                    <span><strong>{t('Chances Reset:')}</strong> {t('You get 3 more tries at the pattern.')}</span>
                   </div>
                 </div>
               </div>
@@ -316,7 +317,7 @@ export default function TutorialOverlay({
                 className="w-full py-4 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:scale-[1.02] active:scale-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2"
               >
                 <RotateCcw size={14} />
-                RESUME FLIGHT TRAINING [3 CHANCES READY]
+                {t('RESUME FLIGHT TRAINING [3 CHANCES READY]')}
               </button>
             </motion.div>
           </div>
@@ -339,16 +340,16 @@ export default function TutorialOverlay({
                 </div>
               </div>
               <div className="font-mono text-xs text-[#39FF14] tracking-[0.4em] uppercase font-black mb-1">
-                // STAGE 1 CERTIFIED //
+                {t('// STAGE 1 CERTIFIED //')}
               </div>
               <h1 className="font-mono text-4xl md:text-5xl font-black uppercase text-white tracking-tighter">
-                FLIGHT ACADEMY <br />
+                {t('FLIGHT ACADEMY')} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#39FF14] via-[#00E5FF] to-[#FF1493]">
-                  COMPLETE
+                  {t('COMPLETE')}
                 </span>
               </h1>
               <p className="font-mono text-xs text-zinc-400 mt-3 tracking-widest uppercase">
-                {PLAYGAMA_MONTH ? 'Track 1 is up next...' : 'Synchronizing decrypted rewards & welcome pack...'}
+                {t(PLAYGAMA_MONTH ? 'Track 1 is up next...' : 'Synchronizing decrypted rewards & welcome pack...')}
               </p>
             </motion.div>
           </div>

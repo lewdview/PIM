@@ -4,6 +4,7 @@
 // shortly before the first long note. "Hide tips" turns them all off.
 
 import { useEffect, useState, type MutableRefObject } from 'react';
+import { t as tr } from '@/i18n';
 import { keyLabel } from '@/lib/options';
 
 const OFF_KEY = 'pg_coach_off';
@@ -84,14 +85,14 @@ export default function IntroCoach({ getT, notes, hits, laneKeys, modality, game
         <div className="min-w-0 text-sm leading-snug">
           {tip === 'tap' && (
             controls
-              ? <>Press <b className="font-mono text-[#39FF14]">{controls}</b> as each note reaches the line.</>
-              : <>Tap a lane as its note reaches the line.</>
+              ? <>{tr('Press')} <b className="font-mono text-[#39FF14]">{controls}</b> {tr('as each note reaches the line.')}</>
+              : <>{tr('Tap a lane as its note reaches the line.')}</>
           )}
-          {tip === 'hold' && <>Long note coming: <b className="text-[#FFD700]">hold</b> until its tail ends.</>}
+          {tip === 'hold' && <>{tr('Long note coming:')} <b className="text-[#FFD700]">{tr('hold')}</b> {tr('until its tail ends.')}</>}
         </div>
         <button type="button" onClick={hide}
           className="shrink-0 rounded-md border border-white/25 px-2 py-1 text-[11px] uppercase tracking-wider text-white/80 hover:text-white">
-          Hide tips
+          {tr('Hide tips')}
         </button>
       </div>
     </div>

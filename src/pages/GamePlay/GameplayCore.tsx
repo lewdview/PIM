@@ -76,6 +76,7 @@ import '../../styles/neonHud.css';
 import { drawStageGrade } from './stageGrade';
 import { chooseWarpNote, collectWarpWhistle, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
 import { noteKey, saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
+import { t, t as tr } from '@/i18n';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -3453,7 +3454,7 @@ export default function Game() {
       restoreLane(0);
       restoreLane(1);
       restoreLane(2);
-      warpBannerRef.current = { text: 'ASSIST ON · KEEP PLAYING', until: Date.now() + 2600, instant: false };
+      warpBannerRef.current = { text: t('ASSIST ON · KEEP PLAYING'), until: Date.now() + 2600, instant: false };
       if (!assistedRef.current) {
         assistedRef.current = true;
         const gs0 = gsRef.current;
@@ -7129,14 +7130,14 @@ export default function Game() {
         ctx.font = `900 9px "Space Mono", monospace`;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillText("DATA LEAK!", x_center, trapY + 8);
+        ctx.fillText(tr('DATA LEAK!'), x_center, trapY + 8);
       } else {
         ctx.fillStyle = "rgba(255, 56, 0, 0.35)";
         ctx.shadowBlur = 0;
         ctx.font = `900 8px "Space Mono", monospace`;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillText("VOID TRAP", x_center, trapY + 8);
+        ctx.fillText(tr('VOID TRAP'), x_center, trapY + 8);
       }
       ctx.restore();
     }
@@ -10776,16 +10777,16 @@ export default function Game() {
         <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="glass-panel p-8 max-w-sm w-full mx-4 text-center border-t-2 border-white/20 shadow-2xl">
             <div className="font-mono font-bold text-xs tracking-[0.5em] text-white/30 mb-6 uppercase">
-              TRANSMISSION SUSPENDED
+              {t('TRANSMISSION SUSPENDED')}
             </div>
-            <h2 className="font-mono font-bold text-4xl text-white mb-8 tracking-tighter">PAUSED</h2>
+            <h2 className="font-mono font-bold text-4xl text-white mb-8 tracking-tighter">{t('PAUSED')}</h2>
             
             <div className="flex flex-col gap-3.5">
               <button
                 onClick={doResume}
                 className="w-full py-3.5 font-mono font-bold text-sm tracking-[0.3em] bg-[#F2F0E8] text-[#080808] rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer"
               >
-                RESUME TRANSMISSION
+                {t('RESUME TRANSMISSION')}
               </button>
               
               <button
@@ -10795,7 +10796,7 @@ export default function Game() {
                 }}
                 className="w-full py-3.5 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/80 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
               >
-                ⚙ SETTINGS & OPTIONS
+                {t('⚙ SETTINGS & OPTIONS')}
               </button>
               
               {ALBUM_ON && !isTutorial && (
@@ -10806,7 +10807,7 @@ export default function Game() {
                   }}
                   className="w-full py-3.5 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/80 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
                 >
-                  ▤ CHAPTER ALBUM
+                  {t('▤ CHAPTER ALBUM')}
                 </button>
               )}
 
@@ -10814,7 +10815,7 @@ export default function Game() {
                 onClick={doAbandon}
                 className="w-full py-3.5 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/60 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
               >
-                ABORT MISSION
+                {t('ABORT MISSION')}
               </button>
             </div>
           </div>
@@ -11233,7 +11234,7 @@ export default function Game() {
                 </button>
                 <button
                   onClick={toggleFullscreen}
-                  title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                  title={t(isFullscreen ? "Exit fullscreen" : "Fullscreen")}
                   style={{ color: isFullscreen ? "#39FF14" : "hsl(30 15% 28%)", lineHeight: 1, padding: "2px 3px", transition: "color 0.15s" }}
                   onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#39FF14")}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = isFullscreen ? "#39FF14" : "hsl(30 15% 28%)")}
@@ -11363,7 +11364,7 @@ export default function Game() {
                   <button
                     data-testid="button-quit"
                     className="pim-rail-btn"
-                    aria-label="Quit"
+                    aria-label={t('Quit')}
                     onClick={() => {
                       audioRef.current?.pause();
                       const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
@@ -11374,7 +11375,7 @@ export default function Game() {
                   </button>
                   <button
                     className="pim-rail-btn"
-                    aria-label="Options"
+                    aria-label={t("Options")}
                     onClick={() => {
                       audioManager.playSfx('menu_confirm', 0.15);
                       if (phase === 'playing' && !paused) {
@@ -11388,8 +11389,8 @@ export default function Game() {
                   <button
                     className="pim-rail-btn"
                     onClick={toggleFullscreen}
-                    title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-                    aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                    title={t(isFullscreen ? "Exit fullscreen" : "Fullscreen")}
+                    aria-label={t(isFullscreen ? "Exit fullscreen" : "Fullscreen")}
                     data-on={isFullscreen}
                   >
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
@@ -11476,7 +11477,7 @@ export default function Game() {
                         )}
                       </div>
                       {opts.hudMisses && (
-                        <div className="pim-rail-pips" aria-label={`${shieldLeft} of 3 misses left`}>
+                        <div className="pim-rail-pips" aria-label={t('{n} of 3 misses left', { n: shieldLeft })}>
                           {[0, 1, 2].map((i) => (
                             <i key={i} className="pim-rail-pip" data-on={i < shieldLeft} />
                           ))}
@@ -11547,7 +11548,7 @@ export default function Game() {
                     <button
                       data-testid="button-quit"
                       className="neon-hud-btn"
-                      aria-label="Quit"
+                      aria-label={t('Quit')}
                       onClick={() => {
                         audioRef.current?.pause();
                         const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
@@ -11556,7 +11557,7 @@ export default function Game() {
                     >✕</button>
                     <button
                       className="neon-hud-btn"
-                      aria-label="Options"
+                      aria-label={t("Options")}
                       onClick={() => {
                         audioManager.playSfx('menu_confirm', 0.15);
                         if (phase === 'playing' && !paused) doPause();
@@ -11566,7 +11567,7 @@ export default function Game() {
                     <button
                       className="neon-hud-btn"
                       onClick={toggleFullscreen}
-                      aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                      aria-label={t(isFullscreen ? "Exit fullscreen" : "Fullscreen")}
                       data-on={isFullscreen}
                     >⛶</button>
                     {PLAYGAMA_MONTH > 0 && <HudMuteButton variant="neon" />}
@@ -11575,7 +11576,7 @@ export default function Game() {
                     {cover && <img src={cover} alt="" />}
                     <div>
                       <b>{song?.title}</b>
-                      <span>{song?.artist} · STAGE {currentStage === 5 ? 'FINAL' : currentStage} · {formatTimeSec(getT())}</span>
+                      <span>{song?.artist} · {t('STAGE')} {currentStage === 5 ? t('FINAL') : currentStage} · {formatTimeSec(getT())}</span>
                     </div>
                   </div>
                 </div>
@@ -11587,7 +11588,7 @@ export default function Game() {
                     <span ref={accuracyTextRef}>{acc.toFixed(1)}%</span>
                   </span>
                   {opts.hudMisses && (
-                    <span className="neon-hud-pips" aria-label={`${shieldLeft} of 3 misses left`}>
+                    <span className="neon-hud-pips" aria-label={t('{n} of 3 misses left', { n: shieldLeft })}>
                       {[0, 1, 2].map(i => <i key={i} data-on={i < shieldLeft} />)}
                     </span>
                   )}
@@ -11597,7 +11598,7 @@ export default function Game() {
               {opts.comboDisplay && (
                 <div className="neon-hud-combo" data-hot={c >= 20}>
                   <span key={c} ref={comboTextRef} className={c > 0 ? 'bump' : ''}>{c}</span>
-                  <small>COMBO</small>
+                  <small>{t('COMBO')}</small>
                 </div>
               )}
               <div ref={puPillRef} className="neon-hud-pu">
@@ -11639,7 +11640,7 @@ export default function Game() {
                   <button
                     data-testid="button-quit"
                     className="pim-hud-btn"
-                    aria-label="Quit"
+                    aria-label={t('Quit')}
                     onClick={() => {
                       audioRef.current?.pause();
                       const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
@@ -11650,7 +11651,7 @@ export default function Game() {
                   </button>
                   <button
                     className="pim-hud-btn"
-                    aria-label="Options"
+                    aria-label={t("Options")}
                     onClick={() => {
                       audioManager.playSfx('menu_confirm', 0.15);
                       if (phase === 'playing' && !paused) {
@@ -11664,8 +11665,8 @@ export default function Game() {
                   <button
                     className="pim-hud-btn"
                     onClick={toggleFullscreen}
-                    title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-                    aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                    title={t(isFullscreen ? "Exit fullscreen" : "Fullscreen")}
+                    aria-label={t(isFullscreen ? "Exit fullscreen" : "Fullscreen")}
                     data-on={isFullscreen}
                   >
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
@@ -11704,7 +11705,7 @@ export default function Game() {
                 <div className="pim-verse-line">
                   <span ref={(el) => { verseHudRef.current.els.text = el; }} className="pim-verse-text">{song?.title}</span>
                   {opts.hudMisses && (
-                    <span className="pim-verse-ell" data-low={shieldLeft <= 1} data-testid="healing-hold-gauge" aria-label={`${shieldLeft} of 3 misses left`}>
+                    <span className="pim-verse-ell" data-low={shieldLeft <= 1} data-testid="healing-hold-gauge" aria-label={t('{n} of 3 misses left', { n: shieldLeft })}>
                       {[0, 1, 2].map((i) => (
                         <i key={i} data-on={i < shieldLeft} />
                       ))}
@@ -12378,16 +12379,16 @@ export default function Game() {
                     }}
                   >
                     {stageStingerPhase === 'transmission_complete'
-                      ? 'TRANSMISSION COMPLETE'
+                      ? t('TRANSMISSION COMPLETE')
                       : stageStingerPhase === 'cleared'
-                        ? 'CLEARED!'
+                        ? t('CLEARED!')
                         : stageStingerNumber >= 3
                           ? (stageStingerNumber === 3
                               ? ARCHETYPE_METAS[activeArchetype]?.stage3Title.replace('STAGE 3: ', '')
                               : stageStingerNumber === 4
                                 ? ARCHETYPE_METAS[activeArchetype]?.stage4Title.replace('STAGE 4: ', '')
                                 : ARCHETYPE_METAS[activeArchetype]?.stage5Title.replace('STAGE 5: ', ''))
-                          : 'GO!'}
+                          : t('GO!')}
                   </motion.div>
                 </motion.div>
               </div>
@@ -12416,7 +12417,7 @@ export default function Game() {
                 className="font-mono text-xs tracking-[0.3em] font-bold"
                 style={{ color: "#39FF14", textShadow: "0 0 12px rgba(57,255,20,0.6)" }}
               >
-                {loadMsg || "STREAMING AUDIO STEMS..."}
+                {t(loadMsg || "STREAMING AUDIO STEMS...")}
               </div>
             </div>
           )}
@@ -12442,7 +12443,7 @@ export default function Game() {
             >
               <div className="flex items-center gap-1 mb-0.5 px-1 opacity-40 font-mono text-[7px] tracking-[0.18em] uppercase text-white/70">
                 <span>◈</span>
-                <span>LOG // LAST 20</span>
+                <span>{t('LOG // LAST 20')}</span>
               </div>
               <div
                 ref={judgmentStreamRef}
@@ -12516,7 +12517,7 @@ export default function Game() {
               <div className="w-full max-w-lg mb-4">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="font-mono text-xs font-bold tracking-wider text-cyan-300 uppercase flex items-center gap-2">
-                    <span>✦ {loadState.stepLabel}</span>
+                    <span>✦ {t(loadState.stepLabel)}</span>
                   </div>
                   <div className="font-mono text-sm font-black text-cyan-400">
                     {loadState.pct}%
@@ -12532,7 +12533,7 @@ export default function Game() {
                 </div>
 
                 <div className="font-mono text-[11px] text-white/60 mt-1.5 truncate">
-                  {loadState.detailMsg || loadMsg}
+                  {t(loadState.detailMsg || loadMsg)}
                 </div>
               </div>
 
@@ -12617,7 +12618,7 @@ export default function Game() {
                     }}
                     className="px-3.5 py-1.5 font-mono text-[10px] tracking-widest text-white/50 hover:text-white bg-white/5 hover:bg-white/15 border border-white/10 rounded-md transition-all cursor-pointer uppercase flex items-center gap-2"
                   >
-                    <span>↺ STUCK OR SLOW? FORCE RETRY TRANSMISSION</span>
+                    <span>{t('↺ STUCK OR SLOW? FORCE RETRY TRANSMISSION')}</span>
                   </button>
                 </div>
               )}
@@ -12688,19 +12689,19 @@ export default function Game() {
                 className="font-mono font-bold tracking-[0.3em]"
                 style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: "0.35em" }}
               >
-                AUDIO BLOCKED
+                {t('AUDIO BLOCKED')}
               </div>
               <div
                 className="font-mono font-bold tracking-[0.2em] text-center"
                 style={{ fontSize: 28, color: "#FF1493", textShadow: "0 0 40px rgba(255,20,147,0.7)" }}
               >
-                TAP TO START
+                {t('TAP TO START')}
               </div>
               <div
                 className="font-mono text-center"
                 style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.2em", maxWidth: 220, lineHeight: 1.8 }}
               >
-                YOUR BROWSER NEEDS A TAP<br />TO ALLOW AUDIO PLAYBACK
+                {t('YOUR BROWSER NEEDS A TAP')}<br />{t('TO ALLOW AUDIO PLAYBACK')}
               </div>
             </div>
           )}
@@ -12712,13 +12713,13 @@ export default function Game() {
             >
               <div className="glass-panel p-8 max-w-sm w-full mx-4 text-center border-t-2 border-white/20 shadow-2xl">
                 <div className="font-mono font-bold text-xs tracking-[0.4em] text-red-500 mb-6 uppercase">
-                  TRANSMISSION FAILURE
+                  {t('TRANSMISSION FAILURE')}
                 </div>
                 <h2 className="font-mono font-bold text-2xl text-white mb-4 tracking-tighter">
-                  LOADING FAILED
+                  {t('LOADING FAILED')}
                 </h2>
                 <p className="font-mono text-xs text-white/50 mb-8 leading-relaxed">
-                  Couldn't download the track. Check your connection and try again.
+                  {t("Couldn't download the track. Check your connection and try again.")}
                 </p>
                 
                 <div className="flex flex-col gap-4">
@@ -12729,14 +12730,14 @@ export default function Game() {
                     }}
                     className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-gradient-to-r from-[#FF1493] to-[#FF7A33] text-white rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer"
                   >
-                    TRY AGAIN
+                    {t('TRY AGAIN')}
                   </button>
                   
                   <button
                     onClick={doAbandon}
                     className="w-full py-4 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/60 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
                   >
-                    ABORT MISSION
+                    {t('ABORT MISSION')}
                   </button>
                 </div>
               </div>
@@ -12885,13 +12886,13 @@ export default function Game() {
                     textShadow: "0 0 40px rgba(255,20,147,0.9)",
                   }}
                 >
-                  SIGNAL LOST
+                  {t('SIGNAL LOST')}
                 </div>
                 <div
                   className="font-mono text-xs tracking-[0.25em]"
                   style={{ color: "rgba(255,255,255,0.35)" }}
                 >
-                  {3 - continueUsedRef.current} CONTINUE{3 - continueUsedRef.current !== 1 ? "S" : ""} REMAINING
+                  {t(3 - continueUsedRef.current === 1 ? '{n} CONTINUE REMAINING' : '{n} CONTINUES REMAINING', { n: 3 - continueUsedRef.current })}
                 </div>
               </div>
 
@@ -12901,7 +12902,7 @@ export default function Game() {
                   className="font-mono text-xs tracking-[0.25em]"
                   style={{ color: "rgba(255,255,255,0.28)" }}
                 >
-                  3 STRIKES
+                  {t('3 STRIKES')}
                 </div>
                 <div className="flex gap-3">
                   {[0, 1, 2].map((i) => (
@@ -12924,7 +12925,7 @@ export default function Game() {
                   className="font-mono text-xs tracking-[0.25em]"
                   style={{ color: "rgba(255,255,255,0.28)" }}
                 >
-                  CONTINUES
+                  {t('CONTINUES')}
                 </div>
                 <div className="flex gap-3">
                   {[0, 1, 2].map((i) => {
@@ -12961,7 +12962,7 @@ export default function Game() {
                     className="font-mono text-xs tracking-[0.2em]"
                     style={{ color: "rgba(255,80,80,0.8)" }}
                   >
-                    LAST CHANCE
+                    {t('LAST CHANCE')}
                   </div>
                 )}
               </div>
@@ -12980,7 +12981,7 @@ export default function Game() {
                     "polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)",
                 }}
               >
-                ▶ CONTINUE
+                {t('▶ CONTINUE')}
               </button>
 
               {/* Countdown + abandon */}
@@ -12992,7 +12993,7 @@ export default function Game() {
                     letterSpacing: "0.2em",
                   }}
                 >
-                  AUTO-ABANDON IN {continueCountdown}s
+                  {t('AUTO-ABANDON IN {n}s', { n: continueCountdown })}
                 </div>
                 <button
                   onClick={doAbandon}
@@ -13004,7 +13005,7 @@ export default function Game() {
                     cursor: "pointer",
                   }}
                 >
-                  ABANDON RUN
+                  {t('ABANDON RUN')}
                 </button>
               </div>
             </div>

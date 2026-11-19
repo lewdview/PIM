@@ -10,6 +10,10 @@
  *     so a long-press or right-click saves it when both are blocked.
  */
 
+import { t, lang } from '@/i18n';
+
+const numLocale = () => (lang() === 'pl' ? 'pl-PL' : 'en-US');
+
 export const MEDAL_COLOR: Record<string, string> = {
   PLATINUM: '#39FF14', GOLD: '#FFC21A', SILVER: '#C9D3E6', BRONZE: '#E08A45',
 };
@@ -73,26 +77,26 @@ export function progressText(p: ProgressSummary): string {
   const bonus = p.tracks.filter((t) => t.bonus);
   const rows: string[] = [];
   for (let i = 0; i < regular.length; i += 7) rows.push(regular.slice(i, i + 7).map(square).join(''));
-  if (bonus.length) rows.push(`${bonus.map(square).join('')} bonus`);
-  const stats = [`✦ ${p.platinums} platinum`];
-  if (p.deluxePlatinums) stats.push(`${p.deluxePlatinums} Deluxe platinum`);
+  if (bonus.length) rows.push(`${bonus.map(square).join('')} ${t('bonus')}`);
+  const stats = [`✦ ${t('{n} platinum', { n: p.platinums })}`];
+  if (p.deluxePlatinums) stats.push(t('{n} Deluxe platinum', { n: p.deluxePlatinums }));
   stats.push(`🏆 ${p.trophies}/${p.trophyCount}`);
   return [
-    `PIM: ${titleCase(p.monthName)} · ${p.cleared}/${p.regularCount} cleared`,
+    `PIM: ${titleCase(p.monthName)} · ${p.cleared}/${p.regularCount} ${t('cleared')}`,
     ...rows,
     stats.join(' · '),
-    ...(p.endings.length ? [`Endings: ${p.endings.join(', ')}`] : []),
-    `Score ${p.total.toLocaleString('en-US')}`,
+    ...(p.endings.length ? [t('Endings: {list}', { list: p.endings.join(', ') })] : []),
+    t('Score {n}', { n: p.total.toLocaleString(numLocale()) }),
   ].join('\n');
 }
 
 /** One run as text, to go with the card where the portal takes text. */
 export function runText(r: RunSummary): string {
-  const medal = hasMedal(r.medal) ? `${MEDAL_SQUARE[r.medal]} ${titleCase(r.medal)}` : 'Cleared';
-  const extras = [r.fullCombo && 'Full combo', r.record === 'first' && 'First clear', r.record === 'new' && 'New record'].filter(Boolean).join(' · ');
+  const medal = hasMedal(r.medal) ? `${MEDAL_SQUARE[r.medal]} ${titleCase(t(r.medal))}` : t('Cleared');
+  const extras = [r.fullCombo && t('Full combo'), r.record === 'first' && t('First clear'), r.record === 'new' && t('New record')].filter(Boolean).join(' · ');
   return [
     `PIM: ${titleCase(r.monthName)} · ${r.title}${r.deluxe ? ' (Deluxe)' : ''}`,
-    `${medal} · Rank ${r.rank} · ${r.score.toLocaleString('en-US')} pts · ${r.accuracy.toFixed(1)}%`,
+    `${medal} · ${t('Rank {rank}', { rank: r.rank })} · ${t('{n} pts', { n: r.score.toLocaleString(numLocale()) })} · ${r.accuracy.toFixed(1)}%`,
     ...(extras ? [extras] : []),
   ].join('\n');
 }
@@ -186,7 +190,7 @@ function footer(ctx: CanvasRenderingContext2D, color: string) {
   ctx.textAlign = 'left';
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.font = `600 28px ${BODY}`;
-  ctx.fillText('th3scr1b3 · 365 Days of Light and Dark', 72, H - 72);
+  ctx.fillText(`th3scr1b3 · ${t('365 Days of Light and Dark')}`, 72, H - 72);
   ctx.textAlign = 'right';
   ctx.fillStyle = color;
   ctx.font = `18px ${PIXEL}`;
@@ -231,7 +235,7 @@ export function drawRunCard(r: RunSummary): Promise<HTMLCanvasElement> {
     const art = withArt ? await loadImage(r.coverArt) : null;
     const medalColor = MEDAL_COLOR[r.medal] ?? r.color;
     backdrop(ctx, r.color, art);
-    header(ctx, r.color, r.monthName, r.deluxe ? `${r.stageLabel} · Deluxe` : r.stageLabel);
+    header(ctx, r.color, r.monthName, r.deluxe ? `${r.stageLabel} · ${t('Deluxe')}` : r.stageLabel);
 
     // Cover art with a medal-coloured frame.
     const size = 560;
@@ -267,13 +271,13 @@ export function drawRunCard(r: RunSummary): Promise<HTMLCanvasElement> {
     ctx.font = `86px ${DISPLAY}`;
     ctx.fillText(r.rank, sx, sy + 22);
     ctx.font = `14px ${PIXEL}`;
-    ctx.fillText(hasMedal(r.medal) ? r.medal : 'CLEAR', sx, sy + 58);
+    ctx.fillText(hasMedal(r.medal) ? t(r.medal) : t('CLEAR'), sx, sy + 58);
     ctx.textAlign = 'left';
 
     // Track title.
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.font = `600 30px ${BODY}`;
-    ctx.fillText(r.day != null ? `Day ${r.day}` : 'Transmission', 72, 940);
+    ctx.fillText(r.day != null ? t('Day {n}', { n: r.day }) : t('Transmission'), 72, 940);
     ctx.fillStyle = '#fff';
     fitText(ctx, r.title, (px) => `${px}px ${DISPLAY}`, 84, W - 144);
     ctx.fillText(r.title, 72, 1030);
@@ -281,17 +285,17 @@ export function drawRunCard(r: RunSummary): Promise<HTMLCanvasElement> {
     // Score line.
     ctx.fillStyle = medalColor;
     ctx.font = `96px ${DISPLAY}`;
-    const score = r.score.toLocaleString('en-US');
+    const score = r.score.toLocaleString(numLocale());
     ctx.fillText(score, 72, 1140);
     const sw = ctx.measureText(score).width;
     ctx.fillStyle = 'rgba(255,255,255,0.75)';
     ctx.font = `600 32px ${BODY}`;
-    ctx.fillText(`${r.accuracy.toFixed(1)}%  ·  ${r.maxCombo}x combo`, 72 + sw + 28, 1132);
+    ctx.fillText(`${r.accuracy.toFixed(1)}%  ·  ${t('{n}x combo', { n: r.maxCombo })}`, 72 + sw + 28, 1132);
 
     let cx = 72;
-    if (r.fullCombo) cx += chip(ctx, cx, 1170, 'FULL COMBO', '#39FF14') + 14;
-    if (r.record) cx += chip(ctx, cx, 1170, r.record === 'first' ? 'FIRST CLEAR' : 'NEW RECORD', '#FFC21A') + 14;
-    if (r.deluxe) chip(ctx, cx, 1170, 'DELUXE', '#FF1493', '#fff');
+    if (r.fullCombo) cx += chip(ctx, cx, 1170, t('FULL COMBO'), '#39FF14') + 14;
+    if (r.record) cx += chip(ctx, cx, 1170, t(r.record === 'first' ? 'FIRST CLEAR' : 'NEW RECORD'), '#FFC21A') + 14;
+    if (r.deluxe) chip(ctx, cx, 1170, t('DELUXE'), '#FF1493', '#fff');
     footer(ctx, r.color);
   });
 }
@@ -300,13 +304,13 @@ export function drawProgressCard(p: ProgressSummary): Promise<HTMLCanvasElement>
   return render(async (ctx, withArt) => {
     const arts = withArt ? await Promise.all(p.tracks.map((t) => (t.cleared ? loadImage(t.coverArt) : Promise.resolve(null)))) : [];
     backdrop(ctx, p.color, null);
-    header(ctx, p.color, p.monthName, 'Month progress');
+    header(ctx, p.color, p.monthName, t('Month progress'));
 
     // Stats row.
     const stats: [string, string][] = [
-      [`${p.cleared}/${p.regularCount}`, 'cleared'],
-      [String(p.platinums), 'platinum'],
-      [`${p.trophies}/${p.trophyCount}`, 'trophies'],
+      [`${p.cleared}/${p.regularCount}`, t('cleared')],
+      [String(p.platinums), t('platinum')],
+      [`${p.trophies}/${p.trophyCount}`, t('trophies')],
     ];
     stats.forEach(([v, label], i) => {
       const x = 72 + i * 320;
@@ -359,7 +363,7 @@ export function drawProgressCard(p: ProgressSummary): Promise<HTMLCanvasElement>
       y += 18;
       ctx.fillStyle = 'rgba(255,255,255,0.6)';
       ctx.font = `16px ${PIXEL}`;
-      ctx.fillText('BONUS', 72, y + 10);
+      ctx.fillText(t('BONUS'), 72, y + 10);
       y += 26;
       bonus.forEach((item, j) => tileAt(72 + j * (tile + gap), y, item));
       y += tile + gap;
@@ -369,10 +373,10 @@ export function drawProgressCard(p: ProgressSummary): Promise<HTMLCanvasElement>
     const base = y + 46;
     ctx.fillStyle = p.color;
     ctx.font = `18px ${PIXEL}`;
-    ctx.fillText(p.endings.length ? `ENDINGS · ${p.endings.join(' · ').toUpperCase()}` : 'NO ENDINGS YET', 72, base);
+    ctx.fillText(p.endings.length ? `${t('ENDINGS')} · ${p.endings.join(' · ').toUpperCase()}` : t('NO ENDINGS YET'), 72, base);
     ctx.fillStyle = '#fff';
     ctx.font = `600 34px ${BODY}`;
-    ctx.fillText(`Score ${p.total.toLocaleString('en-US')}`, 72, base + 56);
+    ctx.fillText(t('Score {n}', { n: p.total.toLocaleString(numLocale()) }), 72, base + 56);
     footer(ctx, p.color);
   });
 }

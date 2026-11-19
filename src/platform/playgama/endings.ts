@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 /**
  * The monthly build's four endings, earned in order through the chapter:
  *
@@ -19,10 +20,10 @@ export type EndingId = 'clear' | 'epilogue' | 'true' | 'bombshell';
 export const ENDING_ORDER: EndingId[] = ['clear', 'epilogue', 'true', 'bombshell'];
 
 export const ENDING_INFO: Record<EndingId, { title: string; condition: string; reward?: string }> = {
-  clear: { title: 'Chapter Clear', condition: 'Clear every track' },
-  epilogue: { title: 'Epilogue', condition: 'Clear the bonus tracks' },
-  true: { title: 'True Ending', condition: 'Platinum on every track', reward: 'Unlocks listening mode' },
-  bombshell: { title: 'Prestige Art Ending', condition: 'Platinum on every track and every Deluxe chart' },
+  clear: { title: t('Chapter Clear'), condition: t('Clear every track') },
+  epilogue: { title: t('Epilogue'), condition: t('Clear the bonus tracks') },
+  true: { title: t('True Ending'), condition: t('Platinum on every track'), reward: t('Unlocks listening mode') },
+  bombshell: { title: t('Prestige Art Ending'), condition: t('Platinum on every track and every Deluxe chart') },
 };
 
 export interface EndingState {

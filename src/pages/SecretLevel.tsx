@@ -30,6 +30,7 @@ import type { SecretGame, SecretInput } from '../game/secret/types';
 import { drawRunnerHud } from '../game/secret/runnerHud';
 import { useRunnerGamepad } from '../game/secret/useRunnerGamepad';
 import './SecretRunner.css';
+import { t, t as tr } from '@/i18n';
 
 type Phase = 'intro' | 'playing' | 'paused' | 'over';
 type LevelResult = { won: boolean; score: number; newWhistle: RunnerWhistleId | null };
@@ -116,10 +117,10 @@ function RunnerGate({ hasEntry, stage }: { hasEntry: boolean; stage: RunnerStage
     <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-[#100b27] px-6 text-center text-white font-mono">
       <h1 className="text-3xl font-black">BEAT RUNNER</h1>
       <p className="text-sm text-purple-200">
-        {hasEntry ? 'Clear the previous course or open a shortcut with a Warp Whistle.' : 'Hit a warp note during a song to earn the Warp Whistle.'}
+        {t(hasEntry ? 'Clear the previous course or open a shortcut with a Warp Whistle.' : 'Hit a warp note during a song to earn the Warp Whistle.')}
       </p>
       <Link href={backTo} className="mt-2 rounded-full bg-fuchsia-500 px-6 py-3 font-bold">
-        {hasEntry ? 'WORLD MAP' : PLAYGAMA_MONTH > 0 ? 'CHAPTER' : 'WARP ZONE'} {pad && <kbd className="runner-pad-key">{pad.back}</kbd>}
+        {t(hasEntry ? 'WORLD MAP' : PLAYGAMA_MONTH > 0 ? 'CHAPTER' : 'WARP ZONE')} {pad && <kbd className="runner-pad-key">{pad.back}</kbd>}
       </Link>
     </div>
   );
@@ -156,7 +157,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
   const outroAtRef = useRef<number | null>(null);
   const [introOpts] = useState<IntroOptions>(() => ({
     reduced,
-    header: levelId === 'runner' && (!via || via === 'arcade') ? ['BEAT RUNNER', `LEVEL 0${stage}`] : undefined,
+    header: levelId === 'runner' && (!via || via === 'arcade') ? ['BEAT RUNNER', t('LEVEL {n}', { n: `0${stage}` })] : undefined,
     runnerSprite: drawRunnerSprite,
     sky: levelId === 'runner' ? SKIES[stage] : undefined,
   }));
@@ -212,7 +213,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
     const frame = (now: number) => {
       const { w, h } = canvasFrame(canvas, ctx);
       const t = (now - introT0Ref.current) / 1000;
-      drawWarpIntro(ctx, w, h, t, levelId, game.title, introOpts);
+      drawWarpIntro(ctx, w, h, t, levelId, tr(game.title), introOpts);
       if (t >= (reduced ? 0.6 : INTRO_READY_AT)) setIntroReady(true);
       raf = requestAnimationFrame(frame);
     };
@@ -259,7 +260,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
         const now = performance.now();
         const since = (now - outroAt) / 1000;
         if (since < INTRO_OUTRO_S) {
-          drawWarpIntro(ctx, w, h, (now - introT0Ref.current) / 1000, levelId, game.title, { ...introOpts, outro: since / INTRO_OUTRO_S });
+          drawWarpIntro(ctx, w, h, (now - introT0Ref.current) / 1000, levelId, tr(game.title), { ...introOpts, outro: since / INTRO_OUTRO_S });
         } else if (since < INTRO_OUTRO_S + INTRO_REVEAL_S) {
           drawWarpReveal(ctx, w, h, (since - INTRO_OUTRO_S) / INTRO_REVEAL_S, now / 1000);
         } else {
@@ -480,7 +481,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
         >
           {/* The title is drawn on the canvas; this keeps it readable for screen readers */}
           <h1 className="sr-only">
-            {levelId === 'runner' && (!via || via === 'arcade') ? `Beat Runner level ${stage}` : 'Warp zone, secret level found'}: {game.title}
+            {levelId === 'runner' && (!via || via === 'arcade') ? t('Beat Runner level {n}', { n: stage }) : t('Warp zone, secret level found')}: {t(game.title)}
           </h1>
           <div
             className="flex flex-col items-center gap-3 transition-all duration-500 ease-out"
@@ -494,13 +495,13 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
               className="max-w-md rounded-xl border px-4 py-2.5 font-mono"
               style={{ background: 'rgba(5,1,15,0.72)', borderColor: `${INTRO_LOOKS[levelId].accent}55` }}
             >
-              {levelId === 'runner' && <p className="mb-1 text-sm text-violet-100">{RUNNER_COURSES[stage].brief}</p>}
+              {levelId === 'runner' && <p className="mb-1 text-sm text-violet-100">{t(RUNNER_COURSES[stage].brief)}</p>}
               <p className="text-xs sm:text-sm text-zinc-300">
-                {game.hint}
+                {t(game.hint)}
                 {levelId === 'runner' && (
                   <span className="mt-1 block text-zinc-400">
-                    <span className="hidden sm:inline">Press jump again in midair to double jump.</span>
-                    <span className="sm:hidden">Tap high to jump, again in midair to double jump, or low to slide.</span>
+                    <span className="hidden sm:inline">{t('Press jump again in midair to double jump.')}</span>
+                    <span className="sm:hidden">{t('Tap high to jump, again in midair to double jump, or low to slide.')}</span>
                   </span>
                 )}
               </p>
@@ -508,9 +509,9 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
             {levelId === 'runner' ? pad && (
               <p className="runner-pad-legend">
                 <Gamepad2 size={17} aria-hidden />
-                {pad.confirm} jump · {pad.back} slide · {pad.attack} slash · {pad.block} block · {pad.taunt} taunt · {pad.menu} pause
+                {pad.confirm} {t('jump')} · {pad.back} {t('slide')} · {pad.attack} {t('slash')} · {pad.block} {t('block')} · {pad.taunt} {t('taunt')} · {pad.menu} {t('pause')}
               </p>
-            ) : padConnected && <p className="max-w-md text-xs text-fuchsia-200 font-mono">{game.padHint}</p>}
+            ) : padConnected && <p className="max-w-md text-xs text-fuchsia-200 font-mono">{t(game.padHint)}</p>}
             <button
               id={levelId === 'runner' ? 'runner-start' : undefined}
               onClick={() => void start()}
@@ -520,17 +521,17 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
                 boxShadow: `0 0 24px ${INTRO_LOOKS[levelId].accent}`,
               }}
             >
-              START
+              {t('START')}
             </button>
             <button onClick={leave} className="text-xs text-zinc-300 font-mono underline">
-              {resumePath || songResults ? 'back to the song' : levelId === 'runner' ? 'back to world map' : 'skip'}
+              {t(resumePath || songResults ? 'back to the song' : levelId === 'runner' ? 'back to world map' : 'skip')}
             </button>
             {levelId === 'runner'
-              ? pad && <div className="text-xs text-zinc-400 font-mono">{pad.confirm} start · {pad.back} back</div>
-              : padConnected && <div className="text-xs text-zinc-400 font-mono">Ⓐ start · Ⓑ back</div>}
+              ? pad && <div className="text-xs text-zinc-400 font-mono">{pad.confirm} {t('start')} · {pad.back} {t('back')}</div>
+              : padConnected && <div className="text-xs text-zinc-400 font-mono">Ⓐ {t('start')} · Ⓑ {t('back')}</div>}
           </div>
           {!introReady && (
-            <div className="absolute bottom-4 right-4 text-[10px] tracking-[0.3em] text-zinc-400 font-mono">TAP TO SKIP ▸▸</div>
+            <div className="absolute bottom-4 right-4 text-[10px] tracking-[0.3em] text-zinc-400 font-mono">{t('TAP TO SKIP')} ▸▸</div>
           )}
           <style>{`
             @keyframes warpStartPulse { 0%,100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.06); filter: brightness(1.25); } }
@@ -542,14 +543,14 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
 
       {phase === 'playing' && levelId === 'runner' && (
         <>
-          <button className="runner-pause" type="button" onClick={togglePause} aria-label="Pause" aria-keyshortcuts="P Escape">
+          <button className="runner-pause" type="button" onClick={togglePause} aria-label={t('Pause')} aria-keyshortcuts="P Escape">
             <Pause size={18} aria-hidden />
           </button>
           <div className="runner-controls">
             <div className="runner-controls-movement">
               {TOUCH_MOVEMENT.map(({ kind, label, icon: Icon }) => (
                 <button type="button" key={kind} className="runner-control" {...actionPress(kind)}>
-                  <Icon size={16} aria-hidden /> {label}
+                  <Icon size={16} aria-hidden /> {t(label)}
                 </button>
               ))}
             </div>
@@ -562,7 +563,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
                   className={`runner-control runner-control--${kind}`}
                   {...actionPress(kind)}
                 >
-                  <Icon size={16} aria-hidden /> {label} <kbd className="runner-control-key">{pad?.[padKey] ?? key}</kbd>
+                  <Icon size={16} aria-hidden /> {t(label)} <kbd className="runner-control-key">{pad?.[padKey] ?? key}</kbd>
                 </button>
               ))}
             </div>
@@ -572,13 +573,13 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
 
       {phase === 'paused' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-[#0b0916]/85 px-6 text-center">
-          <h2 className="runner-screen-title">Paused</h2>
+          <h2 className="runner-screen-title">{t('Paused')}</h2>
           <div className="flex flex-wrap justify-center gap-3">
             <button onClick={togglePause} className="rounded-full bg-fuchsia-500 px-6 py-3 font-mono font-black">
-              Resume {pad && <kbd className="runner-pad-key">{pad.confirm}</kbd>}
+              {t('Resume')} {pad && <kbd className="runner-pad-key">{pad.confirm}</kbd>}
             </button>
             <button onClick={leave} className="rounded-full border border-fuchsia-400 px-6 py-3 font-mono font-bold">
-              {songResults ? 'Back to the song' : 'World Map'} {pad && <kbd className="runner-pad-key">{pad.back}</kbd>}
+              {t(songResults ? 'Back to the song' : 'World Map')} {pad && <kbd className="runner-pad-key">{pad.back}</kbd>}
             </button>
           </div>
         </div>
@@ -586,23 +587,23 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
 
       {phase === 'over' && result && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center bg-black/80">
-          <div className="text-xs tracking-[0.4em] font-mono text-fuchsia-300">{game.title}</div>
+          <div className="text-xs tracking-[0.4em] font-mono text-fuchsia-300">{t(game.title)}</div>
           <h2 className={levelId === 'runner' ? 'runner-screen-title' : 'text-4xl sm:text-5xl font-black font-mono'} style={{ color: result.won ? '#7CFFCB' : '#FF3B6B' }}>
-            {result.won ? 'LEVEL CLEAR' : 'SIGNAL LOST'}
+            {t(result.won ? 'LEVEL CLEAR' : 'SIGNAL LOST')}
           </h2>
           <div className="text-2xl font-mono">{result.score.toLocaleString()}</div>
-          {result.newWhistle && <p className="flex items-center gap-2 text-sm font-bold text-amber-200"><AudioLines size={17} aria-hidden /> {RUNNER_WHISTLES[result.newWhistle].name} found</p>}
+          {result.newWhistle && <p className="flex items-center gap-2 text-sm font-bold text-amber-200"><AudioLines size={17} aria-hidden /> {t('{name} found', { name: t(RUNNER_WHISTLES[result.newWhistle].name) })}</p>}
           <div className="flex flex-wrap justify-center gap-3 mt-2">
             <button
               onClick={() => void start()}
               className="px-6 py-3 rounded-full border border-fuchsia-400 font-black font-mono tracking-widest"
             >
-              RETRY
+              {t('RETRY')}
               {pad && <kbd className="runner-pad-key">{result.won ? pad.attack : `${pad.confirm} / ${pad.attack}`}</kbd>}
             </button>
             {levelId === 'runner' && nextCourse && result.won && (
               <button onClick={nextStage} className="px-6 py-3 rounded-full bg-fuchsia-500 hover:bg-fuchsia-400 font-black font-mono tracking-widest">
-                NEXT LEVEL
+                {t('NEXT LEVEL')}
                 {pad && <kbd className="runner-pad-key">{pad.confirm}</kbd>}
               </button>
             )}
@@ -610,17 +611,17 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
               onClick={leave}
               className={`px-6 py-3 rounded-full font-black font-mono tracking-widest ${levelId === 'runner' && nextCourse && result.won ? 'border border-fuchsia-400' : 'bg-fuchsia-500 hover:bg-fuchsia-400'}`}
             >
-              {resumePath ? 'RESUME SONG' : songResults || levelId === 'shooter' ? 'CONTINUE' : 'WORLD MAP'}
+              {t(resumePath ? 'RESUME SONG' : songResults || levelId === 'shooter' ? 'CONTINUE' : 'WORLD MAP')}
               {pad && <kbd className="runner-pad-key">{result.won && !nextCourse ? `${pad.confirm} / ${pad.back}` : pad.back}</kbd>}
             </button>
           </div>
           {levelId !== 'runner' && padConnected && (
             <div className="text-xs text-zinc-400 font-mono">
-              Ⓨ retry · Ⓐ continue
+              Ⓨ {t('retry')} · Ⓐ {t('continue')}
             </div>
           )}
           {levelId === 'runner' && songResults && (
-            <Link href={runnerMapPath(mapStage)} className="text-sm text-fuchsia-200 underline">World Map</Link>
+            <Link href={runnerMapPath(mapStage)} className="text-sm text-fuchsia-200 underline">{t('World Map')}</Link>
           )}
         </div>
       )}

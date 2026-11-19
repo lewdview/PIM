@@ -20,6 +20,7 @@ import { TUTORIAL_DONE_KEY } from '@/platform/playgama/tutorialTrack';
 import { startFunnel } from '@/platform/playgama/funnel';
 import TitleScreens from './month/TitleScreens';
 import '@/styles/CardShowcaseStyles.css';
+import { t } from '@/i18n';
 
 /**
  * lazy() that survives a redeploy: if a screen's chunk is gone (the page was
@@ -74,7 +75,7 @@ function MuteButton({ inPlay, runner }: { inPlay: boolean; runner: boolean }) {
     <button
       type="button"
       className="pg-mute"
-      aria-label={muted ? 'Unmute sound' : 'Mute sound'}
+      aria-label={muted ? t('Unmute sound') : t('Mute sound')}
       aria-pressed={muted}
       data-play={inPlay || undefined}
       data-runner={runner || undefined}

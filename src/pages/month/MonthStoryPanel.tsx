@@ -9,6 +9,7 @@ import { Lock, Play, X } from 'lucide-react';
 import type { GameSong } from '@/game/api';
 import { MOOD_LABEL, type ChapterAct, type MonthStory, type StoryBeat } from '@/game/chapterStory';
 import { Highlighted, MoodArc, WordChips, type ArcGroup } from '@/pages/campaign/storyParts';
+import { t } from '@/i18n';
 import '@/styles/monthPanels.css';
 
 type Group = ArcGroup & { act?: Partial<ChapterAct> & { word: string; mood?: string; themes?: string[] } };
@@ -52,24 +53,24 @@ export default function MonthStoryPanel(p: {
   const prologueSong = songs.find((s) => s.day === story.prologue.day);
 
   return (
-    <div className="mb-lb" role="dialog" aria-modal="true" aria-label="Story" onClick={p.onClose}>
+    <div className="mb-lb" role="dialog" aria-modal="true" aria-label={t('Story')} onClick={p.onClose}>
       <div className="mb-lb-card mst-card" onClick={(e) => e.stopPropagation()}>
         <div className="mb-lb-head">
           <div>
-            <div className="cs-eyebrow">Three acts and an epilogue</div>
-            <h2 className="cs-display">Story</h2>
+            <div className="cs-eyebrow">{t('Three acts and an epilogue')}</div>
+            <h2 className="cs-display">{t('Story')}</h2>
           </div>
           <div className="mst-head-actions">
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => p.onWatch('/story/prologue')}>
-              <Play size={14} fill="currentColor" /> Prologue
+              <Play size={14} fill="currentColor" /> {t('Prologue')}
             </button>
-            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={p.onClose} aria-label="Close"><X size={16} /></button>
+            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={p.onClose} aria-label={t('Close')}><X size={16} /></button>
           </div>
         </div>
 
         <div className="mst-prologue">
           {story.prologue.lyric
-            ? <p className="mst-quote">“<Highlighted line={story.prologue.line} words={story.words} />”{prologueSong && <small> {prologueSong.title}, day {prologueSong.day}</small>}</p>
+            ? <p className="mst-quote">“<Highlighted line={story.prologue.line} words={story.words} />”{prologueSong && <small> {prologueSong.title}, {t('day {n}', { n: prologueSong.day })}</small>}</p>
             : <p className="mst-quote" data-plain="true">{story.prologue.line}</p>}
           <WordChips words={story.words} small />
         </div>
@@ -81,7 +82,7 @@ export default function MonthStoryPanel(p: {
         <div className="mo-tabs mst-tabs" role="tablist">
           {groups.map((x, i) => (
             <button key={x.key} type="button" role="tab" aria-selected={i === tab} onClick={() => setTab(i)}>
-              {x.bonus ? 'Epilogue' : x.label}
+              {x.bonus ? t('Epilogue') : x.label}
               {!open(x) && <Lock size={11} />}
             </button>
           ))}
@@ -98,12 +99,12 @@ export default function MonthStoryPanel(p: {
                   </p>
                   {!g.bonus && g.act.act && (
                     <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => p.onWatch(`/story/act-${g.act!.act}`)}>
-                      <Play size={14} fill="currentColor" /> Watch Act {g.act.act}
+                      <Play size={14} fill="currentColor" /> {t('Watch Act {n}', { n: g.act.act })}
                     </button>
                   )}
                   {g.bonus && (
                     <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => p.onWatch('/ending/epilogue')}>
-                      <Play size={14} fill="currentColor" /> Watch the Epilogue
+                      <Play size={14} fill="currentColor" /> {t('Watch the Epilogue')}
                     </button>
                   )}
                 </div>
@@ -118,7 +119,7 @@ export default function MonthStoryPanel(p: {
                           : <span className="cs-muted">{titleOf(beat.day)}</span>}
                         {idxOf(beat.day) !== -1 && (
                           <button type="button" className="mst-track" onClick={() => p.onSelect(idxOf(beat.day))}>
-                            Day {beat.day}{titleOf(beat.day) ? ` · ${titleOf(beat.day)}` : ''}
+                            {t('Day {n}', { n: beat.day })}{titleOf(beat.day) ? ` · ${titleOf(beat.day)}` : ''}
                           </button>
                         )}
                       </li>
@@ -132,8 +133,8 @@ export default function MonthStoryPanel(p: {
                 <p className="cs-lock-note">
                   <Lock size={14} />{' '}
                   {g.bonus
-                    ? `Clear all ${g.songs.length} bonus tracks to read the epilogue.`
-                    : `Reach track ${g.startIdx + 1}${g.songs[0] ? ` (${g.songs[0].title})` : ''} to open ${g.label}.`}
+                    ? t('Clear all {n} bonus tracks to read the epilogue.', { n: g.songs.length })
+                    : t('Reach track {n}{title} to open {act}.', { n: g.startIdx + 1, title: g.songs[0] ? ` (${g.songs[0].title})` : '', act: g.label })}
                 </p>
               </div>
             )}
@@ -146,8 +147,8 @@ export default function MonthStoryPanel(p: {
 
 function beatsOf(act: Partial<ChapterAct>): { key: string; label: string; beat: StoryBeat }[] {
   const out: { key: string; label: string; beat: StoryBeat }[] = [];
-  if (act.open) out.push({ key: 'open', label: 'Opens', beat: act.open });
-  if (act.turn) out.push({ key: 'turn', label: act.turn.dir === 'lifts' ? 'Lifts' : 'Drops', beat: act.turn });
-  if (act.close) out.push({ key: 'close', label: 'Lands', beat: act.close });
+  if (act.open) out.push({ key: 'open', label: t('Opens'), beat: act.open });
+  if (act.turn) out.push({ key: 'turn', label: t(act.turn.dir === 'lifts' ? 'Lifts' : 'Drops'), beat: act.turn });
+  if (act.close) out.push({ key: 'close', label: t('Lands'), beat: act.close });
   return out;
 }

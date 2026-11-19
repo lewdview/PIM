@@ -24,6 +24,7 @@ import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/monthBoard.css';
 import '@/styles/monthAlbum.css';
+import { t, tn } from '@/i18n';
 
 const reducedMotion = () => {
   try {
@@ -126,18 +127,18 @@ export default function PackReveal({ songs, regularCount, onClose, primary, onAl
   const more = phase === 'summary' ? waiting : waiting - 1;
   const untilRare = RARE_PITY - state.sinceRare;
   return (
-    <div className="mb-lb al-reveal" role="dialog" aria-modal="true" aria-label="Pack opening" data-first={first || undefined}
+    <div className="mb-lb al-reveal" role="dialog" aria-modal="true" aria-label={t('Pack opening')} data-first={first || undefined}
       onClick={(e) => { e.stopPropagation(); if (phase !== 'summary') skip(); }}>
       <div className="al-reveal-card" onClick={(e) => e.stopPropagation()}>
         <div className="al-reveal-head">
           <div>
-            <div className="cs-eyebrow">{PACK_SOURCE_LABEL[pack.source]}{pack.songId && byId.get(pack.songId) ? ` · ${byId.get(pack.songId)!.title}` : ''}</div>
-            <h2 className="cs-display">{phase === 'summary' ? 'Your cards' : 'Opening pack'}</h2>
+            <div className="cs-eyebrow">{t(PACK_SOURCE_LABEL[pack.source])}{pack.songId && byId.get(pack.songId) ? ` · ${byId.get(pack.songId)!.title}` : ''}</div>
+            <h2 className="cs-display">{t(phase === 'summary' ? 'Your cards' : 'Opening pack')}</h2>
           </div>
           {phase === 'summary' ? (
-            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose} aria-label="Close"><X size={16} /></button>
+            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose} aria-label={t('Close')}><X size={16} /></button>
           ) : (
-            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={skip}><FastForward size={14} /> Skip</button>
+            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={skip}><FastForward size={14} /> {t('Skip')}</button>
           )}
         </div>
 
@@ -155,7 +156,7 @@ export default function PackReveal({ songs, regularCount, onClose, primary, onAl
                   faceDown={i >= shown}
                   isNew={!c.dup}
                   className="al-card--reveal"
-                  tag={i < shown ? (c.dup ? `Duplicate · +${c.shards} shard${c.shards === 1 ? '' : 's'}` : `New ${RARITY_NAME[c.r]}`) : undefined}
+                  tag={i < shown ? (c.dup ? `${t('Duplicate')} · +${c.shards} ${tn(c.shards, 'shard', 'shards')}` : t('New {rarity}', { rarity: t(RARITY_NAME[c.r]) })) : undefined}
                 />
               ))}
             </div>
@@ -164,9 +165,9 @@ export default function PackReveal({ songs, regularCount, onClose, primary, onAl
 
         <div className="al-reveal-foot" data-hidden={phase !== 'summary' || undefined}>
           <p className="al-reveal-note">
-            {pack.cards.some((c) => c.why === 'pity') ? 'Rare guarantee: 10 packs without a Rare always end in one. ' : ''}
-            {pack.cards.some((c) => c.why === 'first_pack') ? 'First pack bonus: a guaranteed Uncommon. ' : ''}
-            Next Rare within {untilRare} pack{untilRare === 1 ? "" : "s"} at most · {state.shards} shards
+            {pack.cards.some((c) => c.why === 'pity') ? t('Rare guarantee: 10 packs without a Rare always end in one.') + ' ' : ''}
+            {pack.cards.some((c) => c.why === 'first_pack') ? t('First pack bonus: a guaranteed Uncommon.') + ' ' : ''}
+            {t('Next Rare within {n} at most', { n: `${untilRare} ${tn(untilRare, 'pack', 'packs')}` })} · {state.shards} {t('shards')}
           </p>
           <div className="al-reveal-actions">
             {primary && (
@@ -176,16 +177,16 @@ export default function PackReveal({ songs, regularCount, onClose, primary, onAl
             )}
             {more > 0 && (
               <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={nextPack}>
-                <Package size={14} /> Open next pack ({more})
+                <Package size={14} /> {t('Open next pack ({n})', { n: more })}
               </button>
             )}
             {onAlbum && (
               <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onAlbum}>
-                <BookOpen size={14} /> Album
+                <BookOpen size={14} /> {t('Album')}
               </button>
             )}
             {!primary && (
-              <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose}>Done</button>
+              <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose}>{t('Done')}</button>
             )}
           </div>
         </div>
@@ -198,10 +199,10 @@ export default function PackReveal({ songs, regularCount, onClose, primary, onAl
 function FoilPack({ cover, tearing }: { cover?: string; tearing: boolean }) {
   const face = (
     <FoilPackFace accent={chapter.dc} label={chapter.name} coverUrl={cover} cardCount={3}
-      tagline="Chapter cards" brand="PIM · 365 DAYS OF LIGHT & DARK" />
+      tagline={t('Chapter cards')} brand="PIM · 365 DAYS OF LIGHT & DARK" />
   );
   return (
-    <div className="al-foil" data-tearing={tearing || undefined} aria-label="Sealed pack, 3 cards" role="img">
+    <div className="al-foil" data-tearing={tearing || undefined} aria-label={t('Sealed pack, 3 cards')} role="img">
       <div className="al-foil-body" style={{ clipPath: FOIL_BODY_CLIP }}>{face}</div>
       <div className="al-foil-strip" style={{ clipPath: FOIL_STRIP_CLIP }}>{face}</div>
       {tearing && (

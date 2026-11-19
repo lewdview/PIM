@@ -21,6 +21,7 @@
  * skipped and the card fades straight to its resting frame.
  */
 
+import { t as tx } from '@/i18n';
 import type { SecretLevelId } from './warp';
 
 export const INTRO_FLASH_AT = 1.05;
@@ -106,7 +107,7 @@ export function drawWarpIntro(
   const look: IntroLook = {
     ...INTRO_LOOKS[level],
     title,
-    header: opts.header ?? ['★ WARP ZONE ★', 'SECRET LEVEL FOUND'],
+    header: opts.header ?? [`★ ${tx('WARP ZONE')} ★`, tx('SECRET LEVEL FOUND')],
     runnerSprite: opts.runnerSprite,
     sky: opts.sky,
   };

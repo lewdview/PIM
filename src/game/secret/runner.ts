@@ -9,6 +9,7 @@
 
 import { offBeat, seeded, type SecretGame, type SecretInput } from './types';
 import { RUNNER_COURSES, RUNNER_WHISTLES, runnerCourse, type RunnerObstacle, type RunnerStage, type RunnerWhistleId } from './runnerCourses';
+import { t } from '@/i18n';
 import { drawRunnerSprite, type RunnerPose } from './runnerSprites';
 
 const JUMP_H = 0.2;            // apex height, in screen heights
@@ -483,8 +484,8 @@ export class RunnerLevel implements SecretGame {
       const popupY = Math.max(77, sy(p.y) - size - 12 - age * 24);
       ctx.lineWidth = 3;
       ctx.strokeStyle = '#171025';
-      ctx.strokeText(p.text, px, popupY);
-      ctx.fillText(p.text, px, popupY);
+      ctx.strokeText(t(p.text), px, popupY);
+      ctx.fillText(t(p.text), px, popupY);
     }
     ctx.globalAlpha = 1;
   }

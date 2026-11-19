@@ -22,6 +22,7 @@ import { SlamTitle } from '@/pages/campaign/arcade';
 import { bombshellArtFor } from './startRun';
 import '@/styles/campaignArcade.css';
 import '@/styles/monthEnding.css';
+import { t } from '@/i18n';
 
 const HOME = `/chapter/${PLAYGAMA_MONTH}`;
 const DISCORD_INVITE = 'https://discord.gg/x3wSdrpJeV';
@@ -85,7 +86,7 @@ function EndingPlayer({ ending, data, onDone }: { ending: EndingId; data: Data; 
  * or with a tap, Skip leaves at any time, and the last waits for the player.
  * The endings and the story scenes (MonthStoryScene.tsx) both play through it.
  */
-export function ScenePlayer({ scenes, music, kind, tone, doneLabel = 'Continue', onDone }: {
+export function ScenePlayer({ scenes, music, kind, tone, doneLabel = t('Continue'), onDone }: {
   scenes: Scene[];
   music: GameSong | undefined;
   /** data-ending on the root, for per-sequence styling. */
@@ -149,7 +150,7 @@ export function ScenePlayer({ scenes, music, kind, tone, doneLabel = 'Continue',
         </div>
         {last
           ? <button type="button" className="btn-3d" onClick={onDone}>{doneLabel}</button>
-          : <button type="button" className="me-skip" onClick={onDone}>Skip ▸▸</button>}
+          : <button type="button" className="me-skip" onClick={onDone}>{t('Skip')} ▸▸</button>}
       </div>
     </div>
   );
@@ -166,7 +167,7 @@ function musicFor(ending: EndingId, { songs, progress, story }: Data): GameSong 
 
 function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[] {
   const titleOf = (day?: number) => songs.find((s) => s.day === day)?.title;
-  const chapterChip = <div className="ca-hud me-hud"><span className="ca-chip" data-tone="hot">Chapter {pad(meta.month)}</span><span className="ca-chip">{meta.name}</span></div>;
+  const chapterChip = <div className="ca-hud me-hud"><span className="ca-chip" data-tone="hot">{t('Chapter {n}', { n: pad(meta.month) })}</span><span className="ca-chip">{meta.name}</span></div>;
   const intro: Scene = {
     key: 'intro',
     ms: 3800,
@@ -186,7 +187,7 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
           ms: 6000,
           body: (
             <>
-              <div className="ca-hud me-hud"><span className="ca-chip" data-tone="hot">Act {a.act}</span></div>
+              <div className="ca-hud me-hud"><span className="ca-chip" data-tone="hot">{t('Act {n}', { n: a.act })}</span></div>
               <SlamTitle text={a.word} className="ca-title--ch me-word" />
               <Line text={beat.line} />
               <Cite day={beat.day} title={titleOf(beat.day)} />
@@ -212,12 +213,12 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
             <div className="me-locked">
               {progress.bonus.map((s) => <span key={s.id}><Lock size={18} /></span>)}
             </div>
-            <h2 className="me-redacted">Epilogue · <span>{'█'.repeat(Math.max(4, epilogue?.word.length ?? 6))}</span></h2>
-            <p className="me-line">The year isn't done with you.</p>
+            <h2 className="me-redacted">{t('Epilogue')} · <span>{'█'.repeat(Math.max(4, epilogue?.word.length ?? 6))}</span></h2>
+            <p className="me-line">{t("The year isn't done with you.")}</p>
             <p className="me-hint">
               {progress.bonusUnlocked
-                ? `The ${progress.bonus.length} bonus tracks are open. Clear them to finish the story.`
-                : `Earn ${meta.platNeeded} platinum medals to open the ${progress.bonus.length} bonus tracks (${progress.platinums} so far), or unlock them from the chapter.`}
+                ? t('The {n} bonus tracks are open. Clear them to finish the story.', { n: progress.bonus.length })
+                : t('Earn {need} platinum medals to open the {n} bonus tracks ({have} so far), or unlock them from the chapter.', { need: meta.platNeeded, n: progress.bonus.length, have: progress.platinums })}
             </p>
           </>
         ),
@@ -235,7 +236,7 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
           <>
             <h2 className="me-redacted me-reveal">
               <span className="me-bar">{'█'.repeat(Math.max(4, epilogue?.word.length ?? 6))}</span>
-              <span className="me-word-in">{epilogue?.word ?? 'Epilogue'}</span>
+              <span className="me-word-in">{epilogue?.word ?? t('Epilogue')}</span>
             </h2>
           </>
         ),
@@ -251,8 +252,8 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
         body: (
           <>
             <CoverGrid songs={songs} />
-            <p className="me-line">{songs.length} tracks. {plats} of {songs.length} platinum.</p>
-            {plats < songs.length && <p className="me-hint">th3scr1b3 didn't stop at good enough.</p>}
+            <p className="me-line">{t('{n} tracks. {plats} of {n} platinum.', { n: songs.length, plats })}</p>
+            {plats < songs.length && <p className="me-hint">{t("th3scr1b3 didn't stop at good enough.")}</p>}
           </>
         ),
       },
@@ -267,7 +268,7 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
         ms: 6000,
         body: (
           <>
-            <div className="ca-hud me-hud"><span className="ca-chip">Prologue</span></div>
+            <div className="ca-hud me-hud"><span className="ca-chip">{t('Prologue')}</span></div>
             {story.prologue.lyric
               ? <><Line text={story.prologue.line} /><Cite day={story.prologue.day} title={titleOf(story.prologue.day)} /></>
               : <p className="me-line">{story.prologue.line}</p>}
@@ -279,7 +280,7 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
         ms: 5500,
         body: (
           <>
-            <div className="ca-hud me-hud"><span className="ca-chip" data-tone="hot">Act {a.act}</span></div>
+            <div className="ca-hud me-hud"><span className="ca-chip" data-tone="hot">{t('Act {n}', { n: a.act })}</span></div>
             <SlamTitle text={a.word} className="ca-title--ch me-word" />
             {a.synopsis ? <p className="me-line">{a.synopsis}</p> : <Line text={a.open.line} />}
           </>
@@ -290,7 +291,7 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
         ms: 6000,
         body: (
           <>
-            <div className="ca-hud me-hud"><span className="ca-chip" data-tone="hot">Epilogue</span></div>
+            <div className="ca-hud me-hud"><span className="ca-chip" data-tone="hot">{t('Epilogue')}</span></div>
             <SlamTitle text={epilogue.word} className="ca-title--ch me-word" />
             {epilogue.close && <Line text={epilogue.close.line} />}
           </>
@@ -302,10 +303,10 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
         body: (
           <div className="me-credit-card">
             <p className="me-credit-head">PIM: Poetry in Motion</p>
-            <p>Chapter {pad(meta.month)} · {meta.name}</p>
-            <p className="me-credit-gap">Music by</p>
+            <p>{t('Chapter {n}', { n: pad(meta.month) })} · {meta.name}</p>
+            <p className="me-credit-gap">{t('Music by')}</p>
             <p className="me-credit-big">th3scr1b3</p>
-            <p className="me-credit-big">th3scr1b3 is Bryan Meason</p>
+            <p className="me-credit-big">{t('th3scr1b3 is Bryan Meason')}</p>
           </div>
         ),
       },
@@ -315,10 +316,10 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
         ms: 0,
         body: (
           <>
-            <SlamTitle text={`Chapter ${pad(meta.month)} complete`} className="ca-title--ch me-word" />
-            <p className="me-line">{meta.month < 12 ? `${12 - meta.month} to go.` : 'The year is complete.'}</p>
-            <p className="me-hint">Listening mode unlocked: every song of {meta.name.toLowerCase()} with its lyrics, on the chapter screen.</p>
-            <p className="me-hint">One more ending is hidden here: platinum every Deluxe chart.</p>
+            <SlamTitle text={t('Chapter {n} complete', { n: pad(meta.month) })} className="ca-title--ch me-word" />
+            <p className="me-line">{meta.month < 12 ? t('{n} to go.', { n: 12 - meta.month }) : t('The year is complete.')}</p>
+            <p className="me-hint">{t('Listening mode unlocked: every song of {month} with its lyrics, on the chapter screen.', { month: meta.name.toLowerCase() })}</p>
+            <p className="me-hint">{t('One more ending is hidden here: platinum every Deluxe chart.')}</p>
           </>
         ),
       },
@@ -346,8 +347,8 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
       ms: 6000,
       body: (
         <>
-          <SlamTitle text={`${songs.length * 2} platinums`} className="ca-title--gold me-word" />
-          <p className="me-line">You heard every one.</p>
+          <SlamTitle text={t('{n} platinums', { n: songs.length * 2 })} className="ca-title--gold me-word" />
+          <p className="me-line">{t('You heard every one.')}</p>
         </>
       ),
     },
@@ -356,11 +357,11 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
       ms: 0,
       body: (
         <>
-          <p className="me-credit-big">th3scr1b3 is Bryan Meason</p>
-          <p className="me-line">Thank you for playing every note of {meta.name.toLowerCase()}.</p>
+          <p className="me-credit-big">{t('th3scr1b3 is Bryan Meason')}</p>
+          <p className="me-line">{t('Thank you for playing every note of {month}.', { month: meta.name.toLowerCase() })}</p>
           {externalLinksAllowed() && (
             <a className="btn-3d" data-tone="quiet" href={DISCORD_INVITE} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()}>
-              <MessageCircle size={16} /> Join the Discord
+              <MessageCircle size={16} /> {t('Join the Discord')}
             </a>
           )}
         </>
@@ -374,7 +375,7 @@ export function Line({ text }: { text: string }) {
 }
 
 export function Cite({ day, title }: { day: number; title?: string }) {
-  return <p className="me-cite">Day {day}{title ? ` · ${title}` : ''}</p>;
+  return <p className="me-cite">{t('Day {n}', { n: day })}{title ? ` · ${title}` : ''}</p>;
 }
 
 function CoverGrid({ songs, medals }: { songs: GameSong[]; medals?: boolean }) {
@@ -397,11 +398,11 @@ function Credits({ songs }: { songs: GameSong[] }) {
   return (
     <div className="me-credits">
       <div className="me-credits-roll">
-        <p className="me-credit-gap">365 Days of Light and Dark</p>
-        <p>One song a day for a year</p>
-        <p className="me-credit-gap">Tracks</p>
-        {songs.map((s) => <p key={s.id}>Day {s.day} · {s.title}</p>)}
-        <p className="me-credit-gap me-credit-big">Thank you for playing</p>
+        <p className="me-credit-gap">{t('365 Days of Light and Dark')}</p>
+        <p>{t('One song a day for a year')}</p>
+        <p className="me-credit-gap">{t('Tracks')}</p>
+        {songs.map((s) => <p key={s.id}>{t('Day {n}', { n: s.day })} · {s.title}</p>)}
+        <p className="me-credit-gap me-credit-big">{t('Thank you for playing')}</p>
       </div>
     </div>
   );
@@ -412,12 +413,12 @@ function FinalPiece() {
   const [missing, setMissing] = useState(false);
   return missing ? (
     <>
-      <SlamTitle text="The full gallery" className="ca-title--gold me-word" />
-      <p className="me-line">Every Prestige Art piece of {meta.name.toLowerCase()} is yours.</p>
+      <SlamTitle text={t('The full gallery')} className="ca-title--gold me-word" />
+      <p className="me-line">{t('Every Prestige Art piece of {month} is yours.', { month: meta.name.toLowerCase() })}</p>
     </>
   ) : (
     <div className="me-final">
-      <img src={finalPiecePath()} alt={`${meta.name} final Prestige Art piece`} onError={() => setMissing(true)} />
+      <img src={finalPiecePath()} alt={t('{month} final Prestige Art piece', { month: meta.name })} onError={() => setMissing(true)} />
     </div>
   );
 }

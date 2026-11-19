@@ -21,6 +21,7 @@ import { BUILD_VERSION, PLAYGAMA_MONTH } from '@/platform/playgama/month';
 import { externalLinksAllowed } from '@/platform/playgama/bridge';
 import '@/styles/stageShell.css';
 import '@/styles/monthTitle.css';
+import { t } from '@/i18n';
 
 const INTRO_MS = 5200;
 const LOGO = '/data/logos/logo_1.png';
@@ -130,16 +131,16 @@ function Intro({ style, covers, name, onSkip }: { style: CSSProperties; covers: 
     <div className="mt-screen mt-intro" style={style} role="presentation">
       <div className="mt-present">
         <span>th3scr1b3</span>
-        <small>presents</small>
+        <small>{t('presents')}</small>
       </div>
       <img className="mt-intro-logo" src={LOGO} alt="PIM: Poetry in Motion" />
       <CoverWall covers={covers} className="mt-intro-wall" />
       <div className="mt-intro-month">
-        <small>Chapter {String(PLAYGAMA_MONTH).padStart(2, '0')}</small>
+        <small>{t('Chapter {n}', { n: String(PLAYGAMA_MONTH).padStart(2, '0') })}</small>
         <b>{name}</b>
       </div>
       <div className="mt-flash" />
-      <div className="mt-skip">Tap to skip</div>
+      <div className="mt-skip">{t('Tap to skip')}</div>
     </div>
   );
 }
@@ -220,7 +221,7 @@ function PressStart({ style, covers, name, sub, count, songs, progress, onStart,
   useEffect(() => { buttons.current[focus]?.focus({ preventScroll: true }); }, [focus]);
 
   const playSub = pick
-    ? `${pick.goal ? 'Replay · ' : ''}Day ${pick.song.day} · ${pick.song.title}${firstTime ? ' · gentle start' : ''}`
+    ? `${pick.goal ? `${t('Replay')} · ` : ''}${t('Day {n}', { n: pick.song.day })} · ${pick.song.title}${firstTime ? ` · ${t('gentle start')}` : ''}`
     : '';
 
   return (
@@ -230,26 +231,26 @@ function PressStart({ style, covers, name, sub, count, songs, progress, onStart,
         <img className="mt-start-logo" src={LOGO} alt="PIM: Poetry in Motion" />
         <div className="mt-start-month">
           <b>{name}</b>
-          <small>{sub}{count ? ` · ${count} tracks` : ''}</small>
+          <small>{sub}{count ? ` · ${t('{n} tracks', { n: count })}` : ''}</small>
         </div>
         <div className="mt-menu">
           <button ref={(el) => { buttons.current[0] = el; }} type="button" className="mt-play" onClick={actions[0]} onFocus={() => setFocus(0)}
-            aria-label={pick ? `Play ${pick.song.title}` : 'Play'}>
-            <span className="mt-play-label"><Play size={20} fill="currentColor" /> Play</span>
+            aria-label={pick ? t('Play {title}', { title: pick.song.title }) : t('Play')}>
+            <span className="mt-play-label"><Play size={20} fill="currentColor" /> {t('Play')}</span>
             {playSub && <small>{playSub}</small>}
           </button>
           <div className="mt-menu-row">
             <button ref={(el) => { buttons.current[1] = el; }} type="button" className="mt-sub" onClick={actions[1]} onFocus={() => setFocus(1)}>
-              <ListMusic size={16} /> Choose entry
+              <ListMusic size={16} /> {t('Choose entry')}
             </button>
             <button ref={(el) => { buttons.current[2] = el; }} type="button" className="mt-sub" onClick={actions[2]} onFocus={() => setFocus(2)}>
-              <Settings size={16} /> Settings
+              <Settings size={16} /> {t('Settings')}
             </button>
           </div>
         </div>
       </div>
       <div className="mt-start-foot">
-        © th3scr1b3 · 365 days of light and dark
+        © th3scr1b3 · {t('365 days of light and dark')}
         {externalLinksAllowed() && (
           <> · <a href="https://th3scr1b3.art" target="_blank" rel="noopener" onPointerDown={(e) => e.stopPropagation()}>th3scr1b3.art</a></>
         )}

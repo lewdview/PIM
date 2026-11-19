@@ -1,5 +1,6 @@
 import type { GameSong } from '@/game/api';
 import { highlightRuns } from '@/game/chapterStory';
+import { t } from '@/i18n';
 
 /** A lyric line with the given words lit in the chapter colour. */
 export function Highlighted({ line, words }: { line: string; words: string[] }) {
@@ -12,7 +13,7 @@ export function Highlighted({ line, words }: { line: string; words: string[] }) 
 
 export function WordChips({ words, redacted = false, small = false }: { words: string[]; redacted?: boolean; small?: boolean }) {
   return (
-    <ul className={small ? 'cs-words cs-words--sm' : 'cs-words'} aria-label={redacted ? 'Hidden until unlocked' : 'Chapter words'}>
+    <ul className={small ? 'cs-words cs-words--sm' : 'cs-words'} aria-label={t(redacted ? 'Hidden until unlocked' : 'Chapter words')}>
       {words.map((w) => (
         <li key={w} className="cs-word" data-redacted={redacted}>
           {redacted ? w.replace(/./g, '•') : w}
@@ -67,10 +68,10 @@ export function MoodArc({ songs, groups, selectedIdx, stateOf, onSelect }: {
   const pts = songs.map((s, i) => `${x(i).toFixed(2)},${y(s).toFixed(1)}`).join(' ');
   const seps = groups.slice(1).map((g) => x(g.startIdx - 0.5));
   return (
-    <section className="cs-arc" aria-label="Mood across the chapter">
+    <section className="cs-arc" aria-label={t('Mood across the chapter')}>
       <div className="cs-arc-head">
-        <div className="cs-eyebrow">Mood arc</div>
-        <div className="cs-eyebrow">brighter ↑ · heavier ↓</div>
+        <div className="cs-eyebrow">{t('Mood arc')}</div>
+        <div className="cs-eyebrow">{t('brighter ↑ · heavier ↓')}</div>
       </div>
       <div style={{ position: 'relative' }}>
         <svg viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" aria-hidden="true">
@@ -87,14 +88,14 @@ export function MoodArc({ songs, groups, selectedIdx, stateOf, onSelect }: {
               data-state={stateOf(s, i)}
               data-selected={i === selectedIdx}
               style={{ left: `${x(i)}%`, top: `${(y(s) / H) * 100}%` }}
-              aria-label={`${s.title}, day ${s.day}`}
+              aria-label={`${s.title}, ${t('day {n}', { n: s.day })}`}
               onClick={() => onSelect(i)}
             />
           ))}
         </div>
       </div>
       <div className="cs-arc-acts" style={{ gridTemplateColumns: groups.map((g) => `${g.songs.length}fr`).join(' ') }}>
-        {groups.map((g) => <span key={g.key} title={g.label}>{g.act?.act ? `${g.act.act} · ${g.act.word}` : g.bonus ? `Bonus${g.act ? ` · ${g.act.word}` : ''}` : g.label}</span>)}
+        {groups.map((g) => <span key={g.key} title={g.label}>{g.act?.act ? `${g.act.act} · ${g.act.word}`   : g.bonus ? `${t('Bonus')}${g.act ? ` · ${g.act.word}` : ''}` : g.label}</span>)}
       </div>
     </section>
   );

@@ -10,6 +10,7 @@ import { prepareRunnerSprites } from '../game/secret/runnerSprites';
 import { useRunnerGamepad, type RunnerDirection } from '../game/secret/useRunnerGamepad';
 import { PLAYGAMA_MONTH } from '@/platform/playgama/month';
 import './RunnerWorldMap.css';
+import { t } from '@/i18n';
 
 // The monthly portal build has no Warp Zone page: the map leads back to the chapter.
 const BACK = PLAYGAMA_MONTH > 0
@@ -125,8 +126,8 @@ export default function RunnerWorldMap() {
       <div className="runner-world runner-world--locked">
         <LockKeyhole size={26} aria-hidden />
         <h1>Beat Runner</h1>
-        <p>Hit a warp note during a song to earn the first Warp Whistle.</p>
-        <Link href={BACK.href} className="runner-map-action"><ArrowLeft size={17} aria-hidden /> {BACK.label} {pad && <kbd>{pad.back}</kbd>}</Link>
+        <p>{t('Hit a warp note during a song to earn the first Warp Whistle.')}</p>
+        <Link href={BACK.href} className="runner-map-action"><ArrowLeft size={17} aria-hidden /> {t(BACK.label)} {pad && <kbd>{pad.back}</kbd>}</Link>
       </div>
     );
   }
@@ -142,29 +143,29 @@ export default function RunnerWorldMap() {
     <div className="runner-world">
       <div className="runner-world-shell">
         <div className="runner-world-top">
-          <Link href={BACK.href} className="runner-world-back"><ArrowLeft size={16} aria-hidden /> {BACK.label}</Link>
-          <div className="runner-world-inventory" aria-label={`${foundCount} of 3 Warp Whistles found`}>
+          <Link href={BACK.href} className="runner-world-back"><ArrowLeft size={16} aria-hidden /> {t(BACK.label)}</Link>
+          <div className="runner-world-inventory" aria-label={t('{n} of 3 Warp Whistles found', { n: foundCount })}>
             <AudioLines size={18} aria-hidden />
-            <span>Warp Whistles</span>
+            <span>{t('Warp Whistles')}</span>
             <strong>{foundCount}/3</strong>
           </div>
         </div>
 
         <header className="runner-world-header">
           <div>
-            <p>World Map</p>
+            <p>{t('World Map')}</p>
             <h1>Beat Runner</h1>
           </div>
-          <span className="runner-world-progress"><Check size={16} aria-hidden /> {progress.cleared.length}/{RUNNER_STAGES.length} courses cleared</span>
+          <span className="runner-world-progress"><Check size={16} aria-hidden /> {t('{n}/{of} courses cleared', { n: progress.cleared.length, of: RUNNER_STAGES.length })}</span>
         </header>
 
         <div className="runner-world-grid">
-          <section className="runner-map-frame" aria-label="Beat Runner course map">
+          <section className="runner-map-frame" aria-label={t('Beat Runner course map')}>
             <div className="runner-map-surface">
               <canvas ref={canvasRef} aria-hidden="true" />
               {MAP_REGIONS.map(({ name, ink, label }) => {
                 const [x, y] = label[compact ? 1 : 0];
-                return <span key={name} className="runner-map-region" style={{ left: `${x}%`, top: `${y}%`, color: ink }}>{name}</span>;
+                return <span key={name} className="runner-map-region" style={{ left: `${x}%`, top: `${y}%`, color: ink }}>{t(name)}</span>;
               })}
               {RUNNER_STAGES.map((stage) => {
                 const [x, y] = layout[stage];
@@ -179,7 +180,7 @@ export default function RunnerWorldMap() {
                     className="runner-map-node"
                     style={{ left: `${x}%`, top: `${y}%` }}
                     data-state={done ? 'clear' : open ? 'open' : 'locked'}
-                    aria-label={`Level ${stage} ${RUNNER_COURSES[stage].title}, ${done ? 'cleared' : open ? 'available' : 'locked'}`}
+                    aria-label={`${t('Level {n}', { n: stage })} ${t(RUNNER_COURSES[stage].title)}, ${t(done ? 'cleared' : open ? 'available' : 'locked')}`}
                     aria-pressed={isSelected}
                     onKeyDown={(event) => {
                       const direction = ARROWS[event.key];
@@ -192,54 +193,54 @@ export default function RunnerWorldMap() {
                     <span className="runner-map-node-marker">
                       {done ? <Check size={17} strokeWidth={3} aria-hidden /> : open ? String(stage).padStart(2, '0') : <LockKeyhole size={15} aria-hidden />}
                     </span>
-                    <span className="runner-map-node-label">{RUNNER_COURSES[stage].title}</span>
+                    <span className="runner-map-node-label">{t(RUNNER_COURSES[stage].title)}</span>
                   </button>
                 );
               })}
             </div>
             <div className="runner-map-legend">
-              <span><i className="runner-map-key runner-map-key--open" /> Open route</span>
-              <span><i className="runner-map-key" /> Locked route</span>
-              <span><i className="runner-map-key runner-map-key--warp" /> Warp shortcut</span>
-              {pad && <span className="runner-map-pad"><Gamepad2 size={16} aria-hidden /> D-pad select · {pad.confirm} confirm · {pad.back} back</span>}
+              <span><i className="runner-map-key runner-map-key--open" /> {t('Open route')}</span>
+              <span><i className="runner-map-key" /> {t('Locked route')}</span>
+              <span><i className="runner-map-key runner-map-key--warp" /> {t('Warp shortcut')}</span>
+              {pad && <span className="runner-map-pad"><Gamepad2 size={16} aria-hidden /> {t('D-pad select')} · {pad.confirm} {t('confirm')} · {pad.back} {t('back')}</span>}
             </div>
           </section>
 
-          <aside className="runner-map-detail" aria-label="Selected course">
+          <aside className="runner-map-detail" aria-label={t('Selected course')}>
             <div className="runner-map-course-header" style={{ borderTopColor: region.ink }}>
-              <p className="runner-map-course-region" style={{ color: region.ink }}>{region.name} / Level {String(selected).padStart(2, '0')}</p>
-              <h2>{course.title}</h2>
-              <p className="runner-map-brief">{course.brief}</p>
+              <p className="runner-map-course-region" style={{ color: region.ink }}>{t(region.name)} / {t('Level {n}', { n: String(selected).padStart(2, '0') })}</p>
+              <h2>{t(course.title)}</h2>
+              <p className="runner-map-brief">{t(course.brief)}</p>
             </div>
             <div className="runner-map-course-body">
-              {cleared && <p className="runner-map-best"><Check size={16} aria-hidden /> Best score <strong>{best?.toLocaleString()}</strong></p>}
+              {cleared && <p className="runner-map-best"><Check size={16} aria-hidden /> {t('Best score')} <strong>{best?.toLocaleString()}</strong></p>}
               {available ? (
                 <Link href={runnerArcadePath(selected)} className="runner-map-action">
-                  <Play size={17} fill="currentColor" aria-hidden /> {cleared ? 'Replay course' : 'Play course'}
+                  <Play size={17} fill="currentColor" aria-hidden /> {t(cleared ? 'Replay course' : 'Play course')}
                 </Link>
               ) : (
-                <p className="runner-map-locked"><LockKeyhole size={16} aria-hidden /> Clear {RUNNER_COURSES[RUNNER_STAGES[RUNNER_STAGES.indexOf(selected) - 1]].title} to unlock.</p>
+                <p className="runner-map-locked"><LockKeyhole size={16} aria-hidden /> {t('Clear {title} to unlock.', { title: t(RUNNER_COURSES[RUNNER_STAGES[RUNNER_STAGES.indexOf(selected) - 1]].title) })}</p>
               )}
 
               {canOpenShortcut && (
                 <button type="button" className="runner-map-whistle-action" onClick={openShortcut}>
-                  <AudioLines size={18} aria-hidden /> Use {RUNNER_WHISTLES[canOpenShortcut].name} <ArrowRight size={16} aria-hidden />
+                  <AudioLines size={18} aria-hidden /> {t('Use {name}', { name: t(RUNNER_WHISTLES[canOpenShortcut].name) })} <ArrowRight size={16} aria-hidden />
                 </button>
               )}
               {whistleToCourse && progress.whistles[whistleToCourse] === 'opened' && (
-                <p className="runner-map-secret" role="status"><AudioLines size={17} aria-hidden /> Warp shortcut open</p>
+                <p className="runner-map-secret" role="status"><AudioLines size={17} aria-hidden /> {t('Warp shortcut open')}</p>
               )}
               {whistleAtCourse && available && (
                 <p className="runner-map-secret">
                   <AudioLines size={17} aria-hidden />
                   {progress.whistles[whistleAtCourse] === 'hidden'
-                    ? RUNNER_WHISTLES[whistleAtCourse].hint
-                    : `${RUNNER_WHISTLES[whistleAtCourse].name} found`}
+                    ? t(RUNNER_WHISTLES[whistleAtCourse].hint)
+                    : t('{name} found', { name: t(RUNNER_WHISTLES[whistleAtCourse].name) })}
                 </p>
               )}
               {readyWhistle && (
                 <button type="button" className="runner-map-shortcut" onClick={() => setSelected(RUNNER_WHISTLES[readyWhistle].to)}>
-                  View {RUNNER_WHISTLES[readyWhistle].name} shortcut <ArrowRight size={15} aria-hidden />
+                  {t('View {name} shortcut', { name: t(RUNNER_WHISTLES[readyWhistle].name) })} <ArrowRight size={15} aria-hidden />
                   {pad && <kbd>{pad.taunt}</kbd>}
                 </button>
               )}

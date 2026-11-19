@@ -10,6 +10,7 @@ import { CHAPTERS } from '@/game/campaign';
 import { PLAYGAMA_MONTH, canBuyBundle, ownsBonusBundle } from '@/platform/playgama/month';
 import { externalLinksAllowed, runSocialAction, socialActions, type SocialAction } from '@/platform/playgama/bridge';
 import '@/styles/monthPanels.css';
+import { t } from '@/i18n';
 
 const SITE_URL = 'https://th3scr1b3.art';
 /** Permanent (never-expiring) invite to the th3scr1b3 Discord server; the button hides while empty. */
@@ -30,60 +31,58 @@ export default function MonthAbout({ onClose, onBuyBundle }: { onClose: () => vo
   const bundle = canBuyBundle() && !ownsBonusBundle() && onBuyBundle;
 
   return (
-    <div className="mb-lb" role="dialog" aria-modal="true" aria-label="Who is th3scr1b3?" onClick={onClose}>
+    <div className="mb-lb" role="dialog" aria-modal="true" aria-label={t('Who is th3scr1b3?')} onClick={onClose}>
       <div className="mb-lb-card ma-card" onClick={(e) => e.stopPropagation()}>
         <div className="mb-lb-head">
           <div>
-            <div className="cs-eyebrow">365 Days of Light and Dark</div>
-            <h2 className="cs-display">Who is th3scr1b3?</h2>
+            <div className="cs-eyebrow">{t('365 Days of Light and Dark')}</div>
+            <h2 className="cs-display">{t('Who is th3scr1b3?')}</h2>
           </div>
-          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose} aria-label="Close"><X size={16} /></button>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={onClose} aria-label={t('Close')}><X size={16} /></button>
         </div>
         <div className="ma-body">
           <section>
-            <h3>The artist</h3>
+            <h3>{t('The artist')}</h3>
             <p>
-              th3scr1b3 is an independent musician. A hard drive failure once wiped out hundreds of finished songs and sessions.
-              Instead of giving up, th3scr1b3 made a vow: write, mix and release one new song every day for a year.
-              That year became <b>365 Days of Light and Dark</b>.
+              {t('th3scr1b3 is an independent musician. A hard drive failure once wiped out hundreds of finished songs and sessions. Instead of giving up, th3scr1b3 made a vow: write, mix and release one new song every day for a year.')}
+              {' '}{t('That year became')} <b>{t('365 Days of Light and Dark')}</b>.
             </p>
           </section>
           <section>
-            <h3>The game</h3>
+            <h3>{t('The game')}</h3>
             <p>
-              PIM (Poetry in Motion) turns those songs into a rhythm game. Your timing shapes the mix: hit cleanly and the
-              song stays pristine, miss and it starts to break up. This is <b>{meta.name}</b>, chapter {PLAYGAMA_MONTH} of twelve,
-              one for each month of the year.
+              {t('PIM (Poetry in Motion) turns those songs into a rhythm game. Your timing shapes the mix: hit cleanly and the song stays pristine, miss and it starts to break up.')}
+              {' '}{t('This is')} <b>{meta.name}</b>{t(', chapter {n} of twelve, one for each month of the year.', { n: PLAYGAMA_MONTH })}
             </p>
           </section>
           <section className="ma-help">
-            <h3>How you can help</h3>
+            <h3>{t('How you can help')}</h3>
             <p>
-              There's no label behind this, just one person and the people who play.
-              {actions.length || bundle ? ' If you enjoy it, any of these helps:' : ' Playing and telling a friend helps more than you think.'}
+              {t("There's no label behind this, just one person and the people who play.")}
+              {' '}{t(actions.length || bundle ? 'If you enjoy it, any of these helps:' : 'Playing and telling a friend helps more than you think.')}
             </p>
             <div className="ma-actions">
               {bundle && (
                 <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={onBuyBundle}>
-                  <Gift size={14} /> Unlock the bonus songs
+                  <Gift size={14} /> {t('Unlock the bonus songs')}
                 </button>
               )}
               {actions.map((a) => {
                 const { label, icon: Icon } = SOCIAL[a];
                 return (
                   <button key={a} type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => void runSocialAction(a)}>
-                    <Icon size={14} /> {label}
+                    <Icon size={14} /> {t(label)}
                   </button>
                 );
               })}
               {links && DISCORD_INVITE && (
                 <a className="btn-3d" data-size="sm" data-tone="quiet" href={DISCORD_INVITE} target="_blank" rel="noopener">
-                  <MessageCircle size={14} /> Join the Discord
+                  <MessageCircle size={14} /> {t('Join the Discord')}
                 </a>
               )}
               {links && (
                 <a className="btn-3d" data-size="sm" data-tone="quiet" href={SITE_URL} target="_blank" rel="noopener">
-                  <ExternalLink size={14} /> Hear all 365 songs and support th3scr1b3
+                  <ExternalLink size={14} /> {t('Hear all 365 songs and support th3scr1b3')}
                 </a>
               )}
             </div>
