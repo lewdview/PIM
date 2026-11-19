@@ -90,7 +90,8 @@ function painter(): SkinFn | null {
 // there. Notes that animate (arrows, hold ends, REMIX, BEAT, WARP, mines and the rest) are
 // still drawn live; there are only ever a few of those on screen.
 
-type Sprite = { canvas: HTMLCanvasElement; w: number; h: number };
+/** `ox`/`oy`: where the note's centre sits in the sprite (the slab's room below is uneven). */
+type Sprite = { canvas: HTMLCanvasElement; w: number; h: number; ox: number; oy: number };
 const sprites = new Map<string, Sprite>();
 const MAX_SPRITES = 260;
 const PAD_X = 20; // room for the bloom and the strike sights
@@ -126,7 +127,19 @@ function stillSprite(
     sprites.set(key, sprite);
     return { sprite, bw, bh };
   }
-  const w = bw + PAD_X * 2, h = bh + PAD_Y * 2;
+  // The slab hangs its side wall and contact shadow below the face (see notes3d's
+  // drawSlabBody): the shadow pools at depth + 0.42h and spreads 0.62w wide, so on close,
+  // big keys it reached past a fixed margin and was cut flat. Give the slab all of it.
+  let padX = PAD_X, padTop = PAD_Y, padBottom = PAD_Y;
+  if (slab) {
+    const depth = bh * 0.34;
+    const shadowBottom = depth + bh * 0.42 + bw * 0.62 * 0.28;
+    const shadowSide = bw * 0.62 + bw * 0.09 * 1.4;
+    padBottom = Math.max(PAD_Y, Math.ceil(Math.max(bh / 2 + depth, shadowBottom) - bh / 2 + 10));
+    padX = Math.max(PAD_X, Math.ceil(shadowSide - bw / 2 + 6));
+  }
+  const w = bw + padX * 2, h = bh + padTop + padBottom;
+  const ox = padX + bw / 2, oy = padTop + bh / 2;
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(w * res);
   canvas.height = Math.ceil(h * res);
@@ -134,10 +147,10 @@ function stillSprite(
   if (!sctx) return null;
   gateShadows(sctx, glow);
   sctx.scale(res, res);
-  sctx.translate(w / 2, h / 2);
+  sctx.translate(ox, oy);
   if (slab) withSlabLateral(lean, () => paint(sctx, bw, bh, laneColor, p, false, undefined, noteType, 0));
   else paint(sctx, bw, bh, laneColor, p, false, undefined, noteType, 0);
-  sprite = { canvas, w, h };
+  sprite = { canvas, w, h, ox, oy };
   sprites.set(key, sprite);
   if (sprites.size > MAX_SPRITES) sprites.delete(sprites.keys().next().value as string);
   return { sprite, bw, bh };
@@ -155,7 +168,7 @@ export const drawSkinnedKey: SkinFn = (ctx, noteW, noteH, laneColor, prog, isHol
     if (hit) {
       const kx = noteW / hit.bw, ky = noteH / hit.bh;
       const w = hit.sprite.w * kx, h = hit.sprite.h * ky;
-      ctx.drawImage(hit.sprite.canvas, -w / 2, -h / 2, w, h);
+      ctx.drawImage(hit.sprite.canvas, -hit.sprite.ox * kx, -hit.sprite.oy * ky, w, h);
       if (useClassic) classic!.sheen(ctx, noteW, noteH, prog, timeOffset ?? 0);
       return true;
     }
