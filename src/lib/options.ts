@@ -34,7 +34,7 @@ export type LyricsMode = 'off' | 'track' | 'poetic';
 export const LYRICS_MODES: readonly LyricsMode[] = ['off', 'track', 'poetic'];
 /** Phones read lyrics best on the track; desktop and tablet get Poetic Lines. */
 export function defaultLyricsMode(): LyricsMode {
-  return typeof window !== 'undefined' && window.innerWidth < 640 ? 'track' : 'poetic';
+  return 'poetic';
 }
 /**
  * The lyric mode actually drawn in a song. The Poetic GUI shows the lyric line
