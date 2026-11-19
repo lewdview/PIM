@@ -20,6 +20,8 @@ import { TUTORIAL_DONE_KEY } from '@/platform/playgama/tutorialTrack';
 import { startFunnel } from '@/platform/playgama/funnel';
 import TitleScreens from './month/TitleScreens';
 import '@/styles/CardShowcaseStyles.css';
+import '@/styles/themeLight.css';
+import { setDarkStage } from '@/theme';
 import { t } from '@/i18n';
 
 /**
@@ -92,6 +94,10 @@ export default function MonthShell() {
   const [started, setStarted] = useState(false);
   // Gameplay's pause menu and gear button ask for options through the vault store's flag.
   const optionsOpen = useVaultStore((s) => s.optionsModalOpen);
+  // Songs, results, scenes, listening and Beat Runner stay dark in the light theme.
+  useEffect(() => {
+    setDarkStage(/^\/(play|results|secret|warp|ending|story|listen|tutorial)(\/|$)/.test(location));
+  }, [location]);
 
   useEffect(() => {
     startFunnel();

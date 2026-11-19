@@ -1,0 +1,125 @@
+/* themeLight.css — the light theme of the portal builds' menus, applied while
+   <html data-theme="light"> (src/theme). The arcade language stays: ink
+   outlines, pixel chips, chapter colour; the screens turn to warm paper.
+   Songs, results, story and ending scenes, listening mode and Beat Runner
+   levels keep their dark stage, so the dark palette comes back inside them. */
+
+html[data-theme='light'] {
+  --shell-bg: #f3ede2;
+  --shell-panel: #fffaf2;
+  --shell-raise: #ebe2d3;
+  --shell-well: #e6dccb;
+  --shell-line: rgba(40, 26, 12, 0.13);
+  --shell-line-strong: rgba(40, 26, 12, 0.28);
+  --shell-specular: rgba(255, 255, 255, 0.7);
+  --shell-text: rgba(24, 16, 8, 0.94);
+  --shell-text-2: rgba(24, 16, 8, 0.7);
+  --shell-text-3: rgba(24, 16, 8, 0.5);
+  /* Neon tones darkened just enough to read as text on paper. */
+  --shell-acid: #1c9e00;
+  --shell-cyan: #00869b;
+  --shell-gold: #b77a00;
+  --lt-paper: #fffaf2;
+  --lt-paper-2: #f6efe3;
+  --lt-ink: #1d130b;
+  --lt-edge: rgba(29, 19, 11, 0.16);
+  background: var(--shell-bg);
+}
+html[data-theme='light'] body { background: var(--shell-bg); color: var(--shell-text); }
+
+/* Dark stages keep the dark palette. */
+html[data-theme='light'] :is(.cr-root, .me-root, .ml-root, .mt-screen) {
+  --shell-bg: #080604;
+  --shell-panel: #14100b;
+  --shell-raise: #211b13;
+  --shell-well: #0b0805;
+  --shell-line: rgba(250, 240, 216, 0.09);
+  --shell-line-strong: rgba(250, 240, 216, 0.20);
+  --shell-specular: rgba(255, 250, 240, 0.14);
+  --shell-text: rgba(250, 240, 216, 0.95);
+  --shell-text-2: rgba(250, 240, 216, 0.66);
+  --shell-text-3: rgba(250, 240, 216, 0.42);
+  --shell-acid: #39ff14;
+  --shell-cyan: #00e5ff;
+  --shell-gold: #ffb800;
+}
+
+/* ── Title screen: the cover wall washed in daylight ─────────────────────── */
+html[data-theme='light'] .mt-start::before {
+  background:
+    radial-gradient(60% 55% at 50% 45%, rgba(255, 250, 242, 0.55), rgba(243, 237, 226, 0.94) 75%),
+    linear-gradient(180deg, rgba(243, 237, 226, 0.4), rgba(243, 237, 226, 0.9));
+}
+html[data-theme='light'] .mt-screen:has(.mt-start) { background: var(--lt-paper-2); color: var(--lt-ink); }
+html[data-theme='light'] .mt-start-month b { color: var(--lt-ink); text-shadow: 0 4px 0 color-mix(in srgb, var(--ch) 55%, transparent); }
+html[data-theme='light'] .mt-press { color: var(--lt-ink); }
+html[data-theme='light'] .mt-play { background: color-mix(in srgb, var(--ch) 30%, var(--lt-paper)); color: var(--lt-ink); border-color: var(--lt-ink); }
+html[data-theme='light'] .mt-play small { color: rgba(29, 19, 11, 0.7); }
+html[data-theme='light'] .mt-sub { background: rgba(255, 250, 242, 0.85); border-color: var(--lt-edge); color: var(--lt-ink); }
+html[data-theme='light'] .mt-sub:hover { border-color: rgba(29, 19, 11, 0.4); }
+
+/* ── Chapter screen ──────────────────────────────────────────────────────── */
+html[data-theme='light'] .ca-root .ca-dither {
+  background: radial-gradient(rgba(29, 19, 11, 0.08) 1px, transparent 1.4px) 0 0 / 4px 4px;
+}
+html[data-theme='light'] .ca-root .ca-scan { background: none; }
+html[data-theme='light'] .ca-chip { background: var(--lt-paper); border-color: var(--lt-edge); color: var(--shell-text-2); }
+html[data-theme='light'] .ca-root .ca-hero,
+html[data-theme='light'] .mb-page .mb-head.ca-hero { background: var(--lt-paper); }
+html[data-theme='light'] .ca-root .cs-hero::before {
+  background: linear-gradient(180deg, rgba(255, 250, 242, 0.5) 0%, rgba(255, 250, 242, 0.92) 70%);
+}
+html[data-theme='light'] .ca-stats > span { background: var(--lt-paper-2); border-color: var(--lt-edge); }
+html[data-theme='light'] .ca-stats b { color: color-mix(in srgb, var(--hot) 55%, var(--lt-ink)); }
+html[data-theme='light'] .ca-root .cs-bar { background: var(--shell-well); box-shadow: 0 0 0 1px var(--lt-edge); }
+html[data-theme='light'] .ca-root .cs-chip-btn { background: var(--lt-paper); color: var(--lt-ink); box-shadow: 0 0 0 2px var(--lt-edge), 3px 3px 0 2px var(--lt-ink); }
+html[data-theme='light'] .ca-root .cs-ms,
+html[data-theme='light'] .ca-root .cs-act-toggle,
+html[data-theme='light'] .ca-root .cs-detail-grid > div { background: var(--lt-paper-2); box-shadow: 0 0 0 1px var(--lt-edge), 3px 3px 0 1px var(--lt-ink); }
+html[data-theme='light'] .ca-root .cs-word { background: color-mix(in srgb, var(--ch) 22%, var(--lt-paper)); color: var(--lt-ink); }
+html[data-theme='light'] .ca-root .cs-word[data-redacted='true'] {
+  background: repeating-linear-gradient(90deg, rgba(29, 19, 11, 0.12) 0 6px, transparent 6px 8px), var(--lt-paper-2);
+  box-shadow: 0 0 0 1px var(--lt-edge), 2px 2px 0 var(--lt-ink);
+}
+html[data-theme='light'] .ca-root .cs-beat { background: var(--lt-paper); box-shadow: 0 0 0 1px var(--lt-edge); }
+html[data-theme='light'] .ca-root .cs-beat[data-selected='true'] { background: linear-gradient(90deg, color-mix(in srgb, var(--ch) 22%, var(--lt-paper)), var(--lt-paper) 70%); }
+html[data-theme='light'] .ca-root .cs-beat[data-state='locked'] { background: var(--shell-well); }
+html[data-theme='light'] .ca-root .cs-synopsis button { background: color-mix(in srgb, var(--ch) 10%, var(--lt-paper)); }
+html[data-theme='light'] .ca-root .ca-playbar,
+html[data-theme='light'] .cs-playbar { background: var(--lt-paper); box-shadow: var(--ring, 0 0 0 2px var(--lt-edge)), 0 12px 30px rgba(29, 19, 11, 0.18); }
+html[data-theme='light'] :is(.cs-display, .cs-stats b, .cs-ch-name, .cs-beat-title, .cs-detail-grid b, .cs-pb-text b, .cs-act-toggle > span:last-child) { color: var(--lt-ink); }
+html[data-theme='light'] .ca-now h2 { color: var(--lt-ink); text-shadow: 0 3px 0 color-mix(in srgb, var(--ch) 55%, transparent); }
+html[data-theme='light'] .ca-scores { background: var(--lt-paper); box-shadow: var(--ring), 0 14px 30px rgba(29, 19, 11, 0.2); }
+html[data-theme='light'] .ca-scores b { color: var(--lt-ink); }
+html[data-theme='light'] .ca-scores small { text-shadow: none; color: color-mix(in srgb, var(--ch) 60%, var(--lt-ink)); }
+
+/* Month board (weeks, tiles, detail) */
+html[data-theme='light'] .mb-page { background: var(--shell-bg); }
+html[data-theme='light'] .mb-week { background: var(--lt-paper); }
+html[data-theme='light'] :is(.mb-week-tab:not([aria-selected='true']), .mb-week-arrow) { background: var(--lt-paper-2); color: var(--lt-ink); }
+html[data-theme='light'] .mb-week-tab[data-done]:not([aria-selected='true']) small { color: var(--shell-acid); }
+html[data-theme='light'] .mb-page .mb-detail.ca-panel { background: var(--lt-paper); box-shadow: var(--ring), 0 14px 30px rgba(29, 19, 11, 0.18); }
+html[data-theme='light'] .mb-tile--tutorial,
+html[data-theme='light'] .mb-cover--tutorial { filter: none; }
+html[data-theme='light'] .mb-mode-switch { background: rgba(29, 19, 11, 0.06); }
+html[data-theme='light'] .mb-lb { background: rgba(40, 30, 20, 0.45); }
+html[data-theme='light'] .mb-cover { box-shadow: 0 10px 26px rgba(29, 19, 11, 0.25); }
+
+/* ── Panels: song page, endings, share, album ────────────────────────────── */
+html[data-theme='light'] .mend-item,
+html[data-theme='light'] .msh-trophies li { background: var(--lt-paper-2); border-color: var(--lt-edge); }
+html[data-theme='light'] .mend-bar { background: rgba(29, 19, 11, 0.1); }
+html[data-theme='light'] .mend-bar em { color: var(--lt-ink); }
+html[data-theme='light'] .mend-lock,
+html[data-theme='light'] .msh-trophy-icon { color: rgba(29, 19, 11, 0.4); }
+html[data-theme='light'] .mo-switch[aria-checked='true'] span { background: #fff; }
+html[data-theme='light'] .ms-nav { background: rgba(255, 250, 242, 0.85); color: var(--lt-ink); }
+html[data-theme='light'] .ms-art { box-shadow: 0 0 0 2px var(--ch, var(--shell-accent)), 0 18px 40px rgba(29, 19, 11, 0.28); }
+
+html[data-theme='light'] .al-pips i { color: rgba(29, 19, 11, 0.22); }
+html[data-theme='light'] .al-body[data-detail] .al-detail { box-shadow: 0 -10px 30px rgba(29, 19, 11, 0.18); }
+
+/* The shell root and the chapter board's blurred cover backdrop */
+html[data-theme='light'] .pim-app-root { background: var(--shell-bg); color: var(--shell-text); }
+html[data-theme='light'] .mb-week-backdrop { filter: blur(28px) saturate(1.2) brightness(1.35); opacity: 0.28; }
+html[data-theme='light'] .mt-start-sub, html[data-theme='light'] .mt-start-month small { color: rgba(29, 19, 11, 0.62); }

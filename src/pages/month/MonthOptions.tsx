@@ -15,6 +15,7 @@ import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/monthBoard.css';
 import '@/styles/monthPanels.css';
+import { readThemeSetting, setThemeSetting, type ThemeSetting } from '@/theme';
 import { t, readLangSetting, setLangSetting, type LangSetting } from '@/i18n';
 
 type Tab = 'audio' | 'timing' | 'display' | 'gfx' | 'play';
@@ -60,6 +61,9 @@ const GFX: { id: GfxLevel; name: string }[] = [
   { id: 'low', name: 'Low' }, { id: 'medium', name: 'Medium' }, { id: 'high', name: 'High' }, { id: 'ultra', name: 'Ultra' },
 ];
 // Language names are written in their own language, so they never change.
+const THEME_ITEMS: { id: ThemeSetting; name: string }[] = [
+  { id: 'auto', name: 'Device setting' }, { id: 'light', name: 'Light' }, { id: 'dark', name: 'Dark' },
+];
 const LANG_ITEMS: { id: LangSetting; name: string }[] = [
   { id: 'auto', name: 'Device language' }, { id: 'en', name: 'English' }, { id: 'pl', name: 'Polski' },
 ];
@@ -125,6 +129,7 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>('audio');
   const [opts, setOpts] = useState<GameOpts>(() => loadOpts());
   const [langSetting, setLangSettingState] = useState<LangSetting>(readLangSetting);
+  const [themeSetting, setThemeSettingState] = useState<ThemeSetting>(readThemeSetting);
 
   const save = <K extends keyof GameOpts>(key: K, value: GameOpts[K]) => {
     try {
@@ -188,6 +193,7 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
           </>}
           {tab === 'display' && <>
             <Cycle label="Language" value={langSetting} items={LANG_ITEMS} onChange={(v) => { setLangSettingState(v); setLangSetting(v); }} />
+            <Cycle label="Theme" value={themeSetting} items={THEME_ITEMS} onChange={(v) => { setThemeSettingState(v); setThemeSetting(v); }} />
             <Cycle label="View" value={opts.povMode} items={VIEWS} onChange={(v) => save('povMode', v)} />
             <Toggle label="Change view each stage" {...bool('stagePovSwitch')} />
             <Cycle label="HUD" value={opts.hudStyle} items={HUDS} onChange={(v) => save('hudStyle', v)} />
