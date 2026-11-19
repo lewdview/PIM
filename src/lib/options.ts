@@ -32,9 +32,9 @@ export type HudStyle = 'beta' | 'console' | 'stanza' | 'neon';
 /** How lyrics show during play: none, painted on the track, or Poetic Lines (kinetic lyrics across the sky). */
 export type LyricsMode = 'off' | 'track' | 'poetic';
 export const LYRICS_MODES: readonly LyricsMode[] = ['off', 'track', 'poetic'];
-/** Lyrics start on the road on every screen size. */
+/** Phones read lyrics best on the track; desktop and tablet get Poetic Lines. */
 export function defaultLyricsMode(): LyricsMode {
-  return 'track';
+  return 'poetic';
 }
 /**
  * The lyric mode actually drawn in a song. The Poetic GUI shows the lyric line
@@ -180,7 +180,7 @@ export const DEFAULT_OPTS: GameOpts = {
   bgAnimation: true,
   healingGauge: true,
   trackLyrics: true,
-  lyricsMode: "track",
+  lyricsMode: "poetic",
 };
 
 export function getEffectiveDpr(res: RenderResolution = 'high'): number {
