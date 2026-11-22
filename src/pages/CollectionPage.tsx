@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import WeeklyCardShelf from '@/components/audius/WeeklyCardShelf';
-import { isAudiusCard } from '@/lib/audiusCardRegistry';
+import AudiusClaimReveal from '@/components/audius/AudiusClaimReveal';
+import { getAudiusCard, isAudiusCard } from '@/lib/audiusCardRegistry';
 import { motion } from 'framer-motion';
 import { Filter, Grid3X3, List, Flame, Play, Info, MoreVertical, Disc } from 'lucide-react';
 import { useLocation } from 'wouter';
@@ -30,6 +30,12 @@ export default function CollectionPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
   const [ultraModalOpen, setUltraModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<OwnedCard | null>(null);
+  // Weekly Audius cards aren't 365 days, so their "details" is the claim reveal.
+  const [audiusReveal, setAudiusReveal] = useState<string | null>(null);
+  const openDetails = useCallback((c: OwnedCard) => {
+    if (isAudiusCard(c)) setAudiusReveal(c.cardId);
+    else setSelectedCard(c);
+  }, []);
   const [actionSheetCard, setActionSheetCard] = useState<{ group: OwnedCard[]; count: number } | null>(null);
   const [page, setPage] = useState(1);
   const CARDS_PER_PAGE = 24;
@@ -57,13 +63,15 @@ export default function CollectionPage() {
 
   const filtered = useMemo(() => {
     // Filter out invalid items defensively
-    // Weekly Audius cards aren't 365 days; they get their own shelf above the grid.
-    let cards = collection.filter(c => c && c.card && !isAudiusCard(c));
+    // Weekly Audius cards sit in the same grid; the Audius set filter isolates them.
+    let cards = collection.filter(c => c && c.card);
 
     if (setFilter === 'gen-0') {
-      cards = cards.filter(c => !isBombshellCard(c));
+      cards = cards.filter(c => !isAudiusCard(c) && !isBombshellCard(c));
     } else if (setFilter === 'bombshell') {
-      cards = cards.filter(c => isBombshellCard(c));
+      cards = cards.filter(c => !isAudiusCard(c) && isBombshellCard(c));
+    } else if (setFilter === 'audius') {
+      cards = cards.filter(c => isAudiusCard(c));
     }
 
     if (filterRarity !== 'all') {
@@ -116,15 +124,16 @@ export default function CollectionPage() {
   useMemo(() => { setPage(1); }, [sortBy, filterRarity, setFilter]);
 
   const stats = useMemo(() => {
-    const validCollection = collection.filter(c => c && c.card && !isAudiusCard(c));
-    const gen0Cards = validCollection.filter(c => !isBombshellCard(c));
+    const validCollection = collection.filter(c => c && c.card);
+    const nonAudius = validCollection.filter(c => !isAudiusCard(c));
+    const gen0Cards = nonAudius.filter(c => !isBombshellCard(c));
     const gen0Unique = new Set(gen0Cards.map(c => c.card.day)).size;
     
-    const bombshellCards = validCollection.filter(c => isBombshellCard(c));
+    const bombshellCards = nonAudius.filter(c => isBombshellCard(c));
     const bombshellUniqueDays = new Set(bombshellCards.map(c => c.card.day)).size;
     const bombshellUniqueCovers = new Set(bombshellCards.map(c => (c as any).coverArtwork || c.card.coverArtwork || c.card.coverUrl || c.cardId)).size;
 
-    const audiusCards = collection.filter(c => c && c.card && isAudiusCard(c));
+    const audiusCards = validCollection.filter(c => isAudiusCard(c));
     const audiusUnique = new Set(audiusCards.map(c => c.cardId)).size;
 
     const unique = setFilter === 'gen-0' 
@@ -379,9 +388,6 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      <WeeklyCardShelf collection={collection} />
-
-      {setFilter !== 'audius' && (<>
       {/* Cards Grid */}
       {filtered.length === 0 ? (
         <div
@@ -390,7 +396,11 @@ export default function CollectionPage() {
         >
           <p className="text-lg mb-2" style={{ color: 'var(--color-text-muted)' }}>No cards yet</p>
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            {filterRarity !== 'all' ? 'No cards with this rarity.' : 'Claim your daily card or open a pack to start collecting.'}
+            {filterRarity !== 'all'
+              ? 'No cards with this rarity.'
+              : setFilter === 'audius'
+                ? 'Clear a Weekly Top 5 song on the Audius page to earn its card.'
+                : 'Claim your daily card or open a pack to start collecting.'}
           </p>
         </div>
       ) : viewMode === 'grid' ? (
@@ -408,8 +418,11 @@ export default function CollectionPage() {
               legendary: 0,
               mythic: 0,
             };
+            const audius = isAudiusCard(mainCard);
+            const audiusInfo = audius ? getAudiusCard(mainCard.cardId) : undefined;
             const maxDuration = isDailyClaim ? 0 : (DURATION_LIMITS[rarity] ?? 15);
-            const isFullSong = maxDuration === 0;
+            // Audius cards have no 365 chart to play from here.
+            const isFullSong = !audius && maxDuration === 0;
             
             return (
               <div key={`${mainCard.cardId}-${mainCard.card.rarity}`} className="relative group">
@@ -447,7 +460,7 @@ export default function CollectionPage() {
                 {/* Card wrapper — single click flips, double-click opens detail */}
                 <div 
                   className="relative z-20 transition-transform duration-300 group-hover:-translate-y-2 group-hover:-translate-x-2 flex flex-col"
-                  onDoubleClick={() => setSelectedCard(mainCard)}
+                  onDoubleClick={() => openDetails(mainCard)}
                 >
                   <div className="relative">
                     <Card 
@@ -458,12 +471,16 @@ export default function CollectionPage() {
                       isDailyOrigin={mainCard.source === 'daily_claim' || mainCard.source === 'pack_miss_out'} 
                       ultraReward={mainCard.ultraReward} 
                       isEcho={mainCard.isEcho}
-                      onBurn={(mainCard.edition || 0) > getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? () => handleBurn(mainCard) : undefined}
+                      onBurn={!audius && (mainCard.edition || 0) > getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? () => handleBurn(mainCard) : undefined}
                       proof={mainCard.proof}
                     />
                     
                     {/* Edition Status badge */}
-                    {(() => {
+                    {audius ? (
+                      <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/85 border border-[#7C3AED]/60 text-[7px] font-black uppercase tracking-tighter text-[#c4b5fd] max-w-[70%] truncate" title={audiusInfo?.artist}>
+                        {audiusInfo?.weekStart ? `WEEK OF ${audiusInfo.weekStart.slice(5)}` : 'WEEKLY TOP 5'}
+                      </div>
+                    ) : (() => {
                       const ed = mainCard.edition || 0;
                       const cap = getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day);
                       if (ed > cap) return (
@@ -490,7 +507,7 @@ export default function CollectionPage() {
 
                     {/* Details button — visible on hover (desktop) */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); setSelectedCard(mainCard); }}
+                      onClick={(e) => { e.stopPropagation(); openDetails(mainCard); }}
                       className={`hidden md:block absolute ${isFullSong ? 'bottom-12' : 'bottom-8'} left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95`}
                       style={{
                         padding: '5px 14px',
@@ -506,8 +523,33 @@ export default function CollectionPage() {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                       }}
                     >
-                      DETAILS
+                      {audius ? 'REVEAL' : 'DETAILS'}
                     </button>
+
+                    {/* Open on Audius — visible on hover for Audius cards (desktop) */}
+                    {audius && audiusInfo?.permalink && (
+                      <a
+                        href={`https://audius.co${audiusInfo.permalink}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="hidden md:block absolute bottom-2 left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 no-underline"
+                        style={{
+                          padding: '5px 14px',
+                          background: 'rgba(124,58,237,0.2)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid #7C3AED',
+                          borderRadius: '6px',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '8px', fontWeight: 700,
+                          letterSpacing: '0.15em', textTransform: 'uppercase' as const,
+                          color: '#c4b5fd',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        AUDIUS ↗
+                      </a>
+                    )}
 
                     {/* Play PIM button — visible on hover for full songs (desktop) */}
                     {isFullSong && (
@@ -560,14 +602,28 @@ export default function CollectionPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedCard(mainCard);
+                        openDetails(mainCard);
                       }}
                       className="flex-1 py-1.5 px-2 rounded-lg bg-white/10 border border-white/20 text-white font-mono text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 active:scale-95 hover:bg-white/15 cursor-pointer"
                       title="View Card Dossier"
                     >
                       <Info size={10} className="text-[#00E5FF]" />
-                      <span>INFO</span>
+                      <span>{audius ? 'REVEAL' : 'INFO'}</span>
                     </button>
+                    {audius ? (
+                      audiusInfo?.permalink && (
+                        <a
+                          href={`https://audius.co${audiusInfo.permalink}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 py-1.5 px-2 rounded-lg bg-[rgba(124,58,237,0.18)] border border-[#7C3AED] text-[#c4b5fd] font-mono text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 active:scale-95 no-underline"
+                          title="Open on Audius"
+                        >
+                          AUDIUS ↗
+                        </a>
+                      )
+                    ) : (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -579,6 +635,7 @@ export default function CollectionPage() {
                     >
                       <MoreVertical size={13} />
                     </button>
+                    )}
                   </div>
                 </div>
                 
@@ -606,7 +663,7 @@ export default function CollectionPage() {
                 )}
 
                 {/* Fuse button — appears on groups with 3+ duplicates */}
-                {count >= 3 && !['legendary', 'mythic'].includes(mainCard.card.rarity) && (
+                {!audius && count >= 3 && !['legendary', 'mythic'].includes(mainCard.card.rarity) && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleFuse(group); }}
                     disabled={fusionLoading}
@@ -654,8 +711,11 @@ export default function CollectionPage() {
               legendary: 0,
               mythic: 0,
             };
+            const audius = isAudiusCard(mainCard);
+            const audiusInfo = audius ? getAudiusCard(mainCard.cardId) : undefined;
             const maxDuration = isDailyClaim ? 0 : (DURATION_LIMITS[rarity] ?? 15);
-            const isFullSong = maxDuration === 0;
+            // Audius cards have no 365 chart to play from here.
+            const isFullSong = !audius && maxDuration === 0;
 
             return (
               <motion.div
@@ -667,7 +727,7 @@ export default function CollectionPage() {
               >
                 <div
                   className={`w-10 h-12 rounded overflow-hidden flex-shrink-0 cursor-pointer ${RARITY_CONFIG[mainCard.card.rarity].cssClass}`}
-                  onClick={() => setSelectedCard(mainCard)}
+                  onClick={() => openDetails(mainCard)}
                 >
                   <img
                     src={getCoverUrlForRarity(mainCard.card.coverUrl, mainCard.card.rarity)}
@@ -683,17 +743,23 @@ export default function CollectionPage() {
                     }}
                   />
                 </div>
-                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedCard(mainCard)}>
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openDetails(mainCard)}>
                   <h4 className="text-sm font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
                     {mainCard.card.title}
                   </h4>
                   <div className="flex items-center gap-2">
+                    {audius ? (
+                      <span className="text-[10px] font-mono truncate" style={{ color: '#c4b5fd' }}>
+                        AUDIUS · {audiusInfo?.artist || 'WEEKLY TOP 5'}
+                      </span>
+                    ) : (<>
                     <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
                       DAY {mainCard.card.day}
                     </span>
                     <span className="text-[8px] font-mono opacity-30">
                       ED. {mainCard.edition || '?'}/{getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day)}
                     </span>
+                    </>)}
                   </div>
                 </div>
                 
@@ -717,7 +783,7 @@ export default function CollectionPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedCard(mainCard);
+                      openDetails(mainCard);
                     }}
                     className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-white/10 border border-white/15 text-white/80 hover:text-white text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-white/15 active:scale-95 flex items-center gap-1 cursor-pointer"
                     title="View Card Dossier"
@@ -793,7 +859,6 @@ export default function CollectionPage() {
           </button>
         </div>
       )}
-      </>)}
 
       <UltraRewardModal
         isOpen={ultraModalOpen}
@@ -809,6 +874,14 @@ export default function CollectionPage() {
         onClose={() => setSelectedCard(null)}
         onBurn={handleBurn}
       />
+
+      {audiusReveal && (
+        <AudiusClaimReveal
+          cardId={audiusReveal}
+          onClose={() => setAudiusReveal(null)}
+          onViewCollection={() => setAudiusReveal(null)}
+        />
+      )}
 
       {/* Mobile Card Action Drawer */}
       <MobileCardActionSheet
