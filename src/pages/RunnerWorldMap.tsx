@@ -40,6 +40,8 @@ export default function RunnerWorldMap() {
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
     let active = true;
+    let frame = 0;
+    let previousDraw = 0;
     const draw = () => {
       if (!active) return;
       const { width, height } = canvas.getBoundingClientRect();
@@ -54,14 +56,23 @@ export default function RunnerWorldMap() {
         canvas.height = pixelsHigh;
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawRunnerMap(ctx, width, height, narrow, progress, selected);
+      drawRunnerMap(ctx, width, height, narrow, progress, selected, Math.floor(performance.now() / 80) % 16);
+    };
+    const animate = (now: number) => {
+      if (now - previousDraw >= 80) {
+        draw();
+        previousDraw = now;
+      }
+      frame = requestAnimationFrame(animate);
     };
     const observer = new ResizeObserver(draw);
     observer.observe(canvas);
     void prepareRunnerSprites().then(draw, draw);
     draw();
+    frame = requestAnimationFrame(animate);
     return () => {
       active = false;
+      cancelAnimationFrame(frame);
       observer.disconnect();
     };
   }, [progress, selected]);

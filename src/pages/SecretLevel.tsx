@@ -9,17 +9,20 @@
  * src/game/secret/.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams, useSearch } from 'wouter';
-import { ArrowDown, ArrowUp, AudioLines, Gamepad2, Pause, Shield, Sword } from 'lucide-react';
+import { ArrowDown, ArrowUp, AudioLines, Gamepad2, Pause, Send, Shield, Sword } from 'lucide-react';
 import { BeatClock, SECRET_TRACKS } from '../game/secret/chiptune';
 import { ShooterLevel } from '../game/secret/shooter';
 import { RunnerLevel, SKIES } from '../game/secret/runner';
 import { RUNNER_COURSES, RUNNER_STAGES, RUNNER_WHISTLES, parseRunnerStage, type RunnerStage, type RunnerWhistleId } from '../game/secret/runnerCourses';
-import { drawRunnerSprite, prepareRunnerSprites } from '../game/secret/runnerSprites';
+import {
+  drawRunnerSprite, prepareRunnerSprites, readRunnerAppearance, RUNNER_FRAMES, RUNNER_SKINS, runnerEmotes, saveRunnerAppearance,
+  type RunnerAppearance, type RunnerPose, type RunnerSkin,
+} from '../game/secret/runnerSprites';
 import {
   drawWarpIntro, drawWarpReveal, playWarpStinger, prefersReducedMotion,
-  INTRO_LOOKS, INTRO_OUTRO_S, INTRO_READY_AT, INTRO_REVEAL_S, type IntroOptions,
+  INTRO_READY_AT, INTRO_OUTRO_S, INTRO_REVEAL_S, type IntroOptions,
 } from '../game/secret/intro';
 import { markSecretLevelCleared, type SecretLevelId } from '../game/secret/warp';
 import { findRunnerWhistle, readRunnerProgress, runnerArcadePath, runnerMapPath } from '../game/secret/runnerProgress';
@@ -27,6 +30,7 @@ import { warpResumePath } from '../game/secret/warpResume';
 import type { SecretGame, SecretInput } from '../game/secret/types';
 import { drawRunnerHud } from '../game/secret/runnerHud';
 import { useRunnerGamepad } from '../game/secret/useRunnerGamepad';
+import RunnerLoadout from './RunnerLoadout';
 import './SecretRunner.css';
 
 type Phase = 'intro' | 'playing' | 'paused' | 'over';
@@ -35,6 +39,7 @@ type LevelResult = { won: boolean; score: number; newWhistle: RunnerWhistleId | 
 const COUNT_IN = 4; // beats of countdown before the level starts
 const RUNNER_ACTIONS = [
   { kind: 'taunt', key: 'T', label: 'Taunt', icon: AudioLines, pad: 'taunt' },
+  { kind: 'throw', key: 'Z', label: 'Throw', icon: Send, pad: 'throw' },
   { kind: 'block', key: 'C', label: 'Block', icon: Shield, pad: 'block' },
   { kind: 'attack', key: 'X', label: 'Slash', icon: Sword, pad: 'attack' },
 ] as const;
@@ -101,6 +106,9 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
   const [resumePath] = useState(() => (via === 'warp' && fromSong ? warpResumePath(fromSong) : null));
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [appearance, setAppearance] = useState(readRunnerAppearance);
+  const [previewPose, setPreviewPose] = useState<RunnerPose>('idle');
+  const preview = useRef<{ pose: RunnerPose; frame: number } | null>(null);
   const gameRef = useRef<SecretGame | null>(null);
   const game = gameRef.current ?? (gameRef.current = makeLevel(levelId, stage));
   const clockRef = useRef<BeatClock | null>(null);
@@ -112,18 +120,37 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
   const [phase, setPhase] = useState<Phase>('intro');
   const [result, setResult] = useState<LevelResult | null>(null);
   const nextCourse = RUNNER_STAGES[RUNNER_STAGES.indexOf(stage) + 1];
-  // Motion intro: clock origin (ms), whether the START card is up, and when START was pressed.
-  // The step-through test harness skips straight to the card.
   const [reduced] = useState(prefersReducedMotion);
-  const introT0Ref = useRef(performance.now());
+  const introT0 = useRef(performance.now() - (stepRunner ? INTRO_READY_AT * 1000 : 0));
+  const introTime = useRef(stepRunner ? INTRO_READY_AT : 0);
   const [introReady, setIntroReady] = useState(stepRunner);
-  const outroAtRef = useRef<number | null>(null);
-  const [introOpts] = useState<IntroOptions>(() => ({
+  const revealIntro = useRef(false);
+  const stopStinger = useRef<() => void>(() => {});
+  const introOpts = useMemo<IntroOptions>(() => ({
     reduced,
-    header: levelId === 'runner' && !via ? ['BEAT RUNNER', `LEVEL 0${stage}`] : undefined,
-    runnerSprite: drawRunnerSprite,
+    header: levelId === 'runner' ? [via?.startsWith('warp') ? '★ WARP ZONE ★' : 'BEAT RUNNER', `LEVEL 0${stage}${via?.startsWith('warp') ? ' / SECRET LEVEL FOUND' : ''}`] : undefined,
+    runnerSprite: (ctx, pose, frame, x, feet, size) => drawRunnerSprite(ctx, pose, frame, x, feet, size, appearance.skin),
     sky: levelId === 'runner' ? SKIES[stage] : undefined,
-  }));
+    previewPose: previewPose === 'idle' ? undefined : previewPose,
+  }), [appearance.skin, levelId, previewPose, reduced, stage, via]);
+
+  const changeAppearance = (next: RunnerAppearance) => {
+    saveRunnerAppearance(next);
+    setAppearance(next);
+    setPreviewPose(next.skin === appearance.skin ? next.emote : 'idle');
+  };
+  const cycleAppearance = (outfit: boolean) => {
+    const skins = Object.keys(RUNNER_SKINS) as RunnerSkin[];
+    const skin = outfit ? skins[(skins.indexOf(appearance.skin) + 1) % skins.length] : appearance.skin;
+    const emotes = runnerEmotes(skin);
+    const emote = outfit ? 'taunt' : emotes[(emotes.indexOf(appearance.emote) + 1) % emotes.length];
+    changeAppearance({ skin, emote });
+  };
+
+  useEffect(() => {
+    if (game instanceof RunnerLevel) game.setAppearance(appearance);
+    if (levelId === 'runner') void prepareRunnerSprites(appearance.skin).catch(() => undefined);
+  }, [game, appearance, levelId]);
 
   const send = useCallback((a: SecretInput) => {
     const clock = clockRef.current;
@@ -133,14 +160,17 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
 
   const start = useCallback(async (controller = false) => {
     if (clockRef.current) return;
-    // Before the card is up, the first press only fast-forwards the intro
     if (phase === 'intro' && !introReady) {
-      introT0Ref.current = performance.now() - INTRO_READY_AT * 1000;
+      introT0.current = performance.now() - INTRO_READY_AT * 1000;
+      introTime.current = INTRO_READY_AT;
+      stopStinger.current();
       setIntroReady(true);
       return;
     }
-    outroAtRef.current = phase === 'intro' && !stepRunner ? performance.now() : null;
+    stopStinger.current();
+    revealIntro.current = phase === 'intro';
     gameRef.current = makeLevel(levelId, stage, result?.won === false);
+    if (gameRef.current instanceof RunnerLevel) gameRef.current.setAppearance(appearance);
     stepBeat.current = -COUNT_IN;
     drawnBeat.current = -COUNT_IN;
     processedWhistle.current = false;
@@ -150,7 +180,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
     clockRef.current = clock;
     if (!stepRunner) await clock.start(controller);
     if (clockRef.current === clock) setPhase('playing');
-  }, [levelId, result, stage, stepRunner, phase, introReady]);
+  }, [levelId, result, stage, stepRunner, appearance, phase, introReady]);
 
   const togglePause = useCallback(() => {
     if (phase === 'playing') {
@@ -162,30 +192,74 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
     }
   }, [phase]);
 
-  // Intro loop: tunnel → flash → title slam → level diorama, then the START card
+  useEffect(() => {
+    if (phase === 'intro' || phase === 'playing' || !(game instanceof RunnerLevel)) {
+      preview.current = null;
+      return;
+    }
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    let active = true;
+    let frame = 0;
+    let previousDraw = 0;
+    const startedAt = performance.now();
+    const drawPreview = () => {
+      if (!active) return;
+      const { w, h } = canvasFrame(canvas, ctx);
+      const elapsed = (performance.now() - startedAt) / 1000;
+      const emotes = runnerEmotes(appearance.skin);
+      const pose = phase === 'over'
+        ? result?.won ? emotes[Math.floor(elapsed / 1.6) % emotes.length] : 'death'
+        : previewPose;
+      const index = phase === 'over' && !result?.won ? RUNNER_FRAMES - 1 : Math.floor(elapsed * 12.5) % RUNNER_FRAMES;
+      preview.current = { pose, frame: index };
+      game.draw(ctx, w, h, drawnBeat.current, preview.current);
+      if (phase === 'paused') drawRunnerHud(ctx, w, h, game, Math.max(0, drawnBeat.current));
+    };
+    const animate = (now: number) => {
+      if (now - previousDraw >= 80) {
+        drawPreview();
+        previousDraw = now;
+      }
+      frame = requestAnimationFrame(animate);
+    };
+    const observer = new ResizeObserver(drawPreview);
+    observer.observe(canvas);
+    void prepareRunnerSprites(appearance.skin).then(drawPreview, drawPreview);
+    frame = requestAnimationFrame(animate);
+    return () => {
+      active = false;
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [game, phase, appearance, previewPose, result]);
+
+  // PR #271's warp tunnel, title slam and live diorama, with the v5 loadout.
   useEffect(() => {
     if (phase !== 'intro') return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
-    if (levelId === 'runner') void prepareRunnerSprites().catch(() => undefined);
     let raf = 0;
     const frame = (now: number) => {
       const { w, h } = canvasFrame(canvas, ctx);
-      const t = (now - introT0Ref.current) / 1000;
-      drawWarpIntro(ctx, w, h, t, levelId, game.title, introOpts);
+      const t = (now - introT0.current) / 1000;
+      introTime.current = t;
+      preview.current = drawWarpIntro(ctx, w, h, t, levelId, game.title, introOpts);
       if (t >= (reduced ? 0.6 : INTRO_READY_AT)) setIntroReady(true);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [game, levelId, phase, reduced, introOpts]);
+  }, [game, introOpts, levelId, phase, reduced]);
 
-  // Stinger plays once, in time with the intro
   useEffect(() => {
-    if (stepRunner) return;
-    return playWarpStinger(levelId, reduced);
-  }, [levelId, reduced, stepRunner]);
+    if (stepRunner || phase !== 'intro') return;
+    const stop = playWarpStinger(levelId, reduced);
+    stopStinger.current = stop;
+    return stop;
+  }, [levelId, phase, reduced, stepRunner]);
 
   // Render loop
   useEffect(() => {
@@ -194,7 +268,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
     if (!canvas || !ctx) return;
     const debug = window as DebugWindow;
     const snapshot = () => game instanceof RunnerLevel
-      ? JSON.stringify({ phase, ...game.snapshot(drawnBeat.current, canvas.clientWidth, canvas.clientHeight) })
+      ? JSON.stringify({ phase, ...game.snapshot(drawnBeat.current, canvas.clientWidth, canvas.clientHeight), ...(phase === 'playing' ? {} : preview.current), intro: { ready: introReady, seconds: introTime.current, revealing: revealIntro.current } })
       : '';
     const currentBeat = () => stepRunner ? stepBeat.current : (clockRef.current?.beat() ?? 0) - COUNT_IN;
     if (import.meta.env.DEV && game instanceof RunnerLevel) debug.render_game_to_text = snapshot;
@@ -214,19 +288,15 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
       if (game instanceof RunnerLevel) drawRunnerHud(ctx, w, h, game, beat);
       else drawHud(ctx, w, h, game, beat);
 
-      // Leaving the intro: the card collapses into the tunnel, then the level irises open
-      const outroAt = outroAtRef.current;
-      if (outroAt !== null && !reduced) {
-        const now = performance.now();
-        const since = (now - outroAt) / 1000;
+      // Use the beat clock for the iris so pausing also freezes the transition.
+      if (revealIntro.current && !reduced) {
+        const since = (beat + COUNT_IN) * 60 / SECRET_TRACKS[levelId].bpm;
         if (since < INTRO_OUTRO_S) {
-          drawWarpIntro(ctx, w, h, (now - introT0Ref.current) / 1000, levelId, game.title, { ...introOpts, outro: since / INTRO_OUTRO_S });
+          drawWarpIntro(ctx, w, h, introTime.current + since, levelId, game.title, { ...introOpts, outro: since / INTRO_OUTRO_S });
         } else if (since < INTRO_OUTRO_S + INTRO_REVEAL_S) {
-          drawWarpReveal(ctx, w, h, (since - INTRO_OUTRO_S) / INTRO_REVEAL_S, now / 1000);
-        } else {
-          outroAtRef.current = null;
-        }
-      }
+          drawWarpReveal(ctx, w, h, (since - INTRO_OUTRO_S) / INTRO_REVEAL_S, since);
+        } else revealIntro.current = false;
+      } else revealIntro.current = false;
 
       if (game.done) {
         clockRef.current?.stop();
@@ -259,12 +329,13 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
       if (debug.render_game_to_text === snapshot) delete debug.render_game_to_text;
       if (debug.advanceTime === advanceTime) delete debug.advanceTime;
     };
-  }, [game, phase, levelId, stage, stepRunner, reduced, introOpts]);
+  }, [game, phase, levelId, stage, stepRunner, introOpts, introReady, reduced]);
 
   // Keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.target instanceof HTMLElement && e.target.closest('select, input, textarea')) return;
       const k = e.key;
       if (levelId === 'runner' && (k.toLowerCase() === 'p' || (k === 'Escape' && !document.fullscreenElement))) {
         if (phase === 'playing' || phase === 'paused') {
@@ -343,9 +414,13 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
     if (phase === 'intro') {
       if (back) leave();
       else if (confirm || menu) void start(true);
+      else if (pressed.includes('throw')) cycleAppearance(true);
+      else if (pressed.includes('taunt')) cycleAppearance(false);
     } else if (phase === 'paused') {
       if (back) leave();
       else if (confirm || menu) togglePause();
+      else if (pressed.includes('throw')) cycleAppearance(true);
+      else if (pressed.includes('taunt')) cycleAppearance(false);
     } else if (phase === 'over') {
       if (back) leave();
       else if (pressed.includes('attack')) void start(true);
@@ -357,12 +432,15 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
     } else if (menu) togglePause();
     else if (confirm || pressed.includes('up')) send({ kind: 'jump' });
     else if (back || pressed.includes('down')) send({ kind: 'duck' });
+    else if (pressed.includes('left')) send({ kind: 'left' });
+    else if (pressed.includes('right')) send({ kind: 'right' });
     else if (pressed.includes('block')) send({ kind: 'block' });
+    else if (pressed.includes('throw')) send({ kind: 'throw' });
     else if (pressed.includes('attack')) send({ kind: 'attack' });
     else if (pressed.includes('taunt')) send({ kind: 'taunt' });
   });
 
-  const actionPress = (kind: 'jump' | 'duck' | 'attack' | 'block' | 'taunt') => ({
+  const actionPress = (kind: 'jump' | 'duck' | 'attack' | 'block' | 'taunt' | 'throw') => ({
     onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => {
       if (event.button !== 0) return;
       event.preventDefault();
@@ -388,67 +466,40 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
       />
 
       {phase === 'intro' && (
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-end gap-4 px-6 text-center"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8dvh)' }}
-          onPointerDown={() => { if (!introReady) void start(); }}
-        >
-          {/* The title is drawn on the canvas; this keeps it readable for screen readers */}
-          <h1 className="sr-only">
-            {levelId === 'runner' && !via ? `Beat Runner level ${stage}` : 'Warp zone, secret level found'}: {game.title}
-          </h1>
-          <div
-            className="flex flex-col items-center gap-3 transition-all duration-500 ease-out"
-            style={{
-              opacity: introReady ? 1 : 0,
-              transform: introReady ? 'translateY(0)' : 'translateY(16px)',
-              pointerEvents: introReady ? 'auto' : 'none',
-            }}
-          >
-            <div
-              className="max-w-md rounded-xl border px-4 py-2.5 font-mono"
-              style={{ background: 'rgba(5,1,15,0.72)', borderColor: `${INTRO_LOOKS[levelId].accent}55` }}
-            >
-              {levelId === 'runner' && <p className="mb-1 text-sm text-violet-100">{RUNNER_COURSES[stage].brief}</p>}
-              <p className="text-xs sm:text-sm text-zinc-300">
-                {game.hint}
-                {levelId === 'runner' && (
-                  <span className="mt-1 block text-zinc-400">
-                    <span className="hidden sm:inline">Press jump again in midair to double jump.</span>
-                    <span className="sm:hidden">Tap high to jump, again in midair to double jump, or low to slide.</span>
-                  </span>
-                )}
-              </p>
-            </div>
-            {pad && levelId === 'runner' && (
-              <p className="runner-pad-legend">
-                <Gamepad2 size={17} aria-hidden />
-                {pad.confirm} jump · {pad.back} slide · {pad.attack} slash · {pad.block} block · {pad.taunt} taunt · {pad.menu} pause
-              </p>
+        <div className="warp-intro absolute inset-0 text-center" onPointerDown={() => { if (!introReady) void start(); }}>
+          <h1 className="sr-only">{game.title}</h1>
+          <p className="sr-only">{levelId === 'runner' ? `Beat Runner, level ${stage}` : 'Warp zone, secret level found'}</p>
+          <div className="warp-intro-card" inert={!introReady} style={{ opacity: introReady ? 1 : 0 }}>
+          {levelId === 'runner' && <p className="max-w-md text-base text-violet-100">{RUNNER_COURSES[stage].brief}</p>}
+          <p className="max-w-lg text-sm text-zinc-300 font-mono">
+            {game.hint}
+            {levelId === 'runner' && (
+              <span className="mt-1 block text-zinc-300">
+                <span className="hidden sm:inline">Press jump again in midair to double jump.</span>
+                <span className="sm:hidden">Tap high to jump, again in midair to double jump, or low to slide.</span>
+              </span>
             )}
-            <button
-              id={levelId === 'runner' ? 'runner-start' : undefined}
-              onClick={() => void start()}
-              className="warp-start mt-1 px-10 py-3 rounded-full font-black font-mono tracking-[0.3em] text-white"
-              style={{
-                background: `linear-gradient(90deg, ${INTRO_LOOKS[levelId].accent2}, ${INTRO_LOOKS[levelId].accent})`,
-                boxShadow: `0 0 24px ${INTRO_LOOKS[levelId].accent}`,
-              }}
-            >
-              START
-            </button>
-            <button onClick={leave} className="text-xs text-zinc-300 font-mono underline">
-              {resumePath || songResults ? 'back to the song' : levelId === 'runner' ? 'back to world map' : 'skip'}
-            </button>
-          </div>
-          {!introReady && (
-            <div className="absolute bottom-4 right-4 text-[10px] tracking-[0.3em] text-zinc-400 font-mono">TAP TO SKIP ▸▸</div>
+          </p>
+          {pad && (
+            <p className="runner-pad-legend">
+              <Gamepad2 size={17} aria-hidden />
+              {pad.confirm} jump · {pad.back} slide · {pad.attack} slash · {pad.throw} throw · {pad.block} block · {pad.taunt} taunt · D-pad ← / → face · {pad.menu} pause
+            </p>
           )}
-          <style>{`
-            @keyframes warpStartPulse { 0%,100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.06); filter: brightness(1.25); } }
-            .warp-start { animation: warpStartPulse ${(60 / SECRET_TRACKS[levelId].bpm) * 2}s ease-in-out infinite; }
-            @media (prefers-reduced-motion: reduce) { .warp-start { animation: none; } }
-          `}</style>
+          {levelId === 'runner' && <RunnerLoadout value={appearance} onChange={changeAppearance} controllerHint={pad ? `${pad.throw} outfit · ${pad.taunt} preview next taunt` : undefined} />}
+          <button
+            id={levelId === 'runner' ? 'runner-start' : undefined}
+            onClick={() => void start()}
+            className="warp-start mt-2 px-8 py-3 rounded-full font-black font-mono tracking-widest"
+            style={{ animationDuration: `${120 / SECRET_TRACKS[levelId].bpm}s` }}
+          >
+            START
+          </button>
+          <button onClick={leave} className="text-xs text-zinc-300 font-mono underline">
+            {resumePath || songResults ? 'back to the song' : levelId === 'runner' ? 'back to world map' : 'skip'}
+          </button>
+          </div>
+          {!introReady && <span className="absolute bottom-5 right-5 text-xs font-mono tracking-widest text-zinc-300">TAP TO SKIP ▸▸</span>}
         </div>
       )}
 
@@ -483,8 +534,9 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
       )}
 
       {phase === 'paused' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-[#0b0916]/85 px-6 text-center">
+        <div className="runner-preview-overlay absolute inset-0 flex flex-col items-center justify-center gap-5 px-6 text-center">
           <h2 className="runner-screen-title">Paused</h2>
+          <RunnerLoadout value={appearance} onChange={changeAppearance} controllerHint={pad ? `${pad.throw} outfit · ${pad.taunt} preview next taunt` : undefined} />
           <div className="flex flex-wrap justify-center gap-3">
             <button onClick={togglePause} className="rounded-full bg-fuchsia-500 px-6 py-3 font-mono font-black">
               Resume {pad && <kbd className="runner-pad-key">{pad.confirm}</kbd>}
@@ -497,7 +549,7 @@ function SecretLevelGame({ levelId, stage, query }: { levelId: SecretLevelId; st
       )}
 
       {phase === 'over' && result && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center bg-black/80">
+        <div className={`absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center ${levelId === 'runner' ? 'runner-preview-overlay' : 'bg-black/80'}`}>
           <div className="text-xs tracking-[0.4em] font-mono text-fuchsia-300">{game.title}</div>
           <h2 className={levelId === 'runner' ? 'runner-screen-title' : 'text-4xl sm:text-5xl font-black font-mono'} style={{ color: result.won ? '#7CFFCB' : '#FF3B6B' }}>
             {result.won ? 'LEVEL CLEAR' : 'SIGNAL LOST'}
