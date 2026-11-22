@@ -74,6 +74,7 @@ import '../../styles/gameplayHud.css';
 import '../../styles/gameplayHudRail.css';
 import '../../styles/neonHud.css';
 import { drawStageGrade } from './stageGrade';
+import { drawMotionTrail, motionTrailLook } from './motionTrails';
 import { chooseWarpNote, collectWarpWhistle, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
 import { noteKey, saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
 import { t, t as tr } from '@/i18n';
@@ -6188,6 +6189,10 @@ export default function Game() {
       activeVisibleNotes.push(ns);
     }
 
+    // Motion trails: decided once per frame from the effective (auto-quality) level.
+    const trailLook = motionTrailLook(effGfx, !!optsRef.current.legacyGraphics, optsRef.current?.particleDensity || 'full');
+    const trailDir = isRewinding ? -1 : 1;
+
     // Render back-to-front Z-order (farthest notes at horizon first, closest notes near hit line last)
     for (let idx = activeVisibleNotes.length - 1; idx >= 0; idx--) {
       const ns = activeVisibleNotes[idx];
@@ -6488,10 +6493,11 @@ export default function Game() {
       // Spawn note trail particles as the note descends (scaled and capped for performance)
       const particleDensity = optsRef.current?.particleDensity || 'full';
       const gfxLevel = effGfx;
-      const allowTrails = particleDensity !== 'minimal' && gfxLevel !== 'low' && !optsRef.current.legacyGraphics;
+      // On medium the motion streak stands in for these particles (they allocate per spawn).
+      const allowTrails = particleDensity !== 'minimal' && gfxLevel !== 'low' && gfxLevel !== 'medium' && !optsRef.current.legacyGraphics;
       if (phase === "playing" && !isMissedNote && allowTrails) {
-        const spawnChance = particleDensity === 'half' || gfxLevel === 'medium' ? 0.10 : 0.22;
-        const maxTrails = particleDensity === 'half' || gfxLevel === 'medium' ? 15 : 35;
+        const spawnChance = particleDensity === 'half' ? 0.10 : 0.22;
+        const maxTrails = particleDensity === 'half' ? 15 : 35;
         if (Math.random() < spawnChance) {
           if (noteTrailsRef.current.length > maxTrails) {
             noteTrailsRef.current.shift();
@@ -6523,6 +6529,26 @@ export default function Game() {
       }
 
       if (!isHoldNoteType) {
+        // Motion streak behind tap notes (holds already draw their own ribbon).
+        if (trailLook && !isMissedNote && (note.type as string) !== 'ghost' && prog > 0.02) {
+          const tailProg = prog - trailDir * (trailLook.seconds / AT);
+          if (tailProg > 0) {
+            const tail = getArchetypeProjection(note.lane, tailProg, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+            if (Number.isFinite(tail.x) && Number.isFinite(tail.y)) {
+              drawMotionTrail(
+                ctx,
+                noteColor,
+                drawX + noteW / 2,
+                noteY,
+                tail.x + tail.w / 2,
+                tail.y,
+                noteW * 0.62,
+                trailLook.alpha,
+                noteH * 0.25,
+              );
+            }
+          }
+        }
         if (proj.rot !== 0) {
           ctx.save();
           ctx.translate(drawX + noteW / 2, noteY);
