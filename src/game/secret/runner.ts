@@ -10,7 +10,10 @@
 import { offBeat, seeded, type SecretGame, type SecretInput } from './types';
 import { RUNNER_COURSES, RUNNER_WHISTLES, runnerCourse, type RunnerObstacle, type RunnerStage, type RunnerWhistleId } from './runnerCourses';
 import { t } from '@/i18n';
-import { drawRunnerSprite, type RunnerPose } from './runnerSprites';
+import {
+  drawRunnerScythe, drawRunnerSprite, readRunnerAppearance, RUNNER_FRAMES, runnerEmotes,
+  type RunnerAppearance, type RunnerFacing, type RunnerPose,
+} from './runnerSprites';
 
 const JUMP_H = 0.2;            // apex height, in screen heights
 const GRAVITY = 8 * JUMP_H;    // airtime of exactly one beat
@@ -27,8 +30,12 @@ const ON_BEAT = 0.12;
 const SWING_BEATS = 0.88;
 const BLOCK_BEATS = 0.94;
 const TAUNT_BEATS = 1.5;
+const THROW_WINDUP = 0.3;
+const THROW_FLIGHT = 2;
+const THROW_RANGE = 3.2;
+const TURN_BEATS = 0.65;
 const DEFEAT_BEATS = 1.3;
-const actionFrame = (elapsed: number, duration: number) => Math.min(9, Math.max(0, Math.floor(elapsed / duration * 10)));
+const actionFrame = (elapsed: number, duration: number) => Math.min(RUNNER_FRAMES - 1, Math.max(0, Math.floor(elapsed / duration * RUNNER_FRAMES)));
 const CUES = {
   spike: 'jump', pit: 'jump', platform: 'jump', bar: 'slide', drone: 'slash', laser: 'block',
 } as const;
@@ -46,13 +53,14 @@ export const SKIES = {
 export class RunnerLevel implements SecretGame {
   readonly title: string;
   readonly padHint = 'Controller: Ⓐ / ↑ jump (again in midair to double jump) · Ⓑ / ↓ slide · Ⓧ slash · LB / RB block · Ⓨ taunt';
-  readonly hint = 'Space / ↑ jump · ↓ slide · X slash · C block · T taunt';
+  readonly hint = 'Space / ↑ jump · ↓ slide · X slash · Z throw · C block · T taunt · ← / → face';
   readonly totalBeats: number;
   score = 0;
   lives = 4;
   done = false;
   won = false;
   foundWhistle: RunnerWhistleId | null = null;
+  appearance: RunnerAppearance = readRunnerAppearance();
 
   private readonly stage: RunnerStage;
   private readonly recovering: boolean;
@@ -68,6 +76,13 @@ export class RunnerLevel implements SecretGame {
   private groundedAt = -Infinity;
   private jumpBufferedUntil = -Infinity;
   private swingAt = -Infinity;
+  private airSwing = false;
+  private throwAt = -Infinity;
+  private throwFacing: RunnerFacing = 'right';
+  private throwY = 0;
+  private facing: RunnerFacing = 'right';
+  private turnAt = -Infinity;
+  private tauntIndex = -1;
   private blockAt = -Infinity;
   private tauntAt = -Infinity;
   private hitAt = -Infinity;
@@ -80,12 +95,19 @@ export class RunnerLevel implements SecretGame {
     this.recovering = recovering;
     this.title = RUNNER_COURSES[stage].title;
     this.totalBeats = RUNNER_COURSES[stage].beats;
+    this.setAppearance(this.appearance);
     const rand = seeded(4242);
     this.obstacles = runnerCourse(stage, rand);
     for (let i = 0; i < 40; i++) {
       this.skyline.push({ x: rand() * 40, w: 0.6 + rand() * 1.6, h: 0.1 + rand() * 0.35, layer: i % 2 });
     }
     for (let i = 0; i < 48; i++) this.stars.push({ x: rand(), y: 0.08 + rand() * 0.55, large: i % 6 === 0 });
+  }
+
+  setAppearance(value: RunnerAppearance) {
+    const emotes = runnerEmotes(value.skin);
+    this.appearance = { skin: value.skin, emote: emotes.includes(value.emote) ? value.emote : 'taunt' };
+    this.tauntIndex = emotes.indexOf(this.appearance.emote) - 1;
   }
 
   private platformAt(b: number) {
@@ -135,6 +157,14 @@ export class RunnerLevel implements SecretGame {
     if (this.done || this.lives === 0 || beat < 0) return;
     let kind = a.kind;
     if (a.kind === 'pointer') kind = a.y < a.h * 0.55 ? 'jump' : 'duck';
+    if (kind === 'left' || kind === 'right') {
+      const facing = kind === 'left' ? 'left' : 'right';
+      if (this.facing !== facing) {
+        this.facing = facing;
+        this.turnAt = beat;
+      }
+      return;
+    }
     if (kind === 'jump' || kind === 'fire') {
       const recentlyGrounded = this.jumpAt === -Infinity && beat - this.groundedAt <= COYOTE_BEATS;
       if (this.grounded(beat) || recentlyGrounded) {
@@ -153,6 +183,14 @@ export class RunnerLevel implements SecretGame {
       else this.vy = Math.min(this.vy, -JUMP_V); // fast-fall
     } else if (kind === 'attack' && beat >= this.swingAt + SWING_BEATS && !this.ducking(beat) && beat >= this.hitAt + 0.8) {
       this.swingAt = beat;
+      this.airSwing = !this.grounded(beat);
+      this.blockAt = -Infinity;
+      this.tauntAt = -Infinity;
+    } else if (kind === 'throw' && beat >= this.throwAt + THROW_WINDUP + THROW_FLIGHT && !this.ducking(beat)
+        && beat >= this.hitAt + 0.8 && beat >= this.swingAt + SWING_BEATS) {
+      this.throwAt = beat;
+      this.throwY = this.y + 0.065;
+      this.throwFacing = this.facing;
       this.blockAt = -Infinity;
       this.tauntAt = -Infinity;
     } else if (kind === 'block' && beat >= this.blockAt + BLOCK_BEATS && beat >= this.hitAt + 0.8) {
@@ -161,8 +199,10 @@ export class RunnerLevel implements SecretGame {
       this.swingAt = -Infinity;
       this.tauntAt = -Infinity;
     } else if (kind === 'taunt' && this.grounded(beat) && !this.ducking(beat) && beat >= this.hitAt + 0.8
-        && beat >= this.swingAt + SWING_BEATS && beat >= this.blockAt + BLOCK_BEATS && beat >= this.tauntAt + TAUNT_BEATS) {
+        && beat >= this.throwAt + SWING_BEATS && beat >= this.swingAt + SWING_BEATS
+        && beat >= this.blockAt + BLOCK_BEATS && beat >= this.tauntAt + TAUNT_BEATS) {
       this.tauntAt = beat;
+      this.tauntIndex = (this.tauntIndex + 1) % runnerEmotes(this.appearance.skin).length;
     }
   }
 
@@ -180,6 +220,7 @@ export class RunnerLevel implements SecretGame {
     this.tauntAt = -Infinity;
     this.jumpBufferedUntil = -Infinity;
     if (!this.lives) this.defeatAt = beat;
+    if (!this.lives) this.throwAt = -Infinity;
     this.popups.push({ text: 'OUCH', at: beat, y: this.y });
   }
 
@@ -194,7 +235,8 @@ export class RunnerLevel implements SecretGame {
       this.done = beat - this.defeatAt >= DEFEAT_BEATS;
       return;
     }
-    const db = Math.max(0, Math.min(0.1, beat - this.lastBeat));
+    const previousBeat = this.lastBeat;
+    const db = Math.max(0, Math.min(0.1, beat - previousBeat));
     this.lastBeat = beat;
 
     // Physics in beats: one jump lasts exactly one beat
@@ -225,17 +267,26 @@ export class RunnerLevel implements SecretGame {
     }
 
     const ducking = this.ducking(beat);
+    const scythe = this.scytheAt(beat);
+    const previousScythe = this.scytheAt(previousBeat);
     const top = this.y + (ducking ? DUCK_H : PLAYER_H);
     for (const o of this.obstacles) {
       if (o.done) continue;
       if (o.kind === 'drone') {
         const distance = o.beat - beat;
         const swing = beat - this.swingAt;
-        if (!ducking && swing >= 0.34 && swing <= 0.64 && distance >= -0.07 && distance <= 0.26 && Math.abs(this.y) < 0.11) {
+        const bladeMin = Math.min(scythe?.world ?? -Infinity, previousScythe?.world ?? scythe?.world ?? -Infinity);
+        const bladeMax = Math.max(scythe?.world ?? -Infinity, previousScythe?.world ?? scythe?.world ?? -Infinity);
+        const rangedHit = scythe && Math.abs(scythe.y - 0.065) < 0.1 && o.beat >= bladeMin - 0.1 && o.beat <= bladeMax + 0.1;
+        const direction = this.facing === 'right' ? 1 : -1;
+        const meleeHit = !ducking && swing >= 0.34 && swing <= 0.64
+          && distance * direction >= -0.07 && distance * direction <= 0.26
+          && Math.abs(this.y) < (this.airSwing ? 0.23 : 0.11);
+        if (rangedHit || meleeHit) {
           o.done = true;
           o.destroyedAt = beat;
           this.score += 350;
-          this.popups.push({ text: 'SLASH +350', at: beat, y: this.y });
+          this.popups.push({ text: rangedHit ? 'SCYTHE +350' : 'SLASH +350', at: beat, y: this.y });
         } else if (Math.abs(distance) < 0.11 && this.y < 0.11) {
           o.done = true;
           this.hurt(beat);
@@ -277,7 +328,22 @@ export class RunnerLevel implements SecretGame {
       this.done = true;
       this.won = true;
       this.score += this.lives * 500;
+      this.throwAt = -Infinity;
     }
+  }
+
+  private scytheAt(beat: number) {
+    const progress = (beat - this.throwAt - THROW_WINDUP) / THROW_FLIGHT;
+    if (progress < 0 || progress >= 1 || !Number.isFinite(progress)) return null;
+    const direction = this.throwFacing === 'right' ? 1 : -1;
+    const distance = Math.sin(progress * Math.PI) * THROW_RANGE * direction;
+    const catchBlend = Math.max(0, (progress - 0.6) / 0.4);
+    return {
+      world: beat + distance,
+      y: this.throwY * (1 - catchBlend) + (this.y + 0.065) * catchBlend,
+      returning: progress >= 0.5,
+      frame: Math.floor(progress * RUNNER_FRAMES * 2) % RUNNER_FRAMES,
+    };
   }
 
   private isGoldLaser(o: RunnerObstacle) {
@@ -292,16 +358,18 @@ export class RunnerLevel implements SecretGame {
     if (!this.lives) return ['death', actionFrame(beat - this.defeatAt, DEFEAT_BEATS)];
     if (beat < 0) {
       if (this.recovering && beat >= -4 && beat < -1.8) return ['resurrect', actionFrame(beat + 4, 2.2)];
-      return ['jump', 0];
+      return ['idle', Math.floor(Math.abs(beat) * 8) % RUNNER_FRAMES];
     }
     if (beat - this.hitAt < 0.8) return ['damage', actionFrame(beat - this.hitAt, 0.8)];
     if (beat - this.blockAt < BLOCK_BEATS) return ['block', actionFrame(beat - this.blockAt, BLOCK_BEATS)];
-    if (this.ducking(beat)) return ['slide', Math.min(9, 3 + Math.floor((beat - this.duckUntil + 0.8) * 7 / 0.8))];
-    if (beat - this.swingAt < SWING_BEATS) return ['attack', actionFrame(beat - this.swingAt, SWING_BEATS)];
+    if (this.ducking(beat)) return ['slide', Math.min(15, 4 + Math.floor((beat - this.duckUntil + 0.8) * 12 / 0.8))];
+    if (beat - this.swingAt < SWING_BEATS) return [this.airSwing ? 'jumpAttack' : 'attack', actionFrame(beat - this.swingAt, SWING_BEATS)];
+    if (beat - this.throwAt < SWING_BEATS) return ['throw', actionFrame(beat - this.throwAt, SWING_BEATS)];
     if (this.doubleJumpAt > -Infinity) return ['doubleJump', Math.max(2, actionFrame(beat - this.doubleJumpAt, 0.94))];
     if (this.vy !== 0) return ['jump', Math.max(2, actionFrame(beat - this.jumpAt, 1))];
-    if (beat - this.tauntAt < TAUNT_BEATS) return ['taunt', actionFrame(beat - this.tauntAt, TAUNT_BEATS)];
-    return ['run', Math.floor(beat % 1 * 10)];
+    if (beat - this.tauntAt < TAUNT_BEATS) return [runnerEmotes(this.appearance.skin)[Math.max(0, this.tauntIndex)], actionFrame(beat - this.tauntAt, TAUNT_BEATS)];
+    if (beat - this.turnAt < TURN_BEATS) return ['turn', actionFrame(beat - this.turnAt, TURN_BEATS)];
+    return ['run', Math.floor(beat % 1 * RUNNER_FRAMES)];
   }
 
   snapshot(beat: number, w: number, h: number) {
@@ -310,6 +378,8 @@ export class RunnerLevel implements SecretGame {
     const beatPx = this.beatPixels(w);
     return {
       stage: this.stage, beat, pose, frame, lives: this.lives, score: this.score, won: this.won, whistle: this.foundWhistle,
+      skin: this.appearance.skin, facing: this.facing,
+      scythe: this.scytheAt(beat), throwReady: beat >= this.throwAt + THROW_WINDUP + THROW_FLIGHT,
       coordinates: 'Canvas pixels from the top left. Player y is at the feet.',
       player: { x: w * 0.22, y: h * (0.78 - this.y), grounded: this.grounded(courseBeat), canDoubleJump: this.canDoubleJump() },
       obstacles: this.obstacles.filter(o => !o.done && o.beat + o.len >= courseBeat - 1 && o.beat <= courseBeat + w * 0.78 / beatPx)
@@ -321,8 +391,8 @@ export class RunnerLevel implements SecretGame {
     return Math.max(72, w * 0.2);
   }
 
-  draw(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
-    const beat = Math.min(time, this.defeatAt);
+  draw(ctx: CanvasRenderingContext2D, w: number, h: number, time: number, preview?: { pose: RunnerPose; frame: number }) {
+    const beat = Math.min(time, this.defeatAt, this.won ? this.totalBeats : Infinity);
     const pulse = 1 - (((beat % 1) + 1) % 1);
     const groundY = h * 0.78;
     const px = w * 0.22;
@@ -457,14 +527,14 @@ export class RunnerLevel implements SecretGame {
 
     this.drawCues(ctx, w, px, groundY, beat, sx);
 
-    const [pose, frame] = this.animation(time);
+    const [pose, frame] = preview ? [preview.pose, preview.frame] : this.animation(time);
     const y = sy(this.y);
     const size = Math.min(h * 0.155, w * 0.43);
     ctx.save();
     ctx.shadowColor = '#ff8de9a8';
     ctx.shadowBlur = 10;
     if (time >= this.hitAt + 0.8 && time < this.hurtUntil && Math.floor(time * 8) % 2 === 0) ctx.globalAlpha = 0.55;
-    if (!drawRunnerSprite(ctx, pose, frame, px, y, size)) {
+    if (!drawRunnerSprite(ctx, pose, frame, px, y, size, this.appearance.skin, this.facing)) {
       const bodyH = (pose === 'slide' || pose === 'death' ? DUCK_H : PLAYER_H) * h;
       const bodyW = pose === 'slide' || pose === 'death' ? 34 : 24;
       ctx.fillStyle = '#7CFFCB';
@@ -473,6 +543,16 @@ export class RunnerLevel implements SecretGame {
       ctx.fill();
     }
     ctx.restore();
+
+    const scythe = this.scytheAt(beat);
+    if (scythe) {
+      ctx.save();
+      ctx.shadowColor = '#f5a1fc';
+      ctx.shadowBlur = 12;
+      drawRunnerScythe(ctx, scythe.frame, sx(scythe.world), sy(scythe.y), size * 0.65,
+        scythe.returning, this.appearance.skin, this.throwFacing);
+      ctx.restore();
+    }
 
     ctx.font = '900 15px "Space Mono", monospace';
     ctx.textAlign = 'center';

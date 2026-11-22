@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const BUTTONS = {
-  confirm: 0, back: 1, attack: 2, taunt: 3, block: 5, menu: 9,
+  confirm: 0, back: 1, attack: 2, taunt: 3, throw: 4, block: 5, menu: 9,
   up: 12, down: 13, left: 14, right: 15,
 } as const;
 
@@ -11,9 +11,9 @@ const KEYS = Object.keys(BUTTONS) as RunnerPadInput[];
 const DIRECTIONS: RunnerDirection[] = ['up', 'down', 'left', 'right'];
 
 const LABELS = {
-  xbox: { confirm: 'A', back: 'B', attack: 'X', taunt: 'Y', block: 'RB', menu: 'Menu' },
-  playstation: { confirm: '✕', back: '○', attack: '□', taunt: '△', block: 'R1', menu: 'Options' },
-  nintendo: { confirm: 'B', back: 'A', attack: 'Y', taunt: 'X', block: 'R', menu: '+' },
+  xbox: { confirm: 'A', back: 'B', attack: 'X', taunt: 'Y', throw: 'LB', block: 'RB', menu: 'Menu' },
+  playstation: { confirm: '✕', back: '○', attack: '□', taunt: '△', throw: 'L1', block: 'R1', menu: 'Options' },
+  nintendo: { confirm: 'B', back: 'A', attack: 'Y', taunt: 'X', throw: 'L', block: 'R', menu: '+' },
 } as const;
 
 type PadFamily = keyof typeof LABELS;

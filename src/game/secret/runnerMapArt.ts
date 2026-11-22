@@ -120,6 +120,7 @@ export function drawRunnerMap(
   compact: boolean,
   progress: ReturnType<typeof readRunnerProgress>,
   selected: RunnerStage,
+  frame = 0,
 ) {
   const background = ctx.createLinearGradient(0, 0, w * 0.58, h);
   background.addColorStop(0, '#0c1024');
@@ -188,7 +189,7 @@ export function drawRunnerMap(
     ctx.save();
     ctx.shadowBlur = 11;
     ctx.shadowColor = '#f5a1fd9c';
-    drawRunnerSprite(ctx, 'jump', 0, x + (compact ? 24 : -28), y - (compact ? 24 : 30), compact ? 56 : 74);
+    drawRunnerSprite(ctx, 'idle', frame, x + (compact ? 24 : -28), y - (compact ? 24 : 30), compact ? 56 : 74);
     ctx.restore();
   }
 }

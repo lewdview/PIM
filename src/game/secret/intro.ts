@@ -23,6 +23,7 @@
 
 import { t as tx } from '@/i18n';
 import type { SecretLevelId } from './warp';
+import { RUNNER_FRAMES, type RunnerPose } from './runnerSprites';
 
 export const INTRO_FLASH_AT = 1.05;
 /** When the controls and START button should appear. */
@@ -39,7 +40,7 @@ const LETTER_DROP = 0.22;
 
 /** Draws a frame of a character sprite with its feet at (x, feet); false if the sheet isn't loaded yet. */
 export type IntroSpriteFn = (
-  ctx: CanvasRenderingContext2D, pose: 'run' | 'jump' | 'attack', frame: number, x: number, feet: number, size: number,
+  ctx: CanvasRenderingContext2D, pose: RunnerPose, frame: number, x: number, feet: number, size: number,
 ) => boolean;
 
 export interface IntroOptions {
@@ -51,6 +52,7 @@ export interface IntroOptions {
   runnerSprite?: IntroSpriteFn;
   /** Course sky: [top, horizon, moon, skyline]. */
   sky?: readonly [string, string, string, string];
+  previewPose?: RunnerPose;
 }
 
 export interface IntroLook {
@@ -58,6 +60,7 @@ export interface IntroLook {
   header: readonly [string, string];
   runnerSprite?: IntroSpriteFn;
   sky?: readonly [string, string, string, string];
+  previewPose?: RunnerPose;
   accent: string;   // main glow colour for the level
   accent2: string;  // secondary colour
   bg: string;
@@ -110,11 +113,13 @@ export function drawWarpIntro(
     header: opts.header ?? [`★ ${tx('WARP ZONE')} ★`, tx('SECRET LEVEL FOUND')],
     runnerSprite: opts.runnerSprite,
     sky: opts.sky,
+    previewPose: opts.previewPose,
   };
   const reduced = !!opts.reduced;
   const outro = clamp01(opts.outro ?? 0);
   // Reduced motion: start at the resting frame, no tunnel, no slams
-  const tt = reduced ? Math.max(t, TITLE_AT + title.length * LETTER_GAP + 0.6) : t;
+  const tt = reduced ? TITLE_AT + title.length * LETTER_GAP + 0.6 : t;
+  let runnerFrame: { pose: RunnerPose; frame: number } | null = null;
 
   ctx.save();
   ctx.fillStyle = '#000';
@@ -129,7 +134,7 @@ export function drawWarpIntro(
     const worldIn = reduced ? clamp01(t / 0.5) : easeOutCubic((tt - INTRO_FLASH_AT) / 0.6);
     ctx.globalAlpha = worldIn;
     if (level === 'shooter') drawShooterDiorama(ctx, w, h, tt - INTRO_FLASH_AT, look);
-    else drawRunnerDiorama(ctx, w, h, tt - INTRO_FLASH_AT, look);
+    else runnerFrame = drawRunnerDiorama(ctx, w, h, tt - INTRO_FLASH_AT, { ...look, previewPose: opts.previewPose ?? (reduced ? 'idle' : undefined) });
     ctx.globalAlpha = 1;
   }
 
@@ -157,6 +162,7 @@ export function drawWarpIntro(
   }
 
   ctx.restore();
+  return runnerFrame;
 }
 
 function shakeAmount(t: number, letters: number): number {
@@ -239,7 +245,7 @@ function scramble(text: string, t: number, revealPerChar: number, seed: number):
 function drawHeader(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, look: IntroLook, fade: number) {
   const local = t - HEADER_AT;
   const size = Math.max(10, Math.min(15, w * 0.03));
-  const y = h * 0.27;
+  const y = h * (w < 640 ? 0.13 : 0.22);
   ctx.save();
   ctx.globalAlpha = fade;
   ctx.textAlign = 'center';
@@ -287,7 +293,7 @@ function drawTitle(ctx: CanvasRenderingContext2D, w: number, h: number, t: numbe
   const fit = (w * 0.9) / Math.max(1, ctx.measureText(text).width);
   if (fit < 1) size *= fit;
   ctx.font = `900 ${size}px ${MONO}`;
-  const cy = h * 0.4;
+  const cy = h * (w < 640 ? 0.25 : 0.35);
   const widths = [...text].map((c) => ctx.measureText(c).width);
   const total = widths.reduce((a, b) => a + b, 0);
   let x = w / 2 - total / 2;
@@ -298,7 +304,7 @@ function drawTitle(ctx: CanvasRenderingContext2D, w: number, h: number, t: numbe
   ctx.textAlign = 'left';
   // Idle glitch: every so often a slice of the title jumps sideways
   const glitchSeed = Math.floor(t * 7);
-  const glitching = t > settled + 0.5 && hash(glitchSeed) > 0.82;
+  const glitching = !reduced && t > settled + 0.5 && hash(glitchSeed) > 0.82;
 
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
@@ -606,7 +612,7 @@ function drawBurst(ctx: CanvasRenderingContext2D, x: number, y: number, age: num
 const RUNNER_BPM = 128;
 const RUNNER_LOOP = 4; // beats: a gap to jump on beat 0, a patrol drone to slash on beat 2
 const SWING_BEATS = 0.88; // as in runner.ts
-const actionFrame = (elapsed: number, duration: number) => Math.min(9, Math.max(0, Math.floor((elapsed / duration) * 10)));
+const actionFrame = (elapsed: number, duration: number) => Math.min(RUNNER_FRAMES - 1, Math.max(0, Math.floor((elapsed / duration) * RUNNER_FRAMES)));
 
 function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, s: number, look: IntroLook) {
   const [skyTop, horizon, moon, skyline] = look.sky ?? ['#12002B', '#3B0A4F', '#FFD23F', '#0A0014'];
@@ -636,7 +642,7 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
   ctx.restore();
 
   // Parallax skyline: three layers, scrolling faster as the camera dollies in
-  const roof = h * 0.78;
+  const roof = h * (w < 640 ? 0.47 : 0.78);
   const speed = 0.4 + easeOutCubic(s) * 0.6;
   const layers = [
     { k: 0.15, col: horizon, a: 0.8, hMin: 0.18, hMax: 0.36, win: 'rgba(255,79,216,0.25)' },
@@ -684,10 +690,10 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
 
   // Course loop: she jumps a spike on the beat, then cuts down a patrol drone
   const beat = s * (RUNNER_BPM / 60) - 2; // the first loop starts once she's on screen
-  const runnerX = w * 0.3 + (1 - easeOutCubic((s - 0.6) / 0.9)) * -w * 0.45;
+  const runnerX = w * (w < 640 ? 0.3 : 0.22) + (1 - easeOutCubic((s - 0.6) / 0.9)) * -w * 0.45;
   const step = Math.max(72, w * 0.2); // pixels per beat, as in the level
   const unit = Math.min(w, h) * 0.03;
-  const spriteSize = Math.min(h * 0.19, w * 0.5); // a touch larger than in play: she's the star here
+  const spriteSize = Math.min(h * 0.155, w * 0.43);
   const loop0 = Math.floor(beat / RUNNER_LOOP);
   for (let n = loop0 - 1; n < loop0 + 4; n++) {
     if (n < 0) continue;
@@ -721,8 +727,8 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
 
   // Pose for this beat, timed like RunnerLevel.animation()
   const local = beat - loop0 * RUNNER_LOOP;
-  let pose: 'run' | 'jump' | 'attack' = 'run';
-  let frame = Math.floor((((beat % 1) + 1) % 1) * 10);
+  let pose: RunnerPose = 'run';
+  let frame = Math.floor((((beat % 1) + 1) % 1) * RUNNER_FRAMES);
   let air = 0;
   if (beat >= 0 && local < 1) {
     pose = 'jump';
@@ -731,6 +737,11 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
   } else if (beat >= 0 && local >= 2.4 - SWING_BEATS * 0.45 && local < 2.4 - SWING_BEATS * 0.45 + SWING_BEATS) {
     pose = 'attack';
     frame = actionFrame(local - (2.4 - SWING_BEATS * 0.45), SWING_BEATS);
+  }
+  if (look.previewPose) {
+    pose = look.previewPose;
+    frame = Math.floor(s * 12.5) % RUNNER_FRAMES;
+    air = 0;
   }
   const feet = roof - air * h * 0.2; // JUMP_H in runner.ts
   // Backlight so her dark silhouette reads against the skyline
@@ -767,6 +778,7 @@ function drawRunnerDiorama(ctx: CanvasRenderingContext2D, w: number, h: number, 
     }
     ctx.restore();
   }
+  return { pose, frame };
 }
 
 function drawCoin(ctx: CanvasRenderingContext2D, x: number, y: number, unit: number, t: number) {
