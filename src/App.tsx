@@ -100,6 +100,7 @@ const UniverseHome = lazyWithRetry(() => import('./pages/UniverseHome'));
 const Archive365Page = lazyWithRetry(() => import('./pages/Archive365Page'));
 const DayArtifactPage = lazyWithRetry(() => import('./pages/DayArtifactPage'));
 const WarpZonePage = lazyWithRetry(() => import('./pages/WarpZonePage'));
+const RunnerWorldMap = lazyWithRetry(() => import('./pages/RunnerWorldMap'));
 const SecretLevel = lazyWithRetry(() => import('./pages/SecretLevel'));
 const AboutPage = lazyWithRetry(() => import('./pages/AboutPage'));
 const AdminPage = lazyWithRetry(() => import('./pages/AdminPage'));
@@ -272,7 +273,7 @@ export default function App() {
 
   // Stop global preview player on gameplay routes to prevent dual-audio
   useEffect(() => {
-    if (location.startsWith('/play/') || location.startsWith('/secret/') || location === '/tutorial') {
+    if (location.startsWith('/play/') || location.startsWith('/secret/') || location === '/warp/runner' || location === '/tutorial') {
       useGlobalPlayer.getState().stop();
     }
   }, [location]);
@@ -325,7 +326,7 @@ export default function App() {
   // guests — that hasn't completed it yet. Guests get the full walkthrough and a
   // "connect identity to keep your cards" conversion screen at the end.
   const isGameplayRoute =
-    location.startsWith('/play/') || location.startsWith('/results/') || location.startsWith('/secret/') || location === '/tutorial';
+    location.startsWith('/play/') || location.startsWith('/results/') || location.startsWith('/secret/') || location === '/warp/runner' || location === '/tutorial';
   if (user && hasOnboarded === false && !isGameplayRoute && !isLaunchRoute && isTutorialDone) {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
@@ -334,6 +335,7 @@ export default function App() {
   const hideNavbar =
     location.startsWith('/play/') ||
     location.startsWith('/secret/') ||
+    location === '/warp/runner' ||
     location === '/tutorial' ||
     location === '/admin/editor' ||
     location === '/admin/card-designs' ||
@@ -439,6 +441,7 @@ export default function App() {
                 <Route path="/sign" component={SignDiscoveryRoute} />
                 <Route path="/random" component={SignDiscoveryRoute} />
                 <Route path="/warp" component={WarpZonePage} />
+                <Route path="/warp/runner" component={RunnerWorldMap} />
                 <Route path="/warp/:sub" component={WarpZonePage} />
                 <Route path="/secret/:level" component={SecretLevel} />
                 <Route path="/about" component={AboutPage} />

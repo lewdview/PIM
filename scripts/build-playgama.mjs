@@ -319,7 +319,7 @@ async function bakeOfficialLyrics(days, dayId) {
     fs.writeFileSync(path.join(lyricsDir, `day${String(row.day).padStart(3, '0')}.json`), JSON.stringify({ words, segments }));
     official.add(row.day);
   }
-  const fallback = list.filter((d) => !official.has(d) && fs.existsSync(path.join(lyricsDir, `day${String(d).padStart(3, '0')}.lrc`)));
+  const fallback = list.filter((d) => !official.has(d) && fs.existsSync(path.join(lyricsDir, `day${String(d).padStart(3, '0')}.txt`)));
   const none = list.filter((d) => !official.has(d) && !fallback.includes(d));
   console.log(`[build-playgama] lyrics: ${official.size}/${list.length} days from lrc.th3scr1b3.art (official)` +
     (fallback.length ? `; older bundled .lrc for days ${fallback.join(', ')}` : '') +
@@ -347,6 +347,10 @@ async function buildMonth() {
     const m = name.match(/^day(\d{3})\./);
     return !!m && days.has(Number(m[1]));
   });
+  // Some portals (klyo) refuse the .lrc extension; the game reads .txt in portal builds.
+  for (const name of fs.readdirSync(path.join(out, 'lyrics'))) {
+    if (name.endsWith('.lrc')) fs.renameSync(path.join(out, 'lyrics', name), path.join(out, 'lyrics', name.replace(/\.lrc$/, '.txt')));
+  }
   await bakeOfficialLyrics(days, dayId);
 
   // Pack, crate and launch-page art belong to the vault and shop, which this build doesn't have.

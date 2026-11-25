@@ -201,8 +201,12 @@ function loadOfficialLyrics(name: string): Promise<TimedLine[]> {
     .catch(() => [] as TimedLine[]);
 }
 
+// Portal builds ship the bundled lyrics as .txt: some portals (klyo) refuse the .lrc
+// extension. scripts/build-playgama.mjs renames them to match.
+const LRC_EXT = import.meta.env.VITE_PLATFORM === 'playgama' ? '.txt' : '.lrc';
+
 function loadBundledLrc(name: string): Promise<TimedLine[]> {
-  return fetch(`/lyrics/${name}.lrc`)
+  return fetch(`/lyrics/${name}${LRC_EXT}`)
     .then((res) => {
       if (!res.ok) throw new Error("no lyrics");
       return res.text();
