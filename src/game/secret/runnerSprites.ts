@@ -43,7 +43,8 @@ const URLS: Record<RunnerSkin, Record<RunnerFacing, string>> = {
   neon: { right: neonRight, left: neonLeft },
   bodypaint: { right: '', left: '' },
 };
-const bodypaintReady: Promise<void> = PORTAL
+// The condition is written out (not PORTAL) so the bundler drops the import in portal builds.
+const bodypaintReady: Promise<void> = import.meta.env.VITE_PLATFORM === 'playgama'
   ? Promise.resolve()
   : import('./runnerBodypaint').then((m) => { URLS.bodypaint = m.default; });
 type Sprite = { row: number; frames: { pivot: number; baseline: number; height: number }[] };
