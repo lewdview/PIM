@@ -115,7 +115,9 @@ function playgamaPackaging(): Plugin {
       return html
         .replace(/\s*<!-- th3scr1b3 ecosystem bar[\s\S]*?<\/script>/, "")
         // Early in <head>, so the SDK has run before the game's module script does.
-        .replace(/(<meta name="viewport"[^>]*>)/, PORTAL_SDK[portal] ? `$1\n    ${PORTAL_SDK[portal]}` : "$1")
+        // The SDK goes first in <head>: klyo restores cloud saves only when its kit runs
+        // before anything else on the page.
+        .replace(/<head>/, PORTAL_SDK[portal] ? `<head>\n    ${PORTAL_SDK[portal]}` : "<head>")
         .replace("</head>", `  <meta name="pim-build" content="${buildVersion}">\n  <meta name="pim-portal" content="${portal}">\n  </head>`);
     },
     generateBundle() {

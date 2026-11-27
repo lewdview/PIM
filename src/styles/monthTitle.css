@@ -230,7 +230,9 @@
 .mt-play-label { display: inline-flex; align-items: center; gap: 10px; }
 .mt-play small {
   font: 600 11px/1.3 var(--shell-mono); letter-spacing: 0.06em; text-transform: none;
-  color: rgba(255, 255, 255, 0.78); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  color: rgba(255, 255, 255, 0.78); max-width: 100%; text-align: center; overflow-wrap: anywhere;
+  /* Long titles (day 32) wrap to a second line instead of being cut off on phones. */
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
 }
 .mt-menu-row { display: flex; gap: 10px; width: 100%; }
 .mt-sub {
